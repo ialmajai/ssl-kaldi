@@ -1,0 +1,8 @@
+torch>=2.4.0
+torchaudio>=2.4.0
+numpy<1.24.0
+transformers>=4.30.0
+torchdr>=0.1.0
+kaldiio>=2.18.0
+soundfile>=0.13.1
+matplotlib
