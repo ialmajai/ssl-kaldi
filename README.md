@@ -1,5 +1,5 @@
 # ssl-kaldi 
-Self-Supervised Learning Features in Kaldi
+Self-Supervised Learning Features in [Kaldi](https://github.com/kaldi-asr/kaldi)
 
 ## SSL features are all you need!
 

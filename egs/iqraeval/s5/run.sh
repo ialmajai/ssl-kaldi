@@ -62,10 +62,9 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
-  echo  "PCA calculation: encoder layer no. $encoder_layer"
   if [ ! -f pca_mhubert/pca-l$encoder_layer-${pca_dim}d.pt ]; then
     #Calculate PCA 
-    echo  "PCA calculation: layer, "
+    echo  "PCA calculation: encoder layer no. $encoder_layer"
     python local/pca_mhubert.py  --layer $encoder_layer -d $pca_dim
   fi
 fi
