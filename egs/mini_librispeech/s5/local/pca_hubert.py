@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright   2025  Johns Hopkins University (author: Ibrahim Almajai)         
+# Copyright   2025  (author: Ibrahim Almajai)         
 # Apache 2.0
 
 import argparse
@@ -21,19 +21,9 @@ logging.basicConfig(
 logger = logging.getLogger("IPCA")
 
 
-# =====================================================================
-#   AUDIO LOADING: supports Kaldi pipes AND plain file paths
-# =====================================================================
-def load_audio(entry: str):
-    """
-    Supports:
-        1) Kaldi pipe commands:  'flac -c -d -s file.flac |'
-        2) Direct file paths:    'path/to/file.wav'
-    Returns FloatTensor [1, T], sr=16000.
-    """
+def load_audio(entry: str): 
 
     entry = entry.strip()
-
  
     if entry.endswith("|"):
         cmd = entry[:-1].strip()
@@ -53,19 +43,14 @@ def load_audio(entry: str):
         audio, sr = torchaudio.load(bio)
         return audio, sr
 
-    # ------------------------------------------------------------
-    # (B) Otherwise treat as filename
-    # ------------------------------------------------------------
     audio, sr = torchaudio.load(entry)
     return audio, sr
-
 
 # =====================================================================
 #   HuBERT feature extraction
 # =====================================================================
-
 def extract_hubert(waveform: torch.Tensor, model, extractor, layer: int):
-    with torch.no_grad():    # <--- THIS IS REQUIRED!
+    with torch.no_grad():   
         inputs = extractor(
             waveform.squeeze(),
             sampling_rate=16000,
@@ -76,10 +61,6 @@ def extract_hubert(waveform: torch.Tensor, model, extractor, layer: int):
 
     return output.hidden_states[layer].squeeze(0)
 
-
-# =====================================================================
-#   Dataset
-# =====================================================================
 class KaldiWavScpDataset(Dataset):
     def __init__(self, wav_scp: str, layer: int, max_files: int):
         self.layer = layer
@@ -120,7 +101,7 @@ def main():
     parser.add_argument("--pca_dim", type=int, default=30)
     parser.add_argument("--max_files", type=int, default=1500)
     parser.add_argument("--batch", type=int, default=64)
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--output_dir", type=str, default="pca_hubert")
     parser.add_argument("--output_model", type=str, default="ipca_torchdr.pt")
     args = parser.parse_args()
@@ -129,13 +110,13 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logger.info(f"Using device: {device}")
 
-    # Load HuBERT (12 layers only)
+    # Load HuBERT 
     logger.info("Loading HuBERT model…")
     extractor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/hubert-base-ls960")
 
     config = HubertConfig.from_pretrained("facebook/hubert-base-ls960")
     config.output_hidden_states = True
-    config.num_hidden_layers = args.layer  # only first 12 layers
+    config.num_hidden_layers = args.layer  
 
     model = HubertModel(config).to(device).eval()
 
@@ -145,12 +126,11 @@ def main():
         ds,
         batch_size=args.batch,
         num_workers=args.workers,
-        shuffle=False,
-        collate_fn=lambda x: x,  # list of dicts
+        shuffle=True,
+        collate_fn=lambda x: x, 
         pin_memory=True
     )
 
-    # Incremental PCA (GPU-friendly)
     ipca = IncrementalPCA(
         n_components=args.pca_dim,
         device=device
@@ -161,7 +141,7 @@ def main():
     # ---------------------------------------------------------------
     # Streaming PCA
     # ---------------------------------------------------------------
-    for batch_list in loader:  # DataLoader returns list of samples
+    for batch_list in loader: 
         for sample in batch_list:
             if not sample["success"]:
                 continue

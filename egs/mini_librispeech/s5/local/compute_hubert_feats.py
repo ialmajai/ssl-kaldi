@@ -5,21 +5,8 @@
 """
 HuBERT Feature Extraction for Kaldi
 -----------------------------------
-Extracts HuBERT hidden layer features from audio using Kaldi I/O.
-Supports optional TorchDR PCA dimensionality reduction and utt2dur writing.
-
-Examples:
-
-    # 1) Raw HuBERT features (no PCA, full dim)
-    python extract_hubert.py scp:data/train/wav.scp ark:exp/features/train.ark
-
-    # 2) With PCA, truncated to 30 dims
-    python extract_hubert.py scp:data/train/wav.scp ark:exp/features/train.ark \
-        --apply-pca --dim 30
-
-    # 3) With utt2dur output
-    python extract_hubert.py scp:data/train/wav.scp ark:exp/features/train.ark \
-        --write-utt2dur ark,t:data/train/utt2dur
+Extracts HuBERT hidden layer features from audio.
+Supports optional TorchDR PCA dimensionality reduction.
 """
 
 import sys
@@ -112,15 +99,12 @@ if not args.apply_pca and args.dim is not None:
     )
 
 
-# ------------------------------------------------------------------------- #
-# Device
-# ------------------------------------------------------------------------- #
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {device}")
 
 
 # ------------------------------------------------------------------------- #
-# Load HuBERT model (fairseq)
+# Load HuBERT model
 # ------------------------------------------------------------------------- #
 logger.info(f"Loading HuBERT checkpoint")
 try:
@@ -165,19 +149,8 @@ else:
     logger.info("PCA disabled; extracting raw HuBERT hidden states.")
 
 
-# ------------------------------------------------------------------------- #
-# Helpers
-# ------------------------------------------------------------------------- #
 def preprocess_waveform(waveform: np.ndarray) -> torch.Tensor:
-    """
-    Convert int16 numpy waveform to float32 tensor in [-1, 1].
 
-    Args:
-        waveform: shape [T], dtype int16 (Kaldi)
-
-    Returns:
-        Tensor of shape [1, T], dtype float32
-    """
     waveform = waveform.astype(np.float32)
     waveform /= np.iinfo(np.int16).max
     return torch.from_numpy(waveform).unsqueeze(0)
@@ -191,9 +164,8 @@ def compute_hubert(waveform: torch.Tensor, sample_rate: int = 16000):
     ).to(device)
 
     outputs = model(**inputs, output_hidden_states=True)
-    feats = outputs.hidden_states[args.layer].squeeze(0)  # [T, D]
+    feats = outputs.hidden_states[args.layer].squeeze(0)  
     if args.apply_pca:
-        # TorchDR PCA: expects [N, D] and returns [N, D_pca]
         pca_out = ipca.transform(feats)
 
         if args.dim is not None:
@@ -203,12 +175,8 @@ def compute_hubert(waveform: torch.Tensor, sample_rate: int = 16000):
     
     return feats.cpu().numpy()
 
-
-
-
 def calculate_duration(num_samples: int, sample_rate: int) -> float:
     return float(num_samples) / float(sample_rate)
-
 
 # ------------------------------------------------------------------------- #
 # Main processing
@@ -284,7 +252,6 @@ def process_features():
 def write_utt2dur(utt2dur_data: dict):
     if not args.write_utt2dur:
         return
-
     out_spec = args.write_utt2dur
     if out_spec.startswith("ark,t:"):
         path = out_spec[6:]
@@ -310,27 +277,10 @@ if __name__ == "__main__":
     try:
         utt2dur = process_features()
         write_utt2dur(utt2dur)
-        logger.info("✅ HuBERT feature extraction completed successfully!")
+        logger.info("HuBERT feature extraction completed successfully!")
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
         sys.exit(1)
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
-
-
-       
-
-                   
-                                               
-
-
-             
-
-    
-
-  
-    
-    
-     
-
