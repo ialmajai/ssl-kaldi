@@ -13,7 +13,6 @@ decode_mbr=false
 stats=true
 beam=10
 word_ins_penalty=0.0,0.5,1.0
-word_ins_penalty=0.0
 min_lmwt=1
 max_lmwt=35
 iter=final

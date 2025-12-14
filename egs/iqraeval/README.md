@@ -45,7 +45,8 @@ python download_hugg_data_tts.py --path "IqraEval/Iqra_TTS" --split "train" --ou
 | SSL (9th layer)       | **26.59** | **20.48** | **18.82** |**11.56**       |
 | IqraEval baseline       | - | - | - |16.42       |
 
-
+#
+![This is a sample phone alignment for one of the decoded dev utterances](images/alignment.png)
 
 ## Citation
 ```
