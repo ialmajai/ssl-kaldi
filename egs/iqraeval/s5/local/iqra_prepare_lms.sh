@@ -4,10 +4,6 @@
 # Modified by Ibrahim Almjai (2025) 
 # Apache 2.0
 
-# This script takes data prepared in a corpus-dependent way
-# in data/local/, and converts it into the "canonical" form,
-# in various subdirectories of data/, e.g. data/lang, data/train, etc.
-
 . ./path.sh || exit 1;
 
 echo "Preparing train, dev and test data"
@@ -16,21 +12,30 @@ lexicon=data/local/dict/lexicon.txt
 KENLM=/data/git/kenlm/build
 mkdir -p  $lmdir
 
-# Create phone bigram and trigram LMs
-if [ -z $KENLM ] ; then
-  export IRSTLM=$KALDI_ROOT/tools/irstlm/
-fi
-export PATH=${PATH}:$KENLM/bin
-if ! command -v lmplz >/dev/null 2>&1 ; then
-  echo "$0: Error: kenlm is not available or compiled" >&2
+
+# Check for KenLM (used for faster/better ARPA LM training and querying in some recipes)
+if [ ! -x $KENLM/bin/lmplz ] ; then
+  echo "===================================================================="
+  echo "WARNING: KenLM not found or not built in $KENLM"
+  echo "To install KenLM:"
+  echo "  git clone https://github.com/kpu/kenlm.git kenlm"
+  echo "  cd kenlm"
+  echo "  mkdir -p build"
+  echo "  cd build"
+  echo "  cmake .."
+  echo "  make -j $(nproc)"
+  echo "If successful update the above KENLM path accordingly"
   exit 1
 fi
+
+
+# Create phone bigram and trigram LMs
+export PATH=${PATH}:$KALDI_ROOT/tools/kenlm/build/bin
 
 cut -d' ' -f2- data/train/text | sort | uniq  > $lmdir/lm_train.text
 
 lmplz -o 2 --discount_fallback <  $lmdir/lm_train.text > $lmdir/bigram.lm.arpa
 lmplz -o 3 --discount_fallback <  $lmdir/lm_train.text > $lmdir/trigram.lm.arpa
-
 
 for lm in bigram trigram ; do
   test=data/lang_test_${lm}
