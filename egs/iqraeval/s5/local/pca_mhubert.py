@@ -46,25 +46,25 @@ parser.add_argument(
     "-l", "--layer", 
     type=int, 
     default=9, 
-    help="mHuBERT encoder layer to extract (0-12, default: 9)"
+    help="mHuBERT encoder layer to extract"
 )
 parser.add_argument(
     "-d", "--pca_dim", 
     type=int, 
     default=30, 
-    help="PCA output dimension (default: 30)"
+    help="PCA output dimension"
 )
 parser.add_argument(
     "-n", "--num_files", 
     type=int, 
     default=3000, 
-    help="Max wav files per dataset (default: 3000, -1 for all)"
+    help="Max wav files per dataset"
 )
 parser.add_argument(
     "--batch_size", 
     type=int, 
     default=32, 
-    help="DataLoader batch size (default: 32)"
+    help="DataLoader batch size"
 )
 parser.add_argument(
     "--workers", 

@@ -15,15 +15,14 @@ nj=50
 
 affix=_768   # affix for the TDNN directory name
 tree_affix=mono
-train_stage=-10
-get_egs_stage=-10
+train_stage=302
+get_egs_stage=302
 decode_iter=
 
 chunk_width=120,80,150
+frame_subsampling_factor=1
 common_egs_dir=
 xent_regularize=0.1
-
-# training options
 srand=0
 remove_egs=true
 reporting_email=
@@ -129,7 +128,7 @@ if [ $stage -le 14 ]; then
      exit 1;
   fi
   steps/nnet3/chain/build_tree.sh \
-    --frame-subsampling-factor 1 \
+    --frame-subsampling-factor ${frame_subsampling_factor} \
     --context-opts "--context-width=1 --central-position=0" \
     --cmd "$train_cmd" 2000 ${lores_train_data_dir} \
     $lang $ali_dir $tree_dir
@@ -195,11 +194,12 @@ if [ $stage -le 16 ]; then
     --trainer.optimization.initial-effective-lrate=0.001 \
     --trainer.optimization.final-effective-lrate=0.0001 \
     --trainer.num-chunk-per-minibatch=256,128,64 \
-    --chain.frame-subsampling-factor 1 \
-    --chain.alignment-subsampling-factor 1 \
+    --chain.frame-subsampling-factor ${frame_subsampling_factor} \
+    --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --egs.chunk-width=$chunk_width \
     --egs.dir="$common_egs_dir" \
-    --egs.opts="--frames-overlap-per-eg 20  --online-cmvn false --frame-subsampling-factor 1 --max-shuffle-jobs-run 6" \
+    --egs.opts="--frames-overlap-per-eg 20  --online-cmvn false --frame-subsampling-factor \
+               ${frame_subsampling_factor} --max-shuffle-jobs-run 6" \
     --cleanup.remove-egs=$remove_egs \
     --use-gpu=wait \
     --reporting.email="$reporting_email" \

@@ -1,0 +1,7 @@
+local/bwer.sh
+%WER 11.56 [ 9697 / 83849, 1879 ins, 2362 del, 5456 sub ] exp/chain/tdnn_768_sp_mono_rvb1/decode_dev_tg/wer_7_0.0 
+%WER 11.90 [ 9976 / 83849, 1920 ins, 2300 del, 5756 sub ] exp/chain/e2e_tdnnf_1a/decode_trigram_dev/wer_8_0.0
+%WER 18.83 [ 15786 / 83849, 3753 ins, 3940 del, 8093 sub ] exp/tri2/decode_dev_tg/wer_10_0.0
+%WER 20.52 [ 17205 / 83849, 3742 ins, 3953 del, 9510 sub ] exp/tri1/decode_dev_tg/wer_19_0.0
+%WER 26.53 [ 22244 / 83849, 3128 ins, 7212 del, 11904 sub ] exp/mono/decode_dev_tg/wer_11_0.0
+
