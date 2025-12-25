@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-
+# Copyright 2025, author: Ibrahim Almajai         
+# Apache 2.0
 
 nj=4
 cmd=run.pl
 compress=true
 write_utt2num_frames=true  # If true writes utt2num_frames.
 write_utt2dur=true
-feat_dim=30
 layer=9
-apply_pca=false
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -21,12 +20,6 @@ Usage: $0 [options] <data-dir> [<log-dir> [<hubert-dir>] ]
  e.g.: $0 data/train
 Note: <log-dir> defaults to <data-dir>/log, and
       <hubert-dir> defaults to <data-dir>/data.
-Options:
-
-  --nj <nj>                            # number of parallel jobs.
-  --cmd <run.pl|queue.pl <queue opts>> # how to run jobs.
-  --write-utt2num-frames <true|false>  # If true, write utt2num_frames file.
-  --write-utt2dur <true|false>         # If true, write utt2dur file.
 EOF
    exit 1;
 fi
@@ -71,13 +64,9 @@ done
 
 utils/validate_data_dir.sh --no-text --no-feats $data || exit 1;
 
-
 for n in $(seq $nj); do
-  # the next command does nothing unless $ssldir/storage/ exists, see
-  # utils/create_data_link.pl for more info.
   utils/create_data_link.pl $ssldir/raw_hubert_$name.$n.ark
 done
-
 
 if $write_utt2num_frames; then
   write_num_frames_opt="--write-num-frames=ark,t:$logdir/utt2num_frames.JOB"
@@ -90,13 +79,6 @@ if $write_utt2dur; then
 else
   write_utt2dur_opt=
 fi
-
-if ${apply_pca}; then
-  pca_opt="--apply-pca"
-else
-  pca_opt=
-fi
-
 
 if [ -f $data/segments ]; then
   echo "$0 [info]: segments file exists: using that."
@@ -111,8 +93,8 @@ if [ -f $data/segments ]; then
 
   $cmd JOB=1:$nj $logdir/make_hubert_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
-    python local/compute_hubert_feats.py $pca_opt --layer $layer --dim=$feat_dim \
-         --pca-file pca-hubert-l$layer-${feat_dim}d.pt $write_utt2dur_opt ark:- ark:- \| \
+    python local/compute_hubert_feats.py --layer $layer \
+         $write_utt2dur_opt ark:- ark:- \| \
          copy-feats --compress=$compress $write_num_frames_opt ark:- \
          ark,scp:$ssldir/raw_hubert_$name.JOB.ark,$ssldir/raw_hubert_$name.JOB.scp \
          || exit 1;
@@ -126,16 +108,14 @@ else
 
   utils/split_scp.pl $scp $split_scps || exit 1;
 
-
   $cmd JOB=1:$nj $logdir/make_hubert_${name}.JOB.log \
-    python local/compute_hubert_feats.py $pca_opt --layer $layer --dim=$feat_dim \
-           --pca-file pca-hubert-l$layer-${feat_dim}d.pt $write_utt2dur_opt \
+    python local/compute_hubert_feats.py --layer $layer \
+          $write_utt2dur_opt \
 	   scp,p:$logdir/wav_${name}.JOB.scp ark:- \| \
            copy-feats $write_num_frames_opt --compress=$compress ark:- \
       ark,scp:$ssldir/raw_hubert_$name.JOB.ark,$ssldir/raw_hubert_$name.JOB.scp \
       || exit 1;
 fi
-
 
 if [ -f $logdir/.error.$name ]; then
   echo "$0: Error producing features for $name:"
@@ -160,7 +140,6 @@ if $write_utt2dur; then
   done > $data/utt2dur || exit 1
 fi
 
-
 frame_shift=0.02
 echo $frame_shift > $data/frame_shift
 
@@ -179,6 +158,5 @@ if (( nf < nu - nu/20 )); then
        "Probably a serious error."
   exit 1
 fi
-
 
 echo "$0: Succeeded creating mHUBERT features for $name"

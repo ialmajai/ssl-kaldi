@@ -1,12 +1,14 @@
 local/bwer.sh
 
 %WER 4.32 [ 869 / 20138, 92 ins, 82 del, 695 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_13_1.0
-%WER 5.11 [ 1030 / 20138, 114 ins, 120 del, 796 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2/wer_11_0.5
+%WER 5.13 [ 1033 / 20138, 107 ins, 143 del, 783 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_11_1.0
 %WER 5.42 [ 1091 / 20138, 129 ins, 79 del, 883 sub ] exp/chain_online_cmn/tdnn_sp/decode_tgsmall_dev_clean_2/wer_10_0.5
-%WER 10.40 [ 2094 / 20138, 181 ins, 536 del, 1377 sub ] exp/tri3b/decode_tglarge_dev_clean_2/wer_12_0.0
-%WER 11.60 [ 2336 / 20138, 182 ins, 585 del, 1569 sub ] exp/tri3b/decode_tgmed_dev_clean_2/wer_12_0.0
-%WER 12.39 [ 2496 / 20138, 191 ins, 626 del, 1679 sub ] exp/tri3b/decode_tgsmall_dev_clean_2/wer_12_0.0
-%WER 12.60 [ 2538 / 20138, 177 ins, 672 del, 1689 sub ] exp/tri3b/decode_tgsmall_dev_clean_2.si/wer_13_0.0
-%WER 23.75 [ 4783 / 20138, 219 ins, 1278 del, 3286 sub ] exp/mono/decode_tglarge_dev_clean_2/wer_10_0.0
-%WER 26.77 [ 5390 / 20138, 193 ins, 1551 del, 3646 sub ] exp/mono/decode_tgmed_dev_clean_2/wer_10_0.0
-%WER 28.42 [ 5723 / 20138, 182 ins, 1674 del, 3867 sub ] exp/mono/decode_tgsmall_dev_clean_2/wer_10_0.0
+%WER 6.18 [ 1244 / 20138, 151 ins, 128 del, 965 sub ] exp/chain/e2e_tdnnf_1a/decode_tgmed_dev_clean_2_raw/wer_10_0.0
+%WER 6.79 [ 1368 / 20138, 156 ins, 155 del, 1057 sub ] exp/chain/e2e_tdnnf_1a/decode_tgsmall_dev_clean_2_raw/wer_10_0.0
+%WER 11.29 [ 2273 / 20138, 237 ins, 453 del, 1583 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_21_0.0
+%WER 12.34 [ 2485 / 20138, 229 ins, 541 del, 1715 sub ] exp/tri3b/decode_tgmed_dev_clean_2_pca/wer_24_0.0
+%WER 13.15 [ 2648 / 20138, 219 ins, 607 del, 1822 sub ] exp/tri3b/decode_tgsmall_dev_clean_2_pca/wer_28_0.0
+%WER 29.05 [ 5850 / 20138, 311 ins, 1436 del, 4103 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_18_0.0
+%WER 31.75 [ 6394 / 20138, 282 ins, 1723 del, 4389 sub ] exp/mono/decode_tgmed_dev_clean_2_pca/wer_18_0.0
+%WER 33.48 [ 6743 / 20138, 251 ins, 1930 del, 4562 sub ] exp/mono/decode_tgsmall_dev_clean_2_pca/wer_19_0.0
+

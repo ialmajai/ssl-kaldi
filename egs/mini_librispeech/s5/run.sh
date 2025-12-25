@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 
-# Change this location to somewhere where you want to put the data.
 data=./corpus/
 
 data_url=www.openslr.org/resources/31
 lm_url=www.openslr.org/resources/11
 
-. ./cmd.sh
-. ./path.sh
-
 stage=0
 encoder_layer=9
 pca_dim=30
 
+. ./cmd.sh
+. ./path.sh
 . utils/parse_options.sh
 
 set -euo pipefail
 
-featdir=feats
+featdir=feats-raw
+pca_feats_dir=feats-pca
 
 mkdir -p data
 
@@ -52,42 +51,53 @@ if [ $stage -le 2 ]; then
 fi
 
 if [ $stage -le 3 ]; then
-  mkdir -p "pca_hubert"
-  echo  "PCA calculation: encoder layer no. $encoder_layer"
-  if [ ! -f pca_hubert/pca-hubert-l${encoder_layer}-${pca_dim}d.pt ]; then
-    #Calculate PCA 
-    python local/pca_hubert.py  --wav_scp data/train_clean_5/wav.scp --layer $encoder_layer \
-	    --output_model "pca-hubert-l${encoder_layer}-${pca_dim}d.pt" --pca_dim $pca_dim
-  fi
+
+  for part in dev_clean_2 train_clean_5; do
+    echo "preparing features"
+    utils/copy_data_dir.sh data/$part data/${part}_raw 
+    local/make_hubert.sh --cmd "$train_cmd" --nj 4  \
+	    --layer $encoder_layer data/${part}_raw exp/make_hubert/${part}_raw $featdir
+    steps/compute_cmvn_stats.sh data/${part}_raw exp/make_hubert/${part}_raw $featdir
+  done  
 fi
 
 if [ $stage -le 4 ]; then
-
+  pca_model="pca-${pca_dim}d.pt"    
+  pca_dir="pca"
+  mkdir -p $pca_dir
+  if [ ! -f $pca_dir/$pca_model ]; then
+    echo "Training PCA model"
+    mkdir -p $pca_dir
+    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+      --feats_scp=data/train_clean_5_raw/feats.scp \
+      --pca_model=$pca_dir/$pca_model \
+      --max_utts=1500 $pca_dir/$pca_model
+  fi
   for part in dev_clean_2 train_clean_5; do
-    local/make_hubert.sh --cmd "$train_cmd" --nj 4  --apply-pca true --feat-dim $pca_dim \
-	    --layer $encoder_layer data/$part exp/make_hubert/$part $featdir
-    steps/compute_cmvn_stats.sh data/$part exp/make_hubert/$part $featdir
-  done
-
-  # Get the shortest 500 utterances first because those are more likely
-  # to have accurate alignments.
-  utils/subset_data_dir.sh --shortest data/train_clean_5 500 data/train_500short
+    echo "preparing pca features"    
+    utils/copy_data_dir.sh data/$part data/${part}_pca
+    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
+          data/${part}_raw data/${part}_pca exp/make_features_pca/${part}_pca $pca_feats_dir  || exit 1;
+    steps/compute_cmvn_stats.sh data/${part}_pca exp/make_features_pca/${part}_pca $pca_feats_dir  || exit 1;
+    utils/fix_data_dir.sh data/${part}_pca
+  done 
 fi
 
 # train a monophone system
 if [ $stage -le 5 ]; then
-  # TODO(galv): Is this too many jobs for a smaller dataset?
+  utils/subset_data_dir.sh --shortest data/train_clean_5_pca 500 data/train_500short
+
   steps/train_mono.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
     data/train_500short data/lang_nosp exp/mono
 
   steps/align_si.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5 data/lang_nosp exp/mono exp/mono_ali_train_clean_5
+    data/train_clean_5_pca data/lang_nosp exp/mono exp/mono_ali_train_clean_5
 fi
 
 if [ $stage -le 6 ]; then
     utils/mkgraph.sh data/lang_nosp_test_tgsmall \
                    exp/mono exp/mono/graph_tgsmall
-    for testset in dev_clean_2; do
+    for testset in dev_clean_2_pca; do
       steps/decode.sh --nj 20 --cmd "$decode_cmd" exp/mono/graph_tgsmall \
         data/$testset exp/mono/decode_tgsmall_$testset
       steps/lmrescore.sh --cmd "$decode_cmd" data/lang_nosp_test_{tgsmall,tgmed} \
@@ -97,38 +107,36 @@ if [ $stage -le 6 ]; then
       data/$testset exp/mono/decode_{tgsmall,tglarge}_$testset
     done
 fi
-
-# train a first delta + delta-delta triphone system on all utterances
+#delta + delta-delta triphone
 if [ $stage -le 7 ]; then
   steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
-    2000 10000 data/train_clean_5 data/lang_nosp exp/mono_ali_train_clean_5 exp/tri1
+    2000 10000 data/train_clean_5_pca data/lang_nosp exp/mono_ali_train_clean_5 exp/tri1
 
   steps/align_si.sh --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5 data/lang_nosp exp/tri1 exp/tri1_ali_train_clean_5
+    data/train_clean_5_pca data/lang_nosp exp/tri1 exp/tri1_ali_train_clean_5
 fi
 
-# train an LDA+MLLT system.
+# Train LDA+MLLT system
 if [ $stage -le 8 ]; then
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" 2500 15000 \
-    data/train_clean_5 data/lang_nosp exp/tri1_ali_train_clean_5 exp/tri2b
+    data/train_clean_5_pca data/lang_nosp exp/tri1_ali_train_clean_5 exp/tri2b
 
-  # Align utts using the tri2b model
   steps/align_si.sh  --nj 5 --cmd "$train_cmd" --use-graphs true \
-    data/train_clean_5 data/lang_nosp exp/tri2b exp/tri2b_ali_train_clean_5
+    data/train_clean_5_pca data/lang_nosp exp/tri2b exp/tri2b_ali_train_clean_5
 fi
 
 # Train LDA+MLLT+SAT
 if [ $stage -le 9 ]; then
   steps/train_sat.sh --cmd "$train_cmd" 2500 15000 \
-    data/train_clean_5 data/lang_nosp exp/tri2b_ali_train_clean_5 exp/tri3b
+    data/train_clean_5_pca data/lang_nosp exp/tri2b_ali_train_clean_5 exp/tri3b
 fi
 
 # Now we compute the pronunciation and silence probabilities from training data,
 # and re-create the lang directory.
 if [ $stage -le 10 ]; then
   steps/get_prons.sh --cmd "$train_cmd" \
-    data/train_clean_5 data/lang_nosp exp/tri3b
+    data/train_clean_5_pca data/lang_nosp exp/tri3b
   utils/dict_dir_add_pronprobs.sh --max-normalize true \
     data/local/dict_nosp \
     exp/tri3b/pron_counts_nowb.txt exp/tri3b/sil_counts_nowb.txt \
@@ -143,19 +151,12 @@ if [ $stage -le 10 ]; then
     data/local/lm/lm_tglarge.arpa.gz data/lang data/lang_test_tglarge
 fi
 
-if [ $stage -le 11 ]; then
-  steps/align_fmllr.sh --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5 data/lang exp/tri3b exp/tri3b_ali_train_clean_5
-fi
-
-
 if [ $stage -le 12 ]; then
-  # Test the tri3b system with the silprobs and pron-probs.
 
   # decode using the tri3b model
   utils/mkgraph.sh data/lang_test_tgsmall \
                    exp/tri3b exp/tri3b/graph_tgsmall
-  for test in  dev_clean_2 ; do
+  for test in  dev_clean_2_pca ; do
     steps/decode_fmllr.sh --nj 10  --cmd "$decode_cmd" \
                           exp/tri3b/graph_tgsmall data/$test \
                           exp/tri3b/decode_tgsmall_$test

@@ -26,8 +26,8 @@ common_egs_dir=
 l2_regularize=0.00005
 frames_per_iter=1000000
 cmvn_opts="--norm-means=false --norm-vars=false"
-train_set=train_clean_5_spe2e_raw
-test_sets="dev_clean_2"
+train_set=train_clean_5_raw_spe2e
+test_sets="dev_clean_2_raw"
 frame_subsampling_factor=2
 
 # End configuration section.
@@ -161,22 +161,24 @@ if [ $stage -le 5 ]; then
   rm $dir/.error 2>/dev/null || true
 
   for data in $test_sets; do
-      data_affix=$(echo $data | sed s/test_//)
-      nspk=$(wc -l <data/${data}_raw/spk2utt)
-      for lmtype in tgsmall; do
-        steps/nnet3/decode.sh \
-          --acwt 1.0 --post-decode-acwt 10.0 \
-          --extra-left-context-initial 0 \
-          --extra-right-context-final 0 \
-          --frames-per-chunk $frames_per_chunk \
-          --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
-          $treedir/graph_${lmtype} data/${data}_raw ${dir}/decode_${lmtype}_${data_affix} || exit 1
-      done
-
-      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
-        data/lang_nosp_test_{tgsmall,tglarge} \
-       data/${data}_raw ${dir}/decode_{tgsmall,tglarge}_${data_affix}  || exit 1
+    data_affix=$(echo $data | sed s/test_//)
+    nspk=$(wc -l <data/${data}/spk2utt)
+    
+    steps/nnet3/decode.sh \
+      --acwt 1.0 --post-decode-acwt 10.0 \
+      --extra-left-context-initial 0 \
+      --extra-right-context-final 0 \
+      --frames-per-chunk $frames_per_chunk \
+      --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
+      $treedir/graph_tgsmall data/${data} ${dir}/decode_${lmtype}_${data_affix} || exit 1
   
+    steps/lmrescore.sh --cmd "$decode_cmd" \
+      data/lang_nosp_test_{tgsmall,tgmed} \
+    data/${data} ${dir}/decode_{tgsmall,tgmed}_${data_affix}  || exit 1
+
+    steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
+      data/lang_nosp_test_{tgsmall,tglarge} \
+      data/${data} ${dir}/decode_{tgsmall,tglarge}_${data_affix}  || exit 1     
   done
  
 fi

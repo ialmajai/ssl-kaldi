@@ -122,6 +122,7 @@ def main():
 
     # Dataset + DataLoader
     ds = KaldiWavScpDataset(args.wav_scp, args.layer, args.max_files)
+    torch.manual_seed(2809)
     loader = DataLoader(
         ds,
         batch_size=args.batch,
@@ -142,19 +143,17 @@ def main():
     # Streaming PCA
     # ---------------------------------------------------------------
     for batch_list in loader: 
+        batch_tensors = [] 
         for sample in batch_list:
             if not sample["success"]:
                 continue
-
             waveform = sample["waveform"][0].to(device)
             feats = extract_hubert(waveform, model, extractor, args.layer)
 
-            if feats.shape[0] < args.pca_dim:
-                logger.warning(f"Skipping {sample['utt']}: too few frames ({feats.shape[0]})")
-                continue
-
             ipca.partial_fit(feats.to(device))
-
+            
+            batch_tensors.append(feats)
+        ipca.partial_fit(torch.vstack(batch_tensors).to(device))
         torch.cuda.empty_cache()
 
     # ---------------------------------------------------------------

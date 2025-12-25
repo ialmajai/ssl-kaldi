@@ -105,11 +105,11 @@ if [ $stage -le 2 ]; then
   output-layer name=output include-log-softmax=false dim=$num_targets $output_opts
 
 EOF
-  steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/network.xconfig --config-dir $dir/configs
+  steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/network.xconfig \
+                                    --config-dir $dir/configs
 fi
 
 if [ $stage -le 3 ]; then
-
   steps/nnet3/chain/e2e/train_e2e.py --stage $train_stage \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "$cmvn_opts" \
@@ -143,7 +143,6 @@ fi
 lmtype=trigram
 
 if [ $stage -le 4 ]; then
-
   utils/lang/check_phones_compatible.sh \
     data/lang_test_$lmtype/phones.txt $lang/phones.txt
   utils/mkgraph.sh \
@@ -157,8 +156,6 @@ if [ $stage -le 5 ]; then
 
   for data in $test_sets; do
       data_affix=$(echo $data | sed s/test_//)
-      
-
         steps/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --extra-left-context-initial 0 \
@@ -167,10 +164,7 @@ if [ $stage -le 5 ]; then
           --nj $decode_jobs --cmd "$decode_cmd"  --num-threads 4 \
           $treedir/graph_$lmtype data/${data}_768 \
           ${dir}/decode_${lmtype}_${data_affix} || exit 1
-
-  
   done
- 
 fi
 
 echo "Done. Date: $(date). Training and decoding finished successfully."

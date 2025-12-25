@@ -53,30 +53,6 @@ parser.add_argument(
     default=12,
     help="HuBERT encoder layer to extract (e.g., 12)",
 )
-parser.add_argument(
-    "-d", "--dim",
-    type=int,
-    default=None,
-    help="Output feature dimension when using PCA (truncate to this size). "
-         "If omitted with --apply-pca, keep full PCA dimension.",
-)
-parser.add_argument(
-    "--apply-pca",
-    action="store_true",
-    help="Enable TorchDR PCA (no interpolation).",
-)
-parser.add_argument(
-    "--pca-dir",
-    type=str,
-    default="pca_hubert",
-    help="Directory containing TorchDR PCA model",
-)
-parser.add_argument(
-    "--pca-file",
-    type=str,
-    default="pca-hubert-l12-30d.pt",
-    help="TorchDR PCA filename inside --pca-dir",
-)
 
 parser.add_argument(
     "--write-utt2dur",
@@ -88,15 +64,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-
-# ------------------------------------------------------------------------- #
-# Validate PCA args
-# ------------------------------------------------------------------------- #
-if not args.apply_pca and args.dim is not None:
-    logger.warning(
-        "--dim is specified but --apply-pca is not set; "
-        "dim will be ignored (raw HuBERT features output)."
-    )
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -124,31 +91,6 @@ except Exception as e:
     sys.exit(1)
 
 
-# ------------------------------------------------------------------------- #
-# Load PCA (TorchDR) if needed
-# ------------------------------------------------------------------------- #
-ipca = None
-
-if args.apply_pca:
-    logger.info("PCA enabled; loading TorchDR PCA model...")
-    from torchdr import PCA, IncrementalPCA  # noqa: F401
-
-    pca_path = Path(args.pca_dir) / args.pca_file
-    if not pca_path.exists():
-        logger.error(f"PCA model not found: {pca_path}")
-        sys.exit(1)
-
-    try:
-        ipca = torch.load(pca_path, map_location=device)
-        ipca.device = device
-        logger.info(f"PCA model loaded from: {pca_path}")
-    except Exception as e:
-        logger.error(f"Failed to load PCA model: {e}", exc_info=True)
-        sys.exit(1)
-else:
-    logger.info("PCA disabled; extracting raw HuBERT hidden states.")
-
-
 def preprocess_waveform(waveform: np.ndarray) -> torch.Tensor:
 
     waveform = waveform.astype(np.float32)
@@ -165,13 +107,6 @@ def compute_hubert(waveform: torch.Tensor, sample_rate: int = 16000):
 
     outputs = model(**inputs, output_hidden_states=True)
     feats = outputs.hidden_states[args.layer].squeeze(0)  
-    if args.apply_pca:
-        pca_out = ipca.transform(feats)
-
-        if args.dim is not None:
-            pca_out = pca_out[:, : args.dim]
-
-        return pca_out.cpu().numpy()
     
     return feats.cpu().numpy()
 
@@ -186,8 +121,6 @@ def process_features():
     logger.info(f"Input:        {args.input}")
     logger.info(f"Output:       {args.output}")
     logger.info(f"Layer:        {args.layer}")
-    logger.info(f"Apply PCA:    {args.apply_pca}")
-    logger.info(f"PCA dim arg:  {args.dim}")
     logger.info("=" * 70)
 
     utt2dur_data = {}
