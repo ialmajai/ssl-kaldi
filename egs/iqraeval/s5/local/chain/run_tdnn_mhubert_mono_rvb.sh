@@ -88,7 +88,6 @@ if [ $stage -le 12 ]; then
   rm $clean_lat_dir/fsts.*.gz # save space
 fi
 
-
 if [ $stage -le 13 ]; then
 
   clean_lat_nj=$(cat $clean_lat_dir/num_jobs)

@@ -24,13 +24,10 @@ Usage:
 import sys
 import argparse
 import logging
-import subprocess
-import io
 from pathlib import Path
 
 import numpy as np
 import torch
-import torchaudio
 from transformers import Wav2Vec2FeatureExtractor, HubertModel
 from kaldiio import ReadHelper, WriteHelper
 
@@ -117,9 +114,6 @@ except Exception as e:
     logger.error(f"Failed to load model: {e}")
     sys.exit(1)
     
-
-
-
 # ------------------------------------------------------------------------- #
 # Load PCA Model (if needed)
 # ------------------------------------------------------------------------- #
@@ -181,7 +175,6 @@ def compute_mhubert(waveform: torch.Tensor, sample_rate: int = 16000) -> np.ndar
     # Otherwise return full 768-dim features
     return features.cpu().numpy()
 
-
 def calculate_duration(num_samples: int, sample_rate: int) -> float:
     """Calculate duration in seconds."""
     return float(num_samples) / sample_rate
@@ -238,7 +231,6 @@ def process_features():
         sys.exit(1)
     
     return utt2dur_data
-
 
 def write_utt2dur(utt2dur_data: dict):
     """Write utt2dur file if specified."""

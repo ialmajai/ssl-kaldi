@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-
+# Copyright 2025, author: Ibrahim Almajai         
+# Apache 2.0
 
 nj=4
 cmd=run.pl
@@ -71,13 +72,11 @@ done
 
 utils/validate_data_dir.sh --no-text --no-feats $data || exit 1;
 
-
 for n in $(seq $nj); do
   # the next command does nothing unless $ssldir/storage/ exists, see
   # utils/create_data_link.pl for more info.
   utils/create_data_link.pl $ssldir/raw_hubert_$name.$n.ark
 done
-
 
 if $write_utt2num_frames; then
   write_num_frames_opt="--write-num-frames=ark,t:$logdir/utt2num_frames.JOB"
@@ -96,7 +95,6 @@ if ${apply_pca}; then
 else
   pca_opt=
 fi
-
 
 if [ -f $data/segments ]; then
   echo "$0 [info]: segments file exists: using that."
@@ -125,7 +123,6 @@ else
   done
 
   utils/split_scp.pl $scp $split_scps || exit 1;
-
 
   $cmd JOB=1:$nj $logdir/make_hubert_${name}.JOB.log \
     python local/compute_hubert_feats.py $pca_opt --layer $layer --dim=$feat_dim \
@@ -159,7 +156,6 @@ if $write_utt2dur; then
     cat $logdir/utt2dur.$n || exit 1
   done > $data/utt2dur || exit 1
 fi
-
 
 frame_shift=0.02
 echo $frame_shift > $data/frame_shift

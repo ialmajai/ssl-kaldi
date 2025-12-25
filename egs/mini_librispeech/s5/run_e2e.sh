@@ -2,11 +2,11 @@
 # Copyright 2017    Hossein Hadian
 #           2025    Ibrahim Almajai
 
+
 # end-to-end LF-MMI training  
 # stages 0-2 are the same as "run.sh"
 
 set -euo pipefail
-
 
 stage=0
 encoder_layer=9
@@ -14,10 +14,8 @@ trainset=train_clean_5
 frame_subsampling_factor=2
 . ./cmd.sh 
 
-
 . ./path.sh
 . utils/parse_options.sh
-
 
 if [ $stage -le 3 ]; then
   echo "$0: perturbing the training data to allowed lengths"

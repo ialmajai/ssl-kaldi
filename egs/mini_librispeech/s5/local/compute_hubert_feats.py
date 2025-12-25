@@ -50,8 +50,8 @@ parser.add_argument(
 parser.add_argument(
     "-l", "--layer",
     type=int,
-    default=12,
-    help="HuBERT encoder layer to extract (e.g., 12)",
+    default=9,
+    help="HuBERT encoder layer to extract",
 )
 parser.add_argument(
     "-d", "--dim",
@@ -63,7 +63,7 @@ parser.add_argument(
 parser.add_argument(
     "--apply-pca",
     action="store_true",
-    help="Enable TorchDR PCA (no interpolation).",
+    help="Enable TorchDR PCA.",
 )
 parser.add_argument(
     "--pca-dir",
@@ -122,7 +122,6 @@ try:
 except Exception as e:
     logger.error(f"Failed to load HuBERT model: {e}", exc_info=True)
     sys.exit(1)
-
 
 # ------------------------------------------------------------------------- #
 # Load PCA (TorchDR) if needed

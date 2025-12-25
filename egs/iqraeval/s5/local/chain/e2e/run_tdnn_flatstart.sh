@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Copyright    2017  Hossein Hadian
 #              2025  Ibrahim Almajai
+# Apache 2.0
 
 # This script performs chain training in a flat-start manner
 # and without building or using any context-dependency tree.

@@ -19,15 +19,7 @@ if [ -f path.sh ]; then . ./path.sh; fi
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
   cat >&2 <<EOF
 Usage: $0 [options] <data-dir> [<log-dir> [<mhubert-dir>] ]
- e.g.: $0 data/train
-Note: <log-dir> defaults to <data-dir>/log, and
-      <mhubert-dir> defaults to <data-dir>/data.
-Options:
-
-  --nj <nj>                            # number of parallel jobs.
-  --cmd <run.pl|queue.pl <queue opts>> # how to run jobs.
-  --write-utt2num-frames <true|false>  # If true, write utt2num_frames file.
-  --write-utt2dur <true|false>         # If true, write utt2dur file.
+ 
 EOF
    exit 1;
 fi
@@ -92,7 +84,6 @@ else
   pca_opt=
 fi
 
-
 if [ -f $data/segments ]; then
   echo "$0 [info]: segments file exists: using that."
 
@@ -110,7 +101,6 @@ if [ -f $data/segments ]; then
     copy-feats --compress=$compress $write_num_frames_opt ark:- \
       ark,scp:$ssldir/raw_mhubert_$name.JOB.ark,$ssldir/raw_mhubert_$name.JOB.scp \
      || exit 1;
-
 else
   echo "$0: [info]: no segments file exists: assuming wav.scp indexed by utterance."
   split_scps=
@@ -120,7 +110,6 @@ else
 
   utils/split_scp.pl $scp $split_scps || exit 1;
 
-
   $cmd JOB=1:$nj $logdir/make_mhubert_${name}.JOB.log \
     python local/compute_mhubert_feats.py $pca_opt --layer $layer --dim=$feat_dim $write_utt2dur_opt scp,p:$logdir/wav_${name}.JOB.scp ark:- \| \
     copy-feats $write_num_frames_opt --compress=$compress ark:- \
@@ -128,14 +117,12 @@ else
       || exit 1;
 fi
 
-
 if [ -f $logdir/.error.$name ]; then
   echo "$0: Error producing features for $name:"
   tail $logdir/make_mhubert_${name}.1.log
   exit 1;
 fi
 
-# concatenate the .scp files together.
 for n in $(seq $nj); do
   cat $ssldir/raw_mhubert_$name.$n.scp || exit 1
 done > $data/feats.scp || exit 1
