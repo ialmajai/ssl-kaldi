@@ -1,0 +1,6 @@
+%WER 7.15 [ 1709 / 23904, 0 ins, 0 del, 1709 sub ] exp/chain/e2e_tdnnf_1a/decode/wer_10_0.0
+%WER 11.22 [ 2683 / 23904, 84 ins, 617 del, 1982 sub ] exp/chain/e2e_tdnnf_1a/decode_ug/wer_7_0.0
+%WER 13.78 [ 3294 / 23904, 0 ins, 10 del, 3284 sub ] exp/tri3b/decode/wer_45_0.0
+%WER 15.39 [ 3678 / 23904, 0 ins, 10 del, 3668 sub ] exp/tri2b/decode/wer_36_0.0
+%WER 22.23 [ 5315 / 23904, 0 ins, 14 del, 5301 sub ] exp/tri1/decode/wer_45_0.0
+%WER 44.59 [ 10659 / 23904, 0 ins, 3 del, 10656 sub ] exp/mono/decode/wer_41_0.0
