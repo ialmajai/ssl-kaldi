@@ -9,10 +9,10 @@ njtest=4
 encoder_layer=9
 pca_dim=30
 
-datasrc=/data/git/github-fork/icefall/egs/grid/ASR/download/grid-corpus
+datasrc=grid-corpus
 ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt"
 
-feattype=features
+
 raw_feats_dir=feats-raw
 pca_feats_dir=feats-pca
 lang=data/lang
@@ -37,6 +37,13 @@ numGaussSAT=40000
 
 if [ $stage -le 0 ]; then 	
   local/grid_data_prep.sh $datasrc
+
+  if [ ! -f  input/shape_predictor_68_face_landmarks.dat ]; then
+      wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+      bunzip2 shape_predictor_68_face_landmarks.dat.bz2
+      mv shape_predictor_68_face_landmarks.dat input/
+  fi
+
 fi
 
 if [ $stage -le 1 ]; then
@@ -53,7 +60,7 @@ if [ $stage -le 1 ]; then
   local/grid_prepare_grammar.sh || exit 1
 fi
 
-if [ $stage -le -2 ]; then
+if [ $stage -le 2 ]; then
   for x in test train; do
     echo "preparing features"
     local/copy_data_dir.sh data/$x data/${x}_raw 
@@ -65,7 +72,7 @@ fi
 
 
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 3 ]; then
   pca_model="pca-${pca_dim}d.pt"    
   pca_dir="pca"
   mkdir -p $pca_dir
@@ -110,7 +117,6 @@ if [ $stage -le 6 ]; then
     utils/mkgraph.sh data/lang exp/tri1 exp/tri1/graph
     steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
       exp/tri1/graph data/test exp/tri1/decode
-  
 
   # align tri1
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
@@ -146,30 +152,4 @@ fi
 
 exit 0
 
-# Align all data with LDA+MLLT+SAT system (tri3b)
-steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang exp/tri3b exp/tri3b_ali
-
-
-data_fmllr=data-fmllr-tri3b
-gmm=exp/tri3b
-if [ $stage -le 9 ]; then
-  # Store fMLLR features, so we can train on them easily,
-  # test
-  dirc=${data_fmllr}/test
-  mkdir -p $dirc
-  steps/nnet/make_fmllr_feats.sh --nj 4 --cmd "$train_cmd" \
-     --transform-dir $gmm/decode \
-     $dirc data/test $gmm $dirc/log $dirc/data
-  steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
-  # train
-  dirc=${data_fmllr}/train
-  mkdir -p $dirc
-  steps/nnet/make_fmllr_feats.sh --nj 8 --cmd "$train_cmd" \
-     --transform-dir ${gmm}_ali \
-     $dirc data/train $gmm $dirc/log $dirc/data
-  steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
-fi
-
-exit 0
 

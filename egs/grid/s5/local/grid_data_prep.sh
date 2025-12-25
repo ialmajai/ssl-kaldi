@@ -69,7 +69,7 @@ align_dir_to_text() {
 echo "Started train data prep. ..."
 
 (
-  find $GRIDROOT  -iname '*.mpg' | sed '/\/s1\//d' | sed '/\/s2\//d' | sed '/\/s20\//d' |\
+  find -L $GRIDROOT  -iname '*.mpg' | sed '/\/s1\//d' | sed '/\/s2\//d' | sed '/\/s20\//d' |\
 	  sed '/\/s22\//d' | sed '/MACOSX/d'  | sort ;
 ) | perl -ane ' m:/sa\d.mpg:i || m:/sb\d\d.mpg:i || print; '  > $tmpdir/train.flist
 
@@ -95,13 +95,11 @@ dir=data/test
 mkdir -p $dir
 
 (
-  find $GRIDROOT -iname '*.mpg' | sed -n -e '/\/s1\//p' -e '/\/s2\//p' -e '/\/s20\//p' -e '/\/s22\//p'\
+  find -L $GRIDROOT -iname '*.mpg' | sed -n -e '/\/s1\//p' -e '/\/s2\//p' -e '/\/s20\//p' -e '/\/s22\//p'\
 	  |  sed '/MACOSX/d' | sort ;
 ) | perl -ane ' m:/sa\d.mpg:i || m:/sb\d\d.mpg:i || print; '  > $tmpdir/test.flist
 
 
-#cat $tmpdir/test.flist | tr -s '//' '/'  > tmp
-#mv tmp $tmpdir/test.flist
 
 local/flist2scp.pl $tmpdir/test.flist | sort > $dir/video.scp
 

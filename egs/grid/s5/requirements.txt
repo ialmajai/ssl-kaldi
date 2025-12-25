@@ -1,2 +1,6 @@
 omegaconf==2.0.6 
 hydra-core>=1.0.7,<1.1
+torchdr>=0.1.0
+matplotlib<=3.5
+kaldiio>=2.18.0
+opencv-python
