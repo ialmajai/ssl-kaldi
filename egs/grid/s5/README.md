@@ -5,7 +5,7 @@
 
 ```
 conda activate ssl-kaldi
-git clone https://github.com/facebookresearch/av_hubert.git && \
+git clone https://github.com/facebookresearch/av_hubert.git
 cd av_hubert 
 git submodule init
 git submodule update
