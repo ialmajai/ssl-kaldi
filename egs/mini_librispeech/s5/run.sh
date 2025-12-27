@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# Change this location to somewhere where you want to put the data.
 data=./corpus/
 
 data_url=www.openslr.org/resources/31
@@ -18,6 +17,7 @@ pca_dim=30
 set -euo pipefail
 
 featdir=feats
+pca_feats_dir=feats-pca
 
 mkdir -p data
 
@@ -52,31 +52,43 @@ if [ $stage -le 2 ]; then
 fi
 
 if [ $stage -le 3 ]; then
-  mkdir -p "pca_hubert"
-  echo  "PCA calculation: encoder layer no. $encoder_layer"
-  if [ ! -f pca_hubert/pca-hubert-l${encoder_layer}-${pca_dim}d.pt ]; then
-    #Calculate PCA 
-    python local/pca_hubert.py  --wav_scp data/train_clean_5/wav.scp --layer $encoder_layer \
-	    --output_model "pca-hubert-l${encoder_layer}-${pca_dim}d.pt" --pca_dim $pca_dim
-  fi
-fi
-
-if [ $stage -le 4 ]; then
 
   for part in dev_clean_2 train_clean_5; do
-    local/make_hubert.sh --cmd "$train_cmd" --nj 4  --apply-pca true --feat-dim $pca_dim \
+    echo "preparing features"
+    utils/copy_data_dir.sh data/$part data/${part}_raw 
+    local/make_hubert.sh --cmd "$train_cmd" --nj 4  \
 	    --layer $encoder_layer data/$part exp/make_hubert/$part $featdir
     steps/compute_cmvn_stats.sh data/$part exp/make_hubert/$part $featdir
   done
+  
+fi
 
-  # Get the shortest 500 utterances first because those are more likely
-  # to have accurate alignments.
-  utils/subset_data_dir.sh --shortest data/train_clean_5 500 data/train_500short
+if [ $stage -le 4 ]; then
+  pca_model="pca-${pca_dim}d.pt"    
+  pca_dir="pca"
+  mkdir -p $pca_dir
+  if [ ! -f $pca_dir/$pca_model ]; then
+    echo "Training PCA model"
+    mkdir -p $pca_dir
+    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+      --feats_scp=data/train_clean_5_raw/feats.scp \
+      --pca_model=$pca_dir/$pca_model \
+      --max_utts=1500 $pca_dir/$pca_model
+  fi
+  for x in dev_clean_2 train_clean_5; do
+    echo "preparing pca features"
+    
+    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_model \
+          data/${x}_raw data/${x} exp/make_features_pca/$x $pca_feats_dir  || exit 1;
+    steps/compute_cmvn_stats.sh data/$x exp/make_features_pca/$x $pca_feats_dir  || exit 1;
+    utils/fix_data_dir.sh data/$x
+  done 
 fi
 
 # train a monophone system
 if [ $stage -le 5 ]; then
-  # TODO(galv): Is this too many jobs for a smaller dataset?
+  utils/subset_data_dir.sh --shortest data/train_clean_5 500 data/train_500short
+
   steps/train_mono.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
     data/train_500short data/lang_nosp exp/mono
 
