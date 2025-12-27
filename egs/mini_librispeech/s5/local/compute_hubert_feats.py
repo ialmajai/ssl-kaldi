@@ -28,7 +28,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # ------------------------------------------------------------------------- #
 # Arguments
 # ------------------------------------------------------------------------- #
@@ -64,11 +63,8 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {device}")
-
 
 # ------------------------------------------------------------------------- #
 # Load HuBERT model
@@ -202,7 +198,6 @@ def write_utt2dur(utt2dur_data: dict):
     except Exception as e:
         logger.error(f"Failed to write utt2dur: {e}")
 
-
 # ------------------------------------------------------------------------- #
 # Main
 # ------------------------------------------------------------------------- #
@@ -211,9 +206,6 @@ if __name__ == "__main__":
         utt2dur = process_features()
         write_utt2dur(utt2dur)
         logger.info("HuBERT feature extraction completed successfully!")
-    except KeyboardInterrupt:
-        logger.info("Interrupted by user")
-        sys.exit(1)
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
