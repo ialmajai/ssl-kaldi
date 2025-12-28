@@ -1,8 +1,8 @@
 local/bwer.sh
 
-%WER 4.32 [ 869 / 20138, 92 ins, 82 del, 695 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_13_1.0
+%WER 4.28 [ 862 / 20138, 108 ins, 68 del, 686 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_11_1.0
 %WER 5.13 [ 1033 / 20138, 107 ins, 143 del, 783 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_11_1.0
-%WER 5.42 [ 1091 / 20138, 129 ins, 79 del, 883 sub ] exp/chain_online_cmn/tdnn_sp/decode_tgsmall_dev_clean_2/wer_10_0.5
+%WER 5.24 [ 1055 / 20138, 131 ins, 72 del, 852 sub ] exp/chain_online_cmn/tdnn_sp/decode_tgsmall_dev_clean_2/wer_11_0.0
 %WER 6.18 [ 1244 / 20138, 151 ins, 128 del, 965 sub ] exp/chain/e2e_tdnnf_1a/decode_tgmed_dev_clean_2_raw/wer_10_0.0
 %WER 6.79 [ 1368 / 20138, 156 ins, 155 del, 1057 sub ] exp/chain/e2e_tdnnf_1a/decode_tgsmall_dev_clean_2_raw/wer_10_0.0
 %WER 11.29 [ 2273 / 20138, 237 ins, 453 del, 1583 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_21_0.0

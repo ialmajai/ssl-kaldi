@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-
 # Set -e here so that we catch if any executable fails immediately
 set -euo pipefail
-
 
 stage=13
 decode_nj=10
@@ -11,9 +9,7 @@ train_set=train_clean_5
 test_sets=dev_clean_2
 gmm=tri3b
 nnet3_affix=_online_cmn
-
 online_cmvn=true
-
 affix=
 tree_affix=
 train_stage=-10
@@ -31,7 +27,6 @@ frame_subsampling_factor=2
 srand=0
 remove_egs=true
 reporting_email=
-
 
 # End configuration section.
 echo "$0 $@"  # Print the command line for logging
@@ -55,14 +50,14 @@ lang=data/lang_chain
 lat_dir=exp/chain${nnet3_affix}/${gmm}_${train_set}_sp_lats
 dir=exp/chain${nnet3_affix}/tdnn${affix}_sp
 train_data_dir=data/${train_set}_sp_raw
-lores_train_data_dir=data/${train_set}_sp
+lores_train_data_dir=data/${train_set}_sp_pca
 
 for f in $gmm_dir/final.mdl $train_data_dir/feats.scp \
     $lores_train_data_dir/feats.scp $ali_dir/ali.1.gz; do
   [ ! -f $f ] && echo "$0: expected file $f to exist" && exit 1
 done
 
-if [ $stage -le 13 ]; then
+if [ $stage -le 15 ]; then
   echo "$0: creating lang directory $lang with chain-type topology"
   # Create a version of the lang/ directory that has one state per phone in the
   # topo file. [note, it really has two states.. the first one is only repeated
@@ -85,7 +80,7 @@ if [ $stage -le 13 ]; then
   fi
 fi
 
-if [ $stage -le 14 ]; then
+if [ $stage -le 16 ]; then
   # Get the alignments as lattices (gives the chain training more freedom).
   # use the same num-jobs as the alignments
   steps/align_fmllr_lats.sh --nj 75 --cmd "$train_cmd" ${lores_train_data_dir} \
@@ -93,7 +88,7 @@ if [ $stage -le 14 ]; then
   rm $lat_dir/fsts.*.gz # save space
 fi
 
-if [ $stage -le 15 ]; then
+if [ $stage -le 17 ]; then
   # Build a tree using our new topology.  We know we have alignments for the
   # speed-perturbed data (local/nnet3/run_ivector_common.sh made them), so use
   # those.  The num-leaves is always somewhat less than the num-leaves from
@@ -109,8 +104,7 @@ if [ $stage -le 15 ]; then
     $lang $ali_dir $tree_dir
 fi
 
-
-if [ $stage -le 16 ]; then
+if [ $stage -le 18 ]; then
   mkdir -p $dir
   echo "$0: creating neural net configs using the xconfig parser";
 
@@ -156,7 +150,7 @@ EOF
   steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/network.xconfig --config-dir $dir/configs/
 fi
 
-if [ $stage -le 17 ]; then
+if [ $stage -le 19 ]; then
 
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
@@ -180,7 +174,8 @@ if [ $stage -le 17 ]; then
     --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --egs.chunk-width=$chunk_width \
     --egs.dir="$common_egs_dir" \
-    --egs.opts="--frames-overlap-per-eg 0 --frame-subsampling-factor ${frame_subsampling_factor} --online-cmvn $online_cmvn" \
+    --egs.opts="--frames-overlap-per-eg 0 --frame-subsampling-factor \
+                ${frame_subsampling_factor} --online-cmvn $online_cmvn" \
     --cleanup.remove-egs=$remove_egs \
     --use-gpu=wait \
     --reporting.email="$reporting_email" \
@@ -190,13 +185,13 @@ if [ $stage -le 17 ]; then
     --dir=$dir  || exit 1;
 fi
 
-if [ $stage -le 18 ]; then
+if [ $stage -le 20 ]; then
   utils/mkgraph.sh \
     --self-loop-scale 1.0 data/lang_test_tgsmall \
     $tree_dir $tree_dir/graph_tgsmall || exit 1;
 fi
 
-if [ $stage -le 19 ]; then
+if [ $stage -le 21 ]; then
   frames_per_chunk=$(echo $chunk_width | cut -d, -f1)
   rm $dir/.error 2>/dev/null || true
 

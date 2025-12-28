@@ -33,7 +33,7 @@ fi
 
 if [ $stage -le 3 ]; then
     featdir=feats-spe2e_raw 
-    local/make_mhubert.sh --cmd "$train_cmd" --nj 4 --feat-dim 768 \
+    local/make_mhubert.sh --cmd "$train_cmd" --nj 4 \
 	    --layer $encoder_layer data/${trainset}_spe2e_raw exp/make_mhubert/${trainset}_spe2e_raw $featdir
     steps/compute_cmvn_stats.sh data/${trainset}_spe2e_raw exp/make_mhubert/${trainset}_spe2e_raw $featdir   
 fi

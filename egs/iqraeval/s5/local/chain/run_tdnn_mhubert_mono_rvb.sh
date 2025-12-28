@@ -6,17 +6,16 @@ decode_nj=10
 train_set=train
 test_sets=dev
 gmm=tri2
-nnet3_affix=
+nnet3_affix=_a1
 
-data=data
 exp=exp
 num_data_reps=1
 nj=50
 
-affix=_768   # affix for the TDNN directory name
+affix=   # affix for the TDNN directory name
 tree_affix=mono
-train_stage=302
-get_egs_stage=302
+train_stage=-10
+get_egs_stage=-10
 decode_iter=
 
 chunk_width=120,80,150
@@ -27,7 +26,7 @@ srand=0
 remove_egs=true
 reporting_email=
 
-echo "$0 $@"  # Print the command line for logging
+echo "$0 $@"  # Print command line
 
 . ./cmd.sh
 . ./path.sh
@@ -44,12 +43,12 @@ fi
 gmm_dir=$exp/$gmm
 ali_dir=$exp/${gmm}_ali_${train_set}_sp
 tree_dir=$exp/chain${nnet3_affix}/tree_sp${tree_affix:+_$tree_affix}
-lang=$data/lang_chain
+lang=data/lang_chain
 clean_lat_dir=$exp/chain${nnet3_affix}/${gmm}_${train_set}_sp_lats
 dir=$exp/chain${nnet3_affix}/tdnn${affix}_sp${tree_affix:+_$tree_affix}_rvb${num_data_reps}
-train_data_dir=$data/${train_set}_sp_rvb${num_data_reps}_768
+train_data_dir=data/${train_set}_sp_raw_rvb${num_data_reps}
 
-lores_train_data_dir=$data/${train_set}_sp
+lores_train_data_dir=data/${train_set}_sp_pca
 lat_dir=${clean_lat_dir}_rvb${num_data_reps}
 
 for f in $gmm_dir/final.mdl $train_data_dir/feats.scp \
@@ -63,15 +62,15 @@ if [ $stage -le 11 ]; then
   # topo file. [note, it really has two states.. the first one is only repeated
   # once, the second one has zero or more repeats.]
   if [ -d $lang ]; then
-    if [ $lang/L.fst -nt $data/lang/L.fst ]; then
+    if [ $lang/L.fst -nt data/lang/L.fst ]; then
       echo "$0: $lang already exists, not overwriting it; continuing"
     else
-      echo "$0: $lang already exists and seems to be older than $data/lang..."
+      echo "$0: $lang already exists and seems to be older than data/lang..."
       echo " ... not sure what to do.  Exiting."
       exit 1;
     fi
   else
-    cp -r $data/lang $lang
+    cp -r data/lang $lang
     silphonelist=$(cat $lang/phones/silence.csl) || exit 1;
     nonsilphonelist=$(cat $lang/phones/nonsilence.csl) || exit 1;
     # Use our special topology... note that later on may have to tune this
@@ -84,18 +83,18 @@ if [ $stage -le 12 ]; then
   # Get the alignments as lattices (gives the chain training more freedom).
   # use the same num-jobs as the alignments
   steps/align_fmllr_lats.sh --nj $nj --cmd "$train_cmd" ${lores_train_data_dir} \
-    $data/lang $gmm_dir $clean_lat_dir
+    data/lang $gmm_dir $clean_lat_dir
   rm $clean_lat_dir/fsts.*.gz # save space
 fi
-
 
 if [ $stage -le 13 ]; then
 
   clean_lat_nj=$(cat $clean_lat_dir/num_jobs)
   mkdir -p $lat_dir/temp/
 
-  $train_cmd --max-jobs-run 10 JOB=1:$clean_lat_nj $lat_dir/temp/log/copy_clean_lats.JOB.log \
-    lattice-copy "ark:gunzip -c $clean_lat_dir/lat.JOB.gz |" ark,scp:$lat_dir/temp/lats.JOB.ark,$lat_dir/temp/lats.JOB.scp
+  $train_cmd --max-jobs-run 10 JOB=1:$clean_lat_nj \ 
+    $lat_dir/temp/log/copy_clean_lats.JOB.log lattice-copy "ark:gunzip -c \ 
+    $clean_lat_dir/lat.JOB.gz |" ark,scp:$lat_dir/temp/lats.JOB.ark,$lat_dir/temp/lats.JOB.scp
 
   rm -f $lat_dir/temp/combined_lats.scp
 
@@ -221,12 +220,12 @@ if [ $stage -le 18 ]; then
 
   for dataset in $test_sets; do
     
-      nspk=$(wc -l <data/${dataset}_768/spk2utt)
+      nspk=$(wc -l <data/${dataset}/spk2utt)
       steps/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --frames-per-chunk $frames_per_chunk \
           --nj 20 --cmd "$decode_cmd"  --num-threads 4 \
-          $tree_dir/graph_tg data/${dataset}_768 ${dir}/decode_${dataset}_tg || exit 1
+          $tree_dir/graph_tg data/${dataset} ${dir}/decode_${dataset}_tg || exit 1
     
   done
 fi

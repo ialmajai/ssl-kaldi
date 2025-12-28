@@ -151,8 +151,7 @@ if [ $stage -le 10 ]; then
     data/local/lm/lm_tglarge.arpa.gz data/lang data/lang_test_tglarge
 fi
 
-if [ $stage -le 12 ]; then
-
+if [ $stage -le 11 ]; then
   # decode using the tri3b model
   utils/mkgraph.sh data/lang_test_tgsmall \
                    exp/tri3b exp/tri3b/graph_tgsmall
