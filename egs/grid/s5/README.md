@@ -27,7 +27,7 @@ conda install -c conda-forge dlib==19.18.0
 
 ## Citation
 
-If you use this recipe, please cite **ssl-kaldi** and the AV‑HuBERT paper
+If you use this recipe, please cite **ssl-kaldi** and the [AV‑HuBERT](https://github.com/facebookresearch/av_hubert) paper
 ```
 @misc{ssl_kaldi,
 author = {Ibrahim Almajai},
