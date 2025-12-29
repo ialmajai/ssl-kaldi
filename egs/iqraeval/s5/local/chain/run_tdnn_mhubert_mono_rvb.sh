@@ -6,13 +6,13 @@ decode_nj=10
 train_set=train
 test_sets=dev
 gmm=tri2
-nnet3_affix=_a1
+nnet3_affix=
 
 exp=exp
 num_data_reps=1
 nj=50
 
-affix=   # affix for the TDNN directory name
+affix=_a1   # affix for the TDNN directory name
 tree_affix=mono
 train_stage=-10
 get_egs_stage=-10
@@ -88,12 +88,11 @@ if [ $stage -le 12 ]; then
 fi
 
 if [ $stage -le 13 ]; then
-
   clean_lat_nj=$(cat $clean_lat_dir/num_jobs)
   mkdir -p $lat_dir/temp/
 
-  $train_cmd --max-jobs-run 10 JOB=1:$clean_lat_nj \ 
-    $lat_dir/temp/log/copy_clean_lats.JOB.log lattice-copy "ark:gunzip -c \ 
+  $train_cmd --max-jobs-run 10 JOB=1:$clean_lat_nj \
+    $lat_dir/temp/log/copy_clean_lats.JOB.log lattice-copy "ark:gunzip -c \
     $clean_lat_dir/lat.JOB.gz |" ark,scp:$lat_dir/temp/lats.JOB.ark,$lat_dir/temp/lats.JOB.scp
 
   rm -f $lat_dir/temp/combined_lats.scp
@@ -218,17 +217,14 @@ if [ $stage -le 18 ]; then
   frames_per_chunk=$(echo $chunk_width | cut -d, -f1)
   rm $dir/.error 2>/dev/null || true
 
-  for dataset in $test_sets; do
-    
+  for dataset in $test_sets; do    
       nspk=$(wc -l <data/${dataset}/spk2utt)
       steps/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --frames-per-chunk $frames_per_chunk \
           --nj 20 --cmd "$decode_cmd"  --num-threads 4 \
-          $tree_dir/graph_tg data/${dataset} ${dir}/decode_${dataset}_tg || exit 1
-    
+          $tree_dir/graph_tg data/${dataset}_raw ${dir}/decode_${dataset}_tg || exit 1    
   done
 fi
 
 exit 0 
-

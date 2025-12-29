@@ -54,7 +54,8 @@ if [ $stage -le 7 ]; then
   fi
   
   echo "preparing pca features"    
-  utils/copy_data_dir.sh data/${train_set} data/${train_set}_sp_pca
+  utils/copy_data_dir.sh data/$clean_data_dir data/${train_set}_sp_pca
+  rm -rf data/${train_set}_sp_pca/feats.scp data/${train_set}_sp_pca/data 
   local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
         data/${clean_data_dir} data/${train_set}_sp_pca  || exit 1;
   steps/compute_cmvn_stats.sh data/${train_set}_sp_pca  || exit 1;
