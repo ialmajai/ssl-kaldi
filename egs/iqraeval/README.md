@@ -13,7 +13,16 @@ python download_hugg_data.py --path "IqraEval/Iqra_train" --split "dev" --output
 python download_hugg_data_tts.py --path "IqraEval/Iqra_TTS" --split "train" --output_dir "./data/TTS" --dev_name "Amer"
 ```
 
- 
+### Install KenLM
+
+```
+git clone https://github.com/kpu/kenlm.git
+cd kenlm
+mkdir build && cd build
+cmake ..
+make -j$(nproc) 
+```
+
 
 ## Expected Results (PER)
 - 30-dimensional PCA for HMM-GMM systems

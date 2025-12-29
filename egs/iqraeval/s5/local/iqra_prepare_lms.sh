@@ -30,7 +30,7 @@ fi
 
 
 # Create phone bigram and trigram LMs
-export PATH=${PATH}:$KALDI_ROOT/tools/kenlm/build/bin
+export PATH=${PATH}:$KENLM/bin
 
 cut -d' ' -f2- data/train/text | sort | uniq  > $lmdir/lm_train.text
 
