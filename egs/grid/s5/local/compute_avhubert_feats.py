@@ -27,7 +27,6 @@ import fairseq
 from avhubert.utils import Compose, CenterCrop, Normalize
 import avhubert.hubert_pretraining, avhubert.hubert
 from fairseq import checkpoint_utils, options, tasks, utils
-from torchvision import transforms
 
 # ------------------------------------------------------------------------- #
 # Logging
