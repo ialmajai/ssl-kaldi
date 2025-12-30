@@ -53,7 +53,7 @@ if [ $stage -le 1 ]; then
   local/grid_prepare_grammar.sh || exit 1
 fi
 
-if [ $stage -le -2 ]; then
+if [ $stage -le 2 ]; then
   for x in test train; do
     echo "preparing features"
     local/copy_data_dir.sh data/$x data/${x}_raw 
@@ -65,7 +65,7 @@ fi
 
 
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 3 ]; then
   pca_model="pca-${pca_dim}d.pt"    
   pca_dir="pca"
   mkdir -p $pca_dir
