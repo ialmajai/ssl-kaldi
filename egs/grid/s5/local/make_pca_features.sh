@@ -51,7 +51,7 @@ utils/split_scp.pl $scp $split_scps || exit 1;
 
 $cmd JOB=1:$nj $pcadir/make_pca_${name}.JOB.log \
 python local/pca.py  --pca_dim=$pca_dim --mode=$pca_mode \
-    --feats_scp=$logdir/feats_${name}.JOB.scp --output_dir=$pca_dir \
+    --feats_scp=$logdir/feats_${name}.JOB.scp \
     --pca_model=$pca_model --max_utts=4000 ark:- \
     \|  copy-feats ark:- \
     ark,scp:$pcadir/feats_$name.JOB.ark,$pcadir/feats_$name.JOB.scp \

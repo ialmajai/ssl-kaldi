@@ -24,6 +24,10 @@ conda install -c conda-forge dlib==19.18.0
 | AV‑HuBERT Grid e2e | unseen speakers |    Fixed GRID grammar |    None |  7.15% |
 
 
+### Tracking & Word Alignment Demo
+
+[![Watch Demo](https://github.com/ialmajai/ssl-kaldi/blob/main/egs/grid/s5/demo/thumbnail.png)](https://github.com/ialmajai/ssl-kaldi/blob/main/egs/grid/s5/demo/tracking-demo.gif)
+
 
 ## Citation
 

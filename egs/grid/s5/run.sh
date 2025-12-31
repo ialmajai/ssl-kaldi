@@ -1,6 +1,8 @@
 #!/bin/bash
+# Copyright   2025  Ibrahim Almajai
+# License: Apache 2.0.
 
-set -e # exit on error
+set -e
 
 stage=0
 nj=8
@@ -9,10 +11,9 @@ njtest=4
 encoder_layer=9
 pca_dim=30
 
-datasrc=/data/git/github-fork/icefall/egs/grid/ASR/download/grid-corpus
+datasrc=download/grid-corpus
 ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt"
 
-feattype=features
 raw_feats_dir=feats-raw
 pca_feats_dir=feats-pca
 lang=data/lang
@@ -20,8 +21,6 @@ dict=data/local/dict
 langtmp=data/local/lang
 mkdir -p $langtmp
 mkdir -p $dict
-steps="steps"
-utils="utils"
 
 monogauss=1000
 numLeavesTri1=2000
@@ -57,13 +56,13 @@ if [ $stage -le 2 ]; then
   for x in test train; do
     echo "preparing features"
     local/copy_data_dir.sh data/$x data/${x}_raw 
-    local/make_avhubert.sh --cmd "$decode_cmd"  --nj 6  --ckpt $ckpt data/${x}_raw exp/make_features_raw/$x $raw_feats_dir  || exit 1;
-    steps/compute_cmvn_stats.sh data/${x}_raw exp/make_features_raw/$x $featdir  || exit 1;
+    local/make_avhubert.sh --cmd "$decode_cmd"  --nj 6  --ckpt $ckpt \
+      data/${x}_raw exp/make_features_raw/$x $raw_feats_dir  || exit 1;
+    steps/compute_cmvn_stats.sh data/${x}_raw \
+      exp/make_features_raw/$x $raw_feats_dir  || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
   done
 fi
-
-
 
 if [ $stage -le 3 ]; then
   pca_model="pca-${pca_dim}d.pt"    
@@ -77,10 +76,10 @@ if [ $stage -le 3 ]; then
       --pca_model=$pca_dir/$pca_model \
       --max_utts=28000 $pca_dir/$pca_model
   fi
+
   for x in train test; do
-    echo "preparing pca features"
-    
-    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_model \
+    echo "preparing pca features"    
+    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
           data/${x}_raw data/${x} exp/make_features_pca/$x $pca_feats_dir  || exit 1;
     steps/compute_cmvn_stats.sh data/$x exp/make_features_pca/$x $pca_feats_dir  || exit 1;
     utils/fix_data_dir.sh data/$x
@@ -88,15 +87,14 @@ if [ $stage -le 3 ]; then
 fi
 
 if [ $stage -le 4 ]; then
-  steps/train_mono.sh --nj 8 --cmd "$train_cmd" --boost-silence 1.5 data/train data/lang exp/mono
+  steps/train_mono.sh --nj 8 --cmd "$train_cmd" --boost-silence 1.5 \
+    data/train data/lang exp/mono
 fi
 
 if [ $stage -le 5 ]; then
-
-    utils/mkgraph.sh  data/lang  exp/mono exp/mono/graph
-    steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-      exp/mono/graph data/test exp/mono/decode
-  
+  utils/mkgraph.sh  data/lang  exp/mono exp/mono/graph
+  steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
+    exp/mono/graph data/test exp/mono/decode  
 fi
 
 if [ $stage -le 6 ]; then
@@ -107,11 +105,10 @@ if [ $stage -le 6 ]; then
   steps/train_deltas.sh --cmd "$train_cmd" --boost-silence 1.5 \
   $numLeavesTri1  $numGaussTri1 data/train data/lang exp/mono_ali exp/tri1
 
-    utils/mkgraph.sh data/lang exp/tri1 exp/tri1/graph
-    steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-      exp/tri1/graph data/test exp/tri1/decode
+  utils/mkgraph.sh data/lang exp/tri1 exp/tri1/graph
+  steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
+    exp/tri1/graph data/test exp/tri1/decode
   
-
   # align tri1
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang exp/tri1 exp/tri1_ali
@@ -120,13 +117,12 @@ fi
 if [ $stage -le 6 ]; then
   # train and decode tri2b [LDA+MLLT]
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
-    --splice-opts "--left-context=3 --right-context=3" \
-  $numLeavesMLLT $numGaussMLLT data/train data/lang exp/tri1_ali exp/tri2b
+    --splice-opts "--left-context=3 --right-context=3" $numLeavesMLLT \
+    $numGaussMLLT data/train data/lang exp/tri1_ali exp/tri2b
 
-    utils/mkgraph.sh data/lang exp/tri2b exp/tri2b/graph
-    steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-      exp/tri2b/graph data/test exp/tri2b/decode
-  
+  utils/mkgraph.sh data/lang exp/tri2b exp/tri2b/graph
+  steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
+    exp/tri2b/graph data/test exp/tri2b/decode 
 fi
 
 if [ $stage -le 7 ]; then
@@ -137,24 +133,23 @@ fi
 
 if [ $stage -le 8 ]; then
   # Do LDA+MLLT+SAT, and decode.
-  steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT data/train data/lang exp/tri2b_ali exp/tri3b
-    utils/mkgraph.sh data/lang exp/tri3b exp/tri3b/graph
-    steps/decode_fmllr.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
+  steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT data/train \
+    data/lang exp/tri2b_ali exp/tri3b
+:q    
+  utils/mkgraph.sh data/lang exp/tri3b exp/tri3b/graph
+  steps/decode_fmllr.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
       exp/tri3b/graph data/test exp/tri3b/decode
- 
 fi
 
-exit 0
-
-# Align all data with LDA+MLLT+SAT system (tri3b)
-steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang exp/tri3b exp/tri3b_ali
-
+if [ $stage -le 9 ]; then
+  # Align all data with LDA+MLLT+SAT 
+  steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
+      data/train data/lang exp/tri3b exp/tri3b_ali
+fi
 
 data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
-if [ $stage -le 9 ]; then
-  # Store fMLLR features, so we can train on them easily,
+if [ $stage -le 10 ]; then
   # test
   dirc=${data_fmllr}/test
   mkdir -p $dirc

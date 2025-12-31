@@ -22,7 +22,7 @@ spk_prefix=
 utt_prefix=
 spk_suffix=
 utt_suffix=
-validate_opts=   # should rarely be needed.
+validate_opts="--no-wav"   # should rarely be needed.
 # end configuration section
 
 . utils/parse_options.sh
