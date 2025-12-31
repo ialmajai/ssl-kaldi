@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright   2025  (author: Ibrahim Almajai)         
+# Apache 2.0
 """
 AV-HuBERT Visual Feature Extraction for Kaldi
 --------------------------------------------
-Extracts AV-HuBERT visual hidden-layer features from lip-region videos
-using Kaldi I/O (scp/ark). Includes dlib-based mouth tracking.
+Extracts AV-HuBERT visual hidden-layer features from dlib tracked lip-regions in videos,
+using Kaldi I/O (scp/ark).
 
 """
 
@@ -16,7 +18,6 @@ import numpy as np
 import torch
 import cv2
 import dlib
-import gc 
 from kaldiio import ReadHelper, WriteHelper
 
 avhubert_path = '/data/git/kaldi/egs/grid/s5/av_hubert'
@@ -37,7 +38,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # ------------------------------------------------------------------------- #
 # Argument parsing
 # ------------------------------------------------------------------------- #
@@ -50,7 +50,7 @@ parser.add_argument(
     "input",
     type=str,
     help="Input: scp:path/to/video.scp or ark:- for stdin "
-         "(values should be video paths, e.g., mouth-ROI MP4 files)",
+         "(values should be video paths",
 )
 parser.add_argument(
     "output",
@@ -69,7 +69,7 @@ parser.add_argument(
     "--layer",
     type=int,
     default=None,
-    help="Encoder layer to extract. ",
+    help="Encoder layer to extract ",
 )
 
 parser.add_argument(
@@ -86,8 +86,6 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-
-
 
 # ------------------------------------------------------------------------- #
 # Device
@@ -125,7 +123,6 @@ transform = Compose([
     Normalize(task.cfg.image_mean, task.cfg.image_std),
 ])
 
-
 # ------------------------------------------------------------------------- #
 # AV-HuBERT feature extraction (visual)
 # ------------------------------------------------------------------------- #
@@ -137,9 +134,7 @@ def extract_avhubert(roi_video, model, layer):
                                         'audio': None}, padding_mask=None, output_layer=args.layer)
     
     feats = feature_vid.squeeze(0)
-
     return feats.cpu().numpy()
-
 
 def calculate_duration(num_frames: int, fps: float) -> float:
     return float(num_frames) / float(fps)
@@ -194,8 +189,7 @@ def mouth_tracking(video, mouth_w=64, mouth_h= 64):
     
         frames.append(avhubert_roi)
     vidcap.release()
-   
-    
+       
     return np.stack(frames)
 
 # ------------------------------------------------------------------------- #
@@ -240,7 +234,6 @@ def process_features():
                     failed_count += 1
                     continue
                     
-
         logger.info("=" * 70)
         logger.info(f"Successfully processed: {processed_count} utterances")
         if failed_count > 0:
@@ -252,7 +245,6 @@ def process_features():
         sys.exit(1)
 
     return utt2dur_data
-
 
 # ------------------------------------------------------------------------- #
 # utt2dur writer
@@ -276,7 +268,6 @@ def write_utt2dur(utt2dur_data: dict):
     except Exception as e:
         logger.error(f"Failed to write utt2dur: {e}")
 
-
 # ------------------------------------------------------------------------- #
 # Main
 # ------------------------------------------------------------------------- #
@@ -284,4 +275,4 @@ if __name__ == "__main__":
     utt2dur = process_features()
     write_utt2dur(utt2dur)
     logger.info("AV-HuBERT feature extraction completed successfully!")
-
+    

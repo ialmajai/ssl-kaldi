@@ -93,7 +93,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train and/or apply PCA on Kaldi features"
     )
-    parser.add_argument("--mode", choices=["train", "apply", "both"],
+    parser.add_argument("--mode", choices=["train", "apply"],
                         required=True)
     parser.add_argument("--feats_scp", required=True)
     parser.add_argument("output", type=str, help="Output: ark:path/to/output.ark or ark:- for stdout")

@@ -2,7 +2,6 @@
 #
 # Copyright 2025 .  Apache 2.0.
 # Modified by Ibrahim Almajai 2024
-# To be run from one directory above this script.
 
 
 if [ $# != 1 ]; then
@@ -13,7 +12,6 @@ fi
 export LC_ALL=C
 
 GRIDROOT=$1
-
 
 tmpdir=data/local/tmp
 mkdir -p $tmpdir
@@ -65,7 +63,6 @@ align_dir_to_text() {
   find "$align_root" "${find_args[@]}" | sort -k1 > "$out_text"
 }
 
-
 echo "Started train data prep. ..."
 
 (
@@ -73,12 +70,7 @@ echo "Started train data prep. ..."
 	  sed '/\/s22\//d' | sed '/MACOSX/d'  | sort ;
 ) | perl -ane ' m:/sa\d.mpg:i || m:/sb\d\d.mpg:i || print; '  > $tmpdir/train.flist
 
-
-#cat $tmpdir/train.flist | tr -s '//' '/'  > tmp
-#mv tmp $tmpdir/train.flist
-
 local/flist2scp.pl $tmpdir/train.flist | sort > $dir/video.scp
-
 
 align_dir_to_text \
   "$GRIDROOT/alignments" \
@@ -87,7 +79,6 @@ align_dir_to_text \
 
 cat $dir/video.scp | perl -ane 'm/^((\w+)-\w+) / || die; print "$1 $2\n"' > $dir/utt2spk
 utils/utt2spk_to_spk2utt.pl $dir/utt2spk > $dir/spk2utt
-
 
 echo "Started test data prep. ..."
 
@@ -98,8 +89,6 @@ mkdir -p $dir
   find -L $GRIDROOT -iname '*.mpg' | sed -n -e '/\/s1\//p' -e '/\/s2\//p' -e '/\/s20\//p' -e '/\/s22\//p'\
 	  |  sed '/MACOSX/d' | sort ;
 ) | perl -ane ' m:/sa\d.mpg:i || m:/sb\d\d.mpg:i || print; '  > $tmpdir/test.flist
-
-
 
 local/flist2scp.pl $tmpdir/test.flist | sort > $dir/video.scp
 
@@ -112,6 +101,3 @@ sleep 0.25
 
 cat $dir/video.scp | perl -ane 'm/^((\w+)-\w+) / || die; print "$1 $2\n"' > $dir/utt2spk
 utils/utt2spk_to_spk2utt.pl $dir/utt2spk > $dir/spk2utt
-
-
-

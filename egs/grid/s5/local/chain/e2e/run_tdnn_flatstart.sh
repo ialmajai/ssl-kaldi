@@ -106,7 +106,6 @@ if [ $stage -le 2 ]; then
   tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
   linear-component name=prefinal-l dim=192 $linear_opts
 
-
   prefinal-layer name=prefinal-chain input=prefinal-l $prefinal_opts big-dim=768 small-dim=192
   output-layer name=output include-log-softmax=false dim=$num_targets $output_opts
 
