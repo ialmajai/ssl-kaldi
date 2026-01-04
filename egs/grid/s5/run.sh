@@ -11,11 +11,11 @@ njtest=4
 encoder_layer=9
 pca_dim=30
 
-datasrc=download/grid-corpus
+datasrc=grid-corpus
 ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt"
 
-raw_feats_dir=feats-raw
-pca_feats_dir=feats-pca
+
+
 lang=data/lang
 dict=data/local/dict
 langtmp=data/local/lang
@@ -57,9 +57,8 @@ if [ $stage -le 2 ]; then
     echo "preparing features"
     local/copy_data_dir.sh data/$x data/${x}_raw 
     local/make_avhubert.sh --cmd "$decode_cmd"  --nj 6  --ckpt $ckpt \
-      data/${x}_raw exp/make_features_raw/$x $raw_feats_dir  || exit 1;
-    steps/compute_cmvn_stats.sh data/${x}_raw \
-      exp/make_features_raw/$x $raw_feats_dir  || exit 1;
+      data/${x}_raw  || exit 1;
+    steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
   done
 fi
@@ -68,7 +67,9 @@ if [ $stage -le 3 ]; then
   pca_model="pca-${pca_dim}d.pt"    
   pca_dir="pca"
   mkdir -p $pca_dir
-  if [ ! -f $pca_dir/$pca_model ]; then
+ 
+  if [[ ! -f "$pca_dir/$pca_model" ] || [ "$pca_dir/$pca_model" \
+    -ot data/train_raw/feats.scp ]]; then
     echo "Training PCA model"
     mkdir -p $pca_dir
     python local/pca.py  --pca_dim=$pca_dim --mode=train \
@@ -79,9 +80,9 @@ if [ $stage -le 3 ]; then
 
   for x in train test; do
     echo "preparing pca features"    
-    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
-          data/${x}_raw data/${x} exp/make_features_pca/$x $pca_feats_dir  || exit 1;
-    steps/compute_cmvn_stats.sh data/$x exp/make_features_pca/$x $pca_feats_dir  || exit 1;
+    local/make_pca_features.sh --cmd "$decode_cmd" --nj 15 --pca-model $pca_dir/$pca_model \
+          data/${x}_raw data/${x}   || exit 1;
+    steps/compute_cmvn_stats.sh data/$x   || exit 1;
     utils/fix_data_dir.sh data/$x
   done
 fi
@@ -135,7 +136,7 @@ if [ $stage -le 8 ]; then
   # Do LDA+MLLT+SAT, and decode.
   steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT data/train \
     data/lang exp/tri2b_ali exp/tri3b
-:q    
+    
   utils/mkgraph.sh data/lang exp/tri3b exp/tri3b/graph
   steps/decode_fmllr.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
       exp/tri3b/graph data/test exp/tri3b/decode

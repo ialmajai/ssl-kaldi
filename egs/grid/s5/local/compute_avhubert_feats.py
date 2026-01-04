@@ -96,7 +96,6 @@ logger.info(f"Using device: {device}")
 logger.info(dlib.DLIB_USE_CUDA)
 logger.info(dlib.cuda.get_num_devices())
 
-
 # ------------------------------------------------------------------------- #
 # dlib: face detector + landmark predictor
 # ------------------------------------------------------------------------- #
@@ -108,7 +107,6 @@ if not pred_path.is_file():
 logger.info(f"Loading dlib face detector and landmark predictor from {pred_path}")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(str(pred_path))
-
 
 logger.info("Loading AV-HuBERT model…")
 # load AV-HuBERT
@@ -132,7 +130,6 @@ def extract_avhubert(roi_video, model, layer):
     with torch.no_grad():
         feature_vid, _ = model.extract_finetune(source={'video': roi_video,
                                         'audio': None}, padding_mask=None, output_layer=args.layer)
-    
     feats = feature_vid.squeeze(0)
     return feats.cpu().numpy()
 
@@ -140,7 +137,6 @@ def calculate_duration(num_frames: int, fps: float) -> float:
     return float(num_frames) / float(fps)
 
 def iter_scp_lines(scp_spec):
-    # Support "scp:foo.scp" or "foo.scp"
     if scp_spec.startswith("scp:"):
         scp_path = scp_spec[len("scp:"):]
     else:
@@ -150,46 +146,53 @@ def iter_scp_lines(scp_spec):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            # Split once: utt-id then the rest (path or command)
             utt_id, video_path = line.split(None, 1)
             yield utt_id, video_path
 
-def mouth_tracking(video, mouth_w=64, mouth_h= 64):    
+def mouth_tracking(video, mouth_w=64, mouth_h=64, detect_every=3):
     vidcap = cv2.VideoCapture(video)
+    frames = []
+    prev_box = None
+    frame_idx = 0
     h_width = mouth_w // 2
     h_height = mouth_h // 2
-    frames = []
-    for ind in range(int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))): 
-        success,image = vidcap.read()
-        if not success:
-            continue
-        h, w, _ = image.shape                      
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        # Detect faces in the image
-        faces = detector(gray)    
-        # Get the facial landmarks
-        try:
-            landmarks = predictor(gray, faces[0]).part
-        except:
-            logger.warning(f"Dlib predictor failed at frame {ind} of video {video}")
-            return None    
-        
-        cx = (landmarks(48).x + landmarks(54).x) // 2
-        cy = (landmarks(48).y + landmarks(54).y) // 2
-        
-        x1 = cx - h_width 
-        y1 = cy - h_height
-        x2 = cx + h_width
-        y2 = cy + h_height 
-        
-        y1 = max(0, y1); y2 = min(h, y2)
-        x1 = max(0, x1); x2 = min(w, x2)        
-        roi = gray[y1:y2, x1:x2]        
-        avhubert_roi = cv2.resize(roi, (88,88)) 
     
+    while vidcap.isOpened():
+        success, image = vidcap.read()
+        if not success:
+            break
+        h, w, _ = image.shape    
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        if frame_idx % detect_every == 0 or prev_box is None:
+            faces = detector(gray)
+            if len(faces) == 0:
+                frames.append(np.zeros((88,88), dtype=np.uint8))
+                frame_idx += 1
+                continue
+                
+            landmarks = predictor(gray, faces[0]).part
+            cx = (landmarks(48).x + landmarks(54).x) // 2
+            cy = (landmarks(48).y + landmarks(54).y) // 2
+            
+            x1 = cx - h_width 
+            y1 = cy - h_height
+            x2 = cx + h_width
+            y2 = cy + h_height 
+            
+            y1 = max(0, y1); y2 = min(h, y2)
+            x1 = max(0, x1); x2 = min(w, x2)
+            prev_box = (x1, y1, x2, y2) 
+        else:            
+            pass  # use prev_box
+
+        roi = gray[prev_box[1]:prev_box[3], prev_box[0]:prev_box[2]]
+        avhubert_roi = cv2.resize(roi, (88,88), interpolation=cv2.INTER_LINEAR)
         frames.append(avhubert_roi)
+        
+        frame_idx += 1
+
     vidcap.release()
-       
     return np.stack(frames)
 
 # ------------------------------------------------------------------------- #
