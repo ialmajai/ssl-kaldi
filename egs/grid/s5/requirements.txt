@@ -1,3 +1,5 @@
-pip install numpy<1.24
-pip install omegaconf==2.0.6 
-pip install "hydra-core>=1.0.7,<1.1"
+pip==24.0
+numpy==1.19.5
+omegaconf==2.0.6 
+hydra-core>=1.0.7,<1.1
+zenodo_get

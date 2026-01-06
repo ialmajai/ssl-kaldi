@@ -8,12 +8,13 @@ stage=0
 nj=8
 njtest=4
 
-encoder_layer=9
+encoder_layer=12
 pca_dim=30
+pca_train_utts=28000
 
 datasrc=grid-corpus
-ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt"
-
+avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
+avhubert_path=/data/git/kaldi/egs/grid/s5/av_hubert
 
 
 lang=data/lang
@@ -33,6 +34,10 @@ numGaussSAT=40000
 . cmd.sh
 . path.sh
 . ./utils/parse_options.sh
+
+if [ $stage -le -1 ]; then
+  python local/download_grid_corpus.py --dir $datasrc
+fi
 
 if [ $stage -le 0 ]; then 	
   local/grid_data_prep.sh $datasrc
@@ -55,27 +60,28 @@ fi
 if [ $stage -le 2 ]; then
   for x in test train; do
     echo "preparing features"
+    rm -rf data/${x}_raw
     local/copy_data_dir.sh data/$x data/${x}_raw 
-    local/make_avhubert.sh --cmd "$decode_cmd"  --nj 6  --ckpt $ckpt \
-      data/${x}_raw  || exit 1;
+    local/make_avhubert.sh --cmd "$decode_cmd"  --nj 3  --ckpt $avhubert_ckpt \
+     --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
   done
 fi
 
 if [ $stage -le 3 ]; then
-  pca_model="pca-${pca_dim}d.pt"    
-  pca_dir="pca"
+  pca_model=pca-${pca_dim}d.pt    
+  pca_dir=pca
   mkdir -p $pca_dir
  
-  if [[ ! -f "$pca_dir/$pca_model" ] || [ "$pca_dir/$pca_model" \
-    -ot data/train_raw/feats.scp ]]; then
+  if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
+	  -ot data/train_raw/feats.scp ]] ; then
     echo "Training PCA model"
     mkdir -p $pca_dir
     python local/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
-      --max_utts=28000 $pca_dir/$pca_model
+      --max_utts=$pca_train_utts $pca_dir/$pca_model
   fi
 
   for x in train test; do

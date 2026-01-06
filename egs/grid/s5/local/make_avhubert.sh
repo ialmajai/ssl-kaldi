@@ -6,7 +6,8 @@ compress=true
 write_utt2num_frames=true
 write_utt2dur=true
 layer=9
-ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5_fixed.pt"
+ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt"
+avhubert_path=/data/git/kaldi/egs/grid/s5/av_hubert
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -94,7 +95,8 @@ if [ -f $data/segments ]; then
   $cmd JOB=1:$nj $logdir/make_mhubert_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
     python local/compute_avhubert_feats.py --layer $layer $write_utt2dur_opt \
-      --ckpt $ckpt ark:- ark:- \|  copy-feats --compress=$compress $write_num_frames_opt ark:- \
+      --ckpt $ckpt --path $avhubert_path ark:- ark:- \|  copy-feats \
+      --compress=$compress $write_num_frames_opt ark:- \
       ark,scp:$ssldir/raw_mhubert_$name.JOB.ark,$ssldir/raw_mhubert_$name.JOB.scp \
      || exit 1;
 
@@ -109,7 +111,7 @@ else
 
   $cmd JOB=1:$nj $logdir/make_mhubert_${name}.JOB.log \
     python local/compute_avhubert_feats.py --layer $layer  $write_utt2dur_opt \
-      --ckpt $ckpt scp,p:$logdir/video_${name}.JOB.scp ark:- \| \
+      --ckpt $ckpt --path $avhubert_path scp,p:$logdir/video_${name}.JOB.scp ark:- \| \
       copy-feats $write_num_frames_opt --compress=$compress ark:- \
       ark,scp:$ssldir/raw_mhubert_$name.JOB.ark,$ssldir/raw_mhubert_$name.JOB.scp \
       || exit 1;

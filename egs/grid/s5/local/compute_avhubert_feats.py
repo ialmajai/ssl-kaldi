@@ -20,15 +20,6 @@ import cv2
 import dlib
 from kaldiio import ReadHelper, WriteHelper
 
-avhubert_path = '/data/git/kaldi/egs/grid/s5/av_hubert'
-sys.path.insert(0, avhubert_path + '/fairseq')
-sys.path.insert(0, avhubert_path )
-from argparse import Namespace
-import fairseq
-from avhubert.utils import Compose, CenterCrop, Normalize
-import avhubert.hubert_pretraining, avhubert.hubert
-from fairseq import checkpoint_utils, options, tasks, utils
-
 # ------------------------------------------------------------------------- #
 # Logging
 # ------------------------------------------------------------------------- #
@@ -64,6 +55,13 @@ parser.add_argument(
     required=True,
     help="Path to AV-HuBERT checkpoint (.pt)",
 )
+
+parser.add_argument(
+    "--path",
+    type=str,
+    required=True,
+    help="Path to cloned AV-HuBERT",
+)
 parser.add_argument(
     "-l",
     "--layer",
@@ -86,6 +84,17 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+
+avhubert_path = args.path
+sys.path.insert(0, avhubert_path + '/fairseq')
+sys.path.insert(0, avhubert_path )
+from argparse import Namespace
+import fairseq
+from avhubert.utils import Compose, CenterCrop, Normalize
+import avhubert.hubert_pretraining, avhubert.hubert
+from fairseq import checkpoint_utils, options, tasks, utils
+
 
 # ------------------------------------------------------------------------- #
 # Device
