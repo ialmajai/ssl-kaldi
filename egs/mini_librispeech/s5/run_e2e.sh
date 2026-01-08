@@ -19,12 +19,12 @@ if [ $stage -le 3 ]; then
   echo "$0: perturbing the training data to allowed lengths"
   utils/data/get_utt2dur.sh data/$trainset  # necessary for the next command
 
-  # 30 in the following command means the allowed lengths are spaced
-  # by 30% change in length.
+  # 12 in the following command means the allowed lengths are spaced
+  # by 12% change in length.
   utils/data/perturb_speed_to_allowed_lengths.py --frame-length 20 \
                                               --frame-shift 20 \
                                               --frame-subsampling-factor ${frame_subsampling_factor} \
-                                                30 data/${trainset} \
+                                                12 data/${trainset} \
                                                 data/${trainset}_spe2e
   cat data/${trainset}_spe2e/utt2dur | \
     awk '{print $1 " " substr($1,5)}' >data/${trainset}_spe2e/utt2uniq

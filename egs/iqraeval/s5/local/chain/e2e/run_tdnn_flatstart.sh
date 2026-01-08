@@ -118,8 +118,7 @@ if [ $stage -le 3 ]; then
     --chain.apply-deriv-weights false \
     --egs.dir "$common_egs_dir" \
     --egs.stage $get_egs_stage \
-    --egs.opts="--frame-subsampling-factor ${frame_subsampling_factor} \
-                --max-shuffle-jobs-run 6" \
+    --egs.opts="--max-shuffle-jobs-run 6" \
     --trainer.dropout-schedule $dropout_schedule \
     --trainer.num-chunk-per-minibatch $minibatch_size \
     --trainer.frames-per-iter $frames_per_iter \
@@ -134,7 +133,6 @@ if [ $stage -le 3 ]; then
     --cleanup.remove-egs true \
     --feat-dir data/${train_set} \
     --chain.frame-subsampling-factor ${frame_subsampling_factor} \
-    --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --use-gpu=wait \
     --tree-dir $treedir \
     --dir $dir  || exit 1;

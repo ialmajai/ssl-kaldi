@@ -79,7 +79,8 @@ try:
     )
     model.to(device)
     model.eval()
-   
+    model.encoder.layers = model.encoder.layers[:args.layer]
+
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"HuBERT model loaded: {total_params:,} parameters")
 except Exception as e:

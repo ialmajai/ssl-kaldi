@@ -66,9 +66,10 @@ logger.info("Loading mHuBERT-147 model...")
 try:
     feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained("utter-project/mHuBERT-147")
     model = HubertModel.from_pretrained("utter-project/mHuBERT-147")
+    model.encoder.layers = model.encoder.layers[:args.layer]
     model.to(device)
     model.eval()
-    
+
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model loaded: {total_params:,} parameters")
 except Exception as e:

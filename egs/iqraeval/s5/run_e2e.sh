@@ -11,7 +11,7 @@ stage=0
 encoder_layer=9
 trainset=train
 frame_subsampling_factor=1
-spacing_factor=30
+feats_nj=8
 
 . ./cmd.sh
 . ./path.sh
@@ -24,7 +24,7 @@ if [ $stage -le 2 ]; then
   utils/data/perturb_speed_to_allowed_lengths.py --frame-length 20 \
                                 --frame-shift 20 \
                                 --frame-subsampling-factor ${frame_subsampling_factor} \
-                                $spacing_factor data/${trainset} \
+                                12 data/${trainset} \
                                 data/${trainset}_spe2e_raw
   cat data/${trainset}_spe2e_raw/utt2dur | \
     awk '{print $1 " " substr($1,5)}' >data/${trainset}_spe2e_raw/utt2uniq
@@ -33,7 +33,7 @@ fi
 
 if [ $stage -le 3 ]; then
     featdir=feats-spe2e_raw 
-    local/make_mhubert.sh --cmd "$train_cmd" --nj 4 \
+    local/make_mhubert.sh --cmd "$train_cmd" --nj $feats_nj \
 	    --layer $encoder_layer data/${trainset}_spe2e_raw exp/make_mhubert/${trainset}_spe2e_raw $featdir
     steps/compute_cmvn_stats.sh data/${trainset}_spe2e_raw exp/make_mhubert/${trainset}_spe2e_raw $featdir   
 fi
