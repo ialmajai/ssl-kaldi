@@ -11,6 +11,7 @@ using Kaldi I/O (scp/ark).
 """
 
 import sys
+import os
 import argparse
 import logging
 from pathlib import Path
@@ -122,7 +123,9 @@ logger.info("Loading AV-HuBERT model…")
 logger.info("Loading AV-HuBERT checkpoint...")
 models, cfg, task = checkpoint_utils.load_model_ensemble_and_task([args.ckpt])
 model = models[0].to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-model.eval()    
+model.eval()
+# Remove unused layers 
+model.encoder.layers = model.encoder.layers[:args.layer]
 logger.info(f"Loaded checkpoint from {args.ckpt}")    
 
 transform = Compose([
@@ -157,49 +160,81 @@ def iter_scp_lines(scp_spec):
                 continue
             utt_id, video_path = line.split(None, 1)
             yield utt_id, video_path
+            
+# ------------------------------------------------------------------------- #
+# Face tracking and ROI extraction
+# ------------------------------------------------------------------------- #
+def mouth_tracking(video, mouth_w=64, mouth_h=64, detect_every=1):
+    """Extract mouth region of interest (ROI) from video frames using dlib face detection.
 
-def mouth_tracking(video, mouth_w=64, mouth_h=64, detect_every=3):
-    vidcap = cv2.VideoCapture(video)
+    Args:
+        video (str): Path to the input video file.
+        mouth_w (int, optional): Width of the mouth ROI. Defaults to 64.
+        mouth_h (int, optional): Height of the mouth ROI. Defaults to 64.
+        detect_every (int, optional): Detect face every N frames. Defaults to 3.
+
+    Returns:
+        np.ndarray: Stack of mouth ROI frames resized to 88x88 pixels.
+    """
+   
+    base, _ = os.path.splitext(video)
+    landmarks_file = base + ".landmarks.npz"
+
+    if Path(landmarks_file).exists():
+        landmarks = np.load(landmarks_file)["landmarks"]
+    else:
+        vidcap = cv2.VideoCapture(video)
+        landmarks = []
+        frame_idx = 0
+
+        while vidcap.isOpened():
+            success, image = vidcap.read()
+            if not success:
+                break
+
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+            if frame_idx % detect_every == 0:
+                faces = detector(gray)
+                if len(faces) == 0:
+                    lm = np.zeros((68, 2), dtype=np.int16)
+                    landmarks.append(lm)
+                else:
+                    shape = predictor(gray, faces[0])
+                    lm = np.array([[p.x, p.y] for p in shape.parts()])
+                    landmarks.append(lm)
+            else:
+                landmarks.append(landmarks[-1])
+
+            frame_idx += 1
+
+        vidcap.release()
+                
+        np.savez_compressed(landmarks_file, landmarks=np.array(landmarks, dtype=np.int16))
+        
+    # ---------------------------
+    # ROI extraction from landmarks
+    # ---------------------------
     frames = []
-    prev_box = None
-    frame_idx = 0
     h_width = mouth_w // 2
     h_height = mouth_h // 2
-    
-    while vidcap.isOpened():
-        success, image = vidcap.read()
-        if not success:
-            break
-        h, w, _ = image.shape    
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
-        if frame_idx % detect_every == 0 or prev_box is None:
-            faces = detector(gray)
-            if len(faces) == 0:
-                frames.append(np.zeros((88,88), dtype=np.uint8))
-                frame_idx += 1
-                continue
-                
-            landmarks = predictor(gray, faces[0]).part
-            cx = (landmarks(48).x + landmarks(54).x) // 2
-            cy = (landmarks(48).y + landmarks(54).y) // 2
-            
-            x1 = cx - h_width 
-            y1 = cy - h_height
-            x2 = cx + h_width
-            y2 = cy + h_height 
-            
-            y1 = max(0, y1); y2 = min(h, y2)
-            x1 = max(0, x1); x2 = min(w, x2)
-            prev_box = (x1, y1, x2, y2) 
-        else:            
-            pass  # use prev_box
 
-        roi = gray[prev_box[1]:prev_box[3], prev_box[0]:prev_box[2]]
-        avhubert_roi = cv2.resize(roi, (88,88), interpolation=cv2.INTER_LINEAR)
-        frames.append(avhubert_roi)
-        
-        frame_idx += 1
+    vidcap = cv2.VideoCapture(video)
+    for lm in landmarks:
+        success, image = vidcap.read()
+        if not success or not np.any(lm):
+            continue
+
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        cx = (lm[48, 0] + lm[54, 0]) // 2
+        cy = (lm[48, 1] + lm[54, 1]) // 2
+
+        x1, y1 = max(0, cx - h_width), max(0, cy - h_height)
+        x2, y2 = cx + h_width, cy + h_height
+
+        roi = gray[y1:y2, x1:x2]
+        frames.append(cv2.resize(roi, (88, 88)))
 
     vidcap.release()
     return np.stack(frames)
@@ -207,7 +242,7 @@ def mouth_tracking(video, mouth_w=64, mouth_h=64, detect_every=3):
 # ------------------------------------------------------------------------- #
 # Main Kaldi processing loop
 # ------------------------------------------------------------------------- #
-def process_features():
+def process_features() -> dict:
     logger.info("=" * 70)
     logger.info(f"Input:  {args.input}")
     logger.info(f"Output: {args.output}")
@@ -261,7 +296,7 @@ def process_features():
 # ------------------------------------------------------------------------- #
 # utt2dur writer
 # ------------------------------------------------------------------------- #
-def write_utt2dur(utt2dur_data: dict):
+def write_utt2dur(utt2dur_data: dict) -> None:
     if not args.write_utt2dur:
         return
 
@@ -288,3 +323,5 @@ if __name__ == "__main__":
     write_utt2dur(utt2dur)
     logger.info("AV-HuBERT feature extraction completed successfully!")
     
+
+# %%

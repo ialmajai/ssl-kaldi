@@ -159,4 +159,4 @@ if (( nf < nu - nu/20 )); then
   exit 1
 fi
 
-echo "$0: Succeeded creating mHUBERT features for $name"
+echo "$0: Succeeded creating HuBert features for $name"

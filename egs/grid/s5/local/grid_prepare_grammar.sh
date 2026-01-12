@@ -26,7 +26,7 @@ cp -r $lang ${lang}_ug
 cut -d' ' -f2- data/train/text > txt
 utils/make_unigram_grammar.pl <txt> ${lang}_ug/G.txt
 compile ${lang}_ug/G.txt ${lang}_ug/G.fst
-#rm txt
+rm txt
  
 # Draw the FST
 #echo "fstdraw --isymbols=$lang/words.txt --osymbols=$lang/words.txt $lang/G.fst | dot -Tpdf > local/G.pdf"

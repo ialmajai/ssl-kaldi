@@ -16,10 +16,10 @@ if [ -f path.sh ]; then . ./path.sh; fi
 
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
   cat >&2 <<EOF
-Usage: $0 [options] <data-dir> [<log-dir> [<mhubert-dir>] ]
+Usage: $0 [options] <data-dir> [<log-dir> [<avhubert-dir>] ]
  e.g.: $0 data/train
 Note: <log-dir> defaults to <data-dir>/log, and
-      <mhubert-dir> defaults to <data-dir>/data.
+      <avhubert-dir> defaults to <data-dir>/data.
       
 EOF
    exit 1;
@@ -66,7 +66,7 @@ done
 vtln_opts=""
 
 for n in $(seq $nj); do
-  utils/create_data_link.pl $ssldir/raw_mhubert_$name.$n.ark
+  utils/create_data_link.pl $ssldir/raw_avhubert_$name.$n.ark
 done
 
 if $write_utt2num_frames; then
@@ -92,12 +92,12 @@ if [ -f $data/segments ]; then
   utils/split_scp.pl $data/segments $split_segments || exit 1;
   rm $logdir/.error 2>/dev/null
 
-  $cmd JOB=1:$nj $logdir/make_mhubert_${name}.JOB.log \
+  $cmd JOB=1:$nj $logdir/make_avhubert_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
     python local/compute_avhubert_feats.py --layer $layer $write_utt2dur_opt \
       --ckpt $ckpt --path $avhubert_path ark:- ark:- \|  copy-feats \
       --compress=$compress $write_num_frames_opt ark:- \
-      ark,scp:$ssldir/raw_mhubert_$name.JOB.ark,$ssldir/raw_mhubert_$name.JOB.scp \
+      ark,scp:$ssldir/raw_avhubert_$name.JOB.ark,$ssldir/raw_avhubert_$name.JOB.scp \
      || exit 1;
 
 else
@@ -143,7 +143,7 @@ fi
 frame_shift=0.04
 echo ${frame_shift:-'0.04'} > $data/frame_shift
 
-rm $logdir/wav_${name}.*.scp  $logdir/segments.* \
+rm $logdir/video_${name}.*.scp  $logdir/segments.* \
    $logdir/utt2num_frames.* $logdir/utt2dur.* 2>/dev/null
 
 nf=$(wc -l < $data/feats.scp)
@@ -159,4 +159,4 @@ if (( nf < nu - nu/20 )); then
   exit 1
 fi
 
-echo "$0: Succeeded creating mHUBERT features for $name"
+echo "$0: Succeeded creating AV-HuBert features for $name"

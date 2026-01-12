@@ -18,8 +18,21 @@ conda install -c conda-forge dlib==19.18.0
 
 | System    | Setting    | Grammar/LM   | Data augmentation |   WER (unseen speaker) |
 | ------- | ------- | ------- | ------- | ------- |
-| LipNet Grid | unseen speakers | Fixed GRID grammar    | Spatial/temporal jitter, mirroring, etc.  | 11.4% |<200b>
-| AV‑HuBERT Grid e2e | unseen speakers |    Fixed GRID grammar |    None |  7.15% |
+| LipNet | unseen speakers | Fixed GRID grammar    | Spatial/temporal jitter, mirroring, etc.  | 11.4% |<200b>
+| SSL-Kaldi GMM-HMM | unseen speakers |    Fixed GRID grammar |    None |  6.36% |
+
+## More Results (WER)
+- 30-dimensional PCA for HMM-GMM systems
+- Features usampled to 50fps give better results 
+- Layer 9 and layer 12 are selected for base and large AV-HuBert
+- Speaker adaption (MLLT+SAT) outperform TDNN systems trained on raw features 
+
+| AV-HuBerT       | Monophone  | Triphone(Δ+ΔΔ) | Triphone + LDA+MLLT | Triphone + LDA+MLLT+SAT |
+| ---------       | ----- | ----- | ----- |----- |
+| base (25fps)    | 44.59 | 22.23  | 15.39  | 13.78 |
+| large (25fps)   | - |  - | -  | - |
+| base (50fps)    | 29.58 | 12.44 | 9.81  | 8.79 |
+| large (50fps)   | 19.34 |  8.74 | 7.32  | **6.36** |
 
 
 ### Tracking & Word Alignment Demo
@@ -29,7 +42,7 @@ conda install -c conda-forge dlib==19.18.0
 
 ## Citation
 
-If you use this recipe, please cite **ssl-kaldi** and the [AV‑HuBERT](https://github.com/facebookresearch/av_hubert) paper
+If you use this recipe, please cite **ssl-kaldi**, [AV‑HuBERT](https://github.com/facebookresearch/av_hubert), and [Grid Corpus](https://spandh.dcs.shef.ac.uk/gridcorpus)
 ```
 @misc{ssl_kaldi,
 author = {Ibrahim Almajai},
@@ -44,6 +57,17 @@ note = {Accessed: 2025-12}
     title = {Learning Audio-Visual Speech Representation by Masked Multimodal Cluster Prediction},
     journal = {arXiv preprint arXiv:2201.02184}
     year = {2022}
+}
+
+@article{cooke2006audio,
+  title={An audio-visual corpus for speech perception and automatic speech recognition},
+  author={Cooke, Martin and Barker, Jon and Cunningham, Stuart and Shao, Xu},
+  journal={The Journal of the Acoustical Society of America},
+  volume={120},
+  number={5},
+  pages={2421--2424},
+  year={2006},
+  publisher={AIP Publishing}
 }
 ```
 Contact

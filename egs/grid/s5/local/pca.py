@@ -9,6 +9,7 @@ import torch
 import numpy as np
 from torchdr import IncrementalPCA
 from kaldiio import ReadHelper, WriteHelper
+import torch.nn.functional as F
 
 # ------------------------------------------------------------
 logging.basicConfig(
@@ -42,8 +43,30 @@ def train_pca(feats_scp, ipca, max_utts):
 
     logger.info(f"[train] done: processed={processed}, skipped={skipped}")
 
+def interpolate_pca_feats(feats, upsample_factor=1, mode="linear"):
+    """
+    feats: torch.Tensor [T, D]
+    upsample_factor: int >= 1
+    returns: torch.Tensor [T * upsample_factor, D]
+    """
+    if upsample_factor <= 1:
+        return feats
 
-def apply_pca(feats_scp, writer_spec, ipca):    
+    T, D = feats.shape
+
+    x = feats.transpose(0, 1).unsqueeze(0)
+
+    x_up = F.interpolate(
+        x,
+        scale_factor=upsample_factor,
+        mode=mode,
+        align_corners=False if mode == "linear" else None
+    )
+
+    return x_up.squeeze(0).transpose(0, 1)
+
+
+def apply_pca(feats_scp, writer_spec, ipca, interp_mode, upsample_factor):    
 
     processed = 0
 
@@ -53,6 +76,13 @@ def apply_pca(feats_scp, writer_spec, ipca):
             feats_t = torch.from_numpy(feats).to(ipca.device)
             
             feats_pca = ipca.transform(feats_t)
+
+            if interp_mode:
+                feats_pca = interpolate_pca_feats(
+                feats_pca,
+                upsample_factor=upsample_factor,
+                mode=interp_mode
+            )
 
             writer(utt, feats_pca.cpu().numpy())
             processed += 1
@@ -73,6 +103,11 @@ def main():
     parser.add_argument("--pca_dim", type=int, default=30)
     parser.add_argument("--max_utts", type=int, default=-1)
     parser.add_argument("--pca_model", default="ipca.pt")
+    parser.add_argument("--interp_mode", default="None",
+                        choices=["linear", "nearest"],
+                        help="Interpolation mode for PCA features")
+    parser.add_argument("--upsample_factor",    type=int,    default=2, 
+                        help="Temporal upsampling factor (e.g. 2 = double frame_rate)")
     parser.add_argument("output", type=str, default="ark:-")
     args = parser.parse_args()
 
@@ -98,7 +133,8 @@ def main():
     if args.mode == "apply":
         logger.info("Applying PCA…")
         ipca = torch.load(args.pca_model)
-        apply_pca(args.feats_scp, args.output, ipca)
+        apply_pca(args.feats_scp, args.output, ipca, args.interp_mode,
+                  args.upsample_factor)
 
     logger.info("All done.")
 

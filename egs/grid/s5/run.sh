@@ -7,15 +7,24 @@ set -e
 stage=0
 nj=8
 njtest=4
+njfeats=10
 
-encoder_layer=12
 pca_dim=30
 pca_train_utts=28000
+interp_mode=nearest
+upsample_factor=2
 
+#path to grid corpus dataset
 datasrc=grid-corpus
-avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
-avhubert_path=/data/git/kaldi/egs/grid/s5/av_hubert
 
+# avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
+# encoder_layer=12
+avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt
+encoder_layer=9
+
+
+#path to avhubert codebase
+avhubert_path=/data/git/ssl-kaldi/egs/grid/s5/av_hubert
 
 lang=data/lang
 dict=data/local/dict
@@ -45,14 +54,13 @@ fi
 
 if [ $stage -le 1 ]; then
   echo "preparing dictionary and lang"
-
   local/chime1_prepare_dict.sh $dict || exit 1
    
   utils/prepare_lang.sh --num-sil-states 5 \
      --num-nonsil-states 3 \
      --position-dependent-phones false \
      --share-silence-phones true \
-     $dict "!SIL"  $langtmp $lang || exit 1
+     $dict "a"  $langtmp $lang || exit 1
 
   local/grid_prepare_grammar.sh || exit 1
 fi
@@ -62,7 +70,7 @@ if [ $stage -le 2 ]; then
     echo "preparing features"
     rm -rf data/${x}_raw
     local/copy_data_dir.sh data/$x data/${x}_raw 
-    local/make_avhubert.sh --cmd "$decode_cmd"  --nj 3  --ckpt $avhubert_ckpt \
+    local/make_avhubert.sh --cmd "$decode_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
      --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
@@ -81,12 +89,16 @@ if [ $stage -le 3 ]; then
     python local/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
-      --max_utts=$pca_train_utts $pca_dir/$pca_model
+      --max_utts=$pca_train_utts \
+      --interp_mode=$interp_mode --upsample_factor=$upsample_factor \
+      $pca_dir/$pca_model
   fi
 
   for x in train test; do
     echo "preparing pca features"    
-    local/make_pca_features.sh --cmd "$decode_cmd" --nj 15 --pca-model $pca_dir/$pca_model \
+    local/make_pca_features.sh --cmd "$decode_cmd" --nj 15 \
+	  --interp-mode $interp_mode --upsample-factor $upsample_factor \
+	  --pca-model $pca_dir/$pca_model \
           data/${x}_raw data/${x}   || exit 1;
     steps/compute_cmvn_stats.sh data/$x   || exit 1;
     utils/fix_data_dir.sh data/$x
@@ -173,5 +185,4 @@ if [ $stage -le 10 ]; then
   steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
 fi
 
-exit 0
-
+exit 0;

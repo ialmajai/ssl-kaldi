@@ -21,14 +21,14 @@ num_epochs=10
 num_jobs_initial=2
 num_jobs_final=5
 #Suggested:
-minibatch_size=140=64,32/200=32,16/500=16,8
+minibatch_size=150=64,32/200=32,16/500=16,8
 common_egs_dir=
 l2_regularize=0.00005
 frames_per_iter=500000
 cmvn_opts="--norm-means=false --norm-vars=false"
-train_set=train_raw
-test_set=test_raw
-frame_subsampling_factor=1
+train_set=train_raw_upsampled
+test_set=test_raw_upsampled
+frame_subsampling_factor=2
 
 # End configuration section.
 echo "$0 $@"  # Print the command line for logging
@@ -67,14 +67,16 @@ if [ $stage -le 1 ]; then
   mkdir -p $treedir/log
   $train_cmd $treedir/log/make_phone_lm.log \
              cat data/$train_set/text \| \
-             steps/nnet3/chain/e2e/text_to_phones.py --between-silprob 0.1 \
+             steps/nnet3/chain/e2e/text_to_phones.py --between-silprob 0.0 \
              data/lang \| \
              utils/sym2int.pl -f 2- data/lang/phones.txt \| \
              chain-est-phone-lm --num-extra-lm-states=2000 \
              ark:- $treedir/phone_lm.fst
   steps/nnet3/chain/e2e/prepare_e2e.sh --nj 20 --cmd "$train_cmd" \
-                                       --shared-phones true \
-                                       data/$train_set $lang $treedir
+                                       --shared-phones false \
+				       --min-biphone-count 50 \
+				       --min-monophone-count 10 \
+				       data/$train_set $lang $treedir
 fi
 
 if [ $stage -le 2 ]; then
@@ -96,14 +98,14 @@ if [ $stage -le 2 ]; then
   tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
   tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
   tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=0
-  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf9 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf10 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf11 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf12 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
+  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf9 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf10 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf11 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf12 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
   linear-component name=prefinal-l dim=192 $linear_opts
 
   prefinal-layer name=prefinal-chain input=prefinal-l $prefinal_opts big-dim=768 small-dim=192
@@ -123,7 +125,7 @@ if [ $stage -le 3 ]; then
     --chain.apply-deriv-weights false \
     --egs.dir "$common_egs_dir" \
     --egs.stage $get_egs_stage \
-    --egs.opts "--frame-subsampling-factor ${frame_subsampling_factor}" \
+    --egs.opts "" \
     --trainer.dropout-schedule $dropout_schedule \
     --trainer.num-chunk-per-minibatch $minibatch_size \
     --trainer.frames-per-iter $frames_per_iter \
@@ -131,14 +133,13 @@ if [ $stage -le 3 ]; then
     --trainer.optimization.momentum 0 \
     --trainer.optimization.num-jobs-initial $num_jobs_initial \
     --trainer.optimization.num-jobs-final $num_jobs_final \
-    --trainer.optimization.initial-effective-lrate 0.002 \
-    --trainer.optimization.final-effective-lrate 0.0002 \
+    --trainer.optimization.initial-effective-lrate 0.004 \
+    --trainer.optimization.final-effective-lrate 0.0004 \
     --trainer.optimization.shrink-value 1.0 \
     --trainer.max-param-change 2.0 \
     --cleanup.remove-egs true \
     --feat-dir data/${train_set} \
     --chain.frame-subsampling-factor ${frame_subsampling_factor} \
-    --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --use-gpu=wait \
     --tree-dir $treedir \
     --dir $dir  || exit 1;
@@ -154,13 +155,13 @@ if [ $stage -le 4 ]; then
 fi
 
 if [ $stage -le 5 ]; then
-  frames_per_chunk=140
+  frames_per_chunk=150
   rm $dir/.error 2>/dev/null || true
 
       nspk=$(wc -l <data/test/spk2utt)  
       steps/nnet3/decode.sh \
         --acwt 1.0 --post-decode-acwt 10.0 \
-        --lattice-beam 3.0 \
+        --lattice-beam 2.0 \
         --extra-left-context-initial 0 \
         --extra-right-context-final 0 \
         --frames-per-chunk $frames_per_chunk \
