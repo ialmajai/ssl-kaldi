@@ -42,7 +42,7 @@ parser.add_argument(
     "-l", "--layer", 
     type=int, 
     default=9,
-    help="Encoder layer to extract (0-12)"
+    help="Encoder layer to extract features"
 )
 parser.add_argument(
     "--write-utt2dur",

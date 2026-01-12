@@ -160,7 +160,7 @@ if [ $stage -le 5 ]; then
           --extra-right-context-final 0 \
           --frames-per-chunk $frames_per_chunk \
           --nj $decode_jobs --cmd "$decode_cmd"  --num-threads 4 \
-          $treedir/graph_$lmtype data/${data}_768 \
+          $treedir/graph_$lmtype data/${data}_raw \
           ${dir}/decode_${lmtype}_${data_affix} || exit 1
   done
 fi

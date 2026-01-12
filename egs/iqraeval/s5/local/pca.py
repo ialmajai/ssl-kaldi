@@ -42,7 +42,7 @@ def train_pca(feats_scp, ipca, max_utts):
 
     logger.info(f"[train] done: processed={processed}, skipped={skipped}")
 
-
+# ------------------------------------------------------------
 def apply_pca(feats_scp, writer_spec, ipca):    
 
     processed = 0

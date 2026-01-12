@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-stage=11
+stage=0
 decode_nj=10
 train_set=train
 test_sets=dev
@@ -12,14 +12,14 @@ exp=exp
 num_data_reps=1
 nj=50
 
-affix=_a1   # affix for the TDNN directory name
+affix=_1a   # affix for the TDNN directory name
 tree_affix=mono
 train_stage=-10
 get_egs_stage=-10
 decode_iter=
 
-chunk_width=120,80,150
-frame_subsampling_factor=1
+chunk_width=140,100,160
+frame_subsampling_factor=2
 common_egs_dir=
 xent_regularize=0.1
 srand=0
@@ -27,7 +27,6 @@ remove_egs=true
 reporting_email=
 
 echo "$0 $@"  # Print command line
-
 . ./cmd.sh
 . ./path.sh
 . ./utils/parse_options.sh
@@ -56,7 +55,7 @@ for f in $gmm_dir/final.mdl $train_data_dir/feats.scp \
   [ ! -f $f ] && echo "$0: expected file $f to exist" && exit 1
 done
 
-if [ $stage -le 11 ]; then
+if [ $stage -le 0 ]; then
   echo "$0: creating lang directory $lang with chain-type topology"
   # Create a version of the lang/ directory that has one state per phone in the
   # topo file. [note, it really has two states.. the first one is only repeated
@@ -79,7 +78,7 @@ if [ $stage -le 11 ]; then
   fi
 fi
 
-if [ $stage -le 12 ]; then
+if [ $stage -le 1 ]; then
   # Get the alignments as lattices (gives the chain training more freedom).
   # use the same num-jobs as the alignments
   steps/align_fmllr_lats.sh --nj $nj --cmd "$train_cmd" ${lores_train_data_dir} \
@@ -87,7 +86,7 @@ if [ $stage -le 12 ]; then
   rm $clean_lat_dir/fsts.*.gz # save space
 fi
 
-if [ $stage -le 13 ]; then
+if [ $stage -le 2 ]; then
   clean_lat_nj=$(cat $clean_lat_dir/num_jobs)
   mkdir -p $lat_dir/temp/
 
@@ -113,14 +112,13 @@ if [ $stage -le 13 ]; then
     "ark:|gzip -c >$lat_dir/lat.JOB.gz" || exit 1;
 
   echo $nj > $lat_dir/num_jobs
-
   # copy other files from original lattice dir
   for f in cmvn_opts final.mdl splice_opts tree; do
     cp $clean_lat_dir/$f $lat_dir/$f
   done
 fi
 
-if [ $stage -le 14 ]; then
+if [ $stage -le 2 ]; then
    if [ -f $tree_dir/final.mdl ]; then
      echo "$0: $tree_dir/final.mdl already exists, refusing to overwrite it."
      exit 1;
@@ -132,7 +130,7 @@ if [ $stage -le 14 ]; then
     $lang $ali_dir $tree_dir
 fi
 
-if [ $stage -le 15 ]; then
+if [ $stage -le 3 ]; then
   mkdir -p $dir
   echo "$0: creating neural net configs using the xconfig parser";
 
@@ -151,14 +149,14 @@ if [ $stage -le 15 ]; then
 
   relu-batchnorm-layer name=tdnn1 dim=768 input=Append(-1,0,1)
 
-  tdnnf-layer name=tdnnf1 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
+  tdnnf-layer name=tdnnf1 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
 
   linear-component name=prefinal-l dim=192 $linear_opts
 
@@ -173,7 +171,7 @@ EOF
   steps/nnet3/xconfig_to_configs.py --xconfig-file $dir/configs/network.xconfig --config-dir $dir/configs/
 fi
 
-if [ $stage -le 16 ]; then
+if [ $stage -le 4 ]; then
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
     --feat.cmvn-opts "--norm-means=false --norm-vars=false" \
@@ -185,19 +183,18 @@ if [ $stage -le 16 ]; then
     --trainer.add-option="--optimization.memory-compression-level=2" \
     --trainer.srand=$srand \
     --trainer.max-param-change=2.0 \
-    --trainer.num-epochs=10 \
-    --trainer.frames-per-iter=700000 \
+    --trainer.num-epochs=5 \
+    --trainer.frames-per-iter=1000000 \
     --trainer.optimization.num-jobs-initial=2 \
     --trainer.optimization.num-jobs-final=5 \
-    --trainer.optimization.initial-effective-lrate=0.001 \
-    --trainer.optimization.final-effective-lrate=0.0001 \
+    --trainer.optimization.initial-effective-lrate=0.005 \
+    --trainer.optimization.final-effective-lrate=0.0005 \
     --trainer.num-chunk-per-minibatch=256,128,64 \
     --chain.frame-subsampling-factor ${frame_subsampling_factor} \
     --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --egs.chunk-width=$chunk_width \
     --egs.dir="$common_egs_dir" \
-    --egs.opts="--frames-overlap-per-eg 20  --online-cmvn false --frame-subsampling-factor \
-               ${frame_subsampling_factor} --max-shuffle-jobs-run 6" \
+    --egs.opts="--max-shuffle-jobs-run 6" \
     --cleanup.remove-egs=$remove_egs \
     --use-gpu=wait \
     --reporting.email="$reporting_email" \
@@ -207,13 +204,13 @@ if [ $stage -le 16 ]; then
     --dir=$dir  || exit 1;
 fi
 
-if [ $stage -le 17 ]; then
+if [ $stage -le 5 ]; then
   utils/mkgraph.sh \
     --self-loop-scale 1.0 data/lang_test_trigram \
     $tree_dir $tree_dir/graph_tg || exit 1;
 fi
 
-if [ $stage -le 18 ]; then
+if [ $stage -le 6 ]; then
   frames_per_chunk=$(echo $chunk_width | cut -d, -f1)
   rm $dir/.error 2>/dev/null || true
 

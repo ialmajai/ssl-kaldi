@@ -10,7 +10,7 @@ set -euo pipefail
 stage=0
 encoder_layer=9
 trainset=train
-frame_subsampling_factor=1
+frame_subsampling_factor=2
 feats_nj=8
 
 . ./cmd.sh
@@ -40,5 +40,8 @@ fi
 
 if [ $stage -le 4 ]; then
   echo "$0: calling the flat-start chain recipe..."
-  local/chain/e2e/run_tdnn_flatstart.sh
+  local/chain/e2e/run_tdnn_flatstart.sh --frame-subsampling-factor $frame_subsampling_factor \
+	  --train-set ${trainset}_spe2e_raw
 fi
+
+exit 0;
