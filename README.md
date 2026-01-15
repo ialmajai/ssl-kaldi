@@ -12,10 +12,11 @@ Kaldi Compatibility: Features are extracted in Kaldi's standard ark and scp file
 Prerequisites
 Kaldi Installation: Follow official Kaldi setup or use Docker image.
 
+Suggestions for improvements or new features are always welcome! Feel free to open an issue or submit a pull request.
 
-Getting Started
+## Getting Started:
 
-# Create environment
+### Create a conda environment
 ```
 git clone https://github.com/ialmajai/ssl-kaldi.git
 cd ssl-kaldi

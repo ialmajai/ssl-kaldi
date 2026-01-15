@@ -25,7 +25,7 @@ conda install -c conda-forge dlib==19.18.0
 - 30-dimensional PCA for HMM-GMM systems
 - Features usampled to 50fps give better results 
 - Layer 9 and layer 12 are selected for base and large AV-HuBert
-- Speaker adaption (MLLT+SAT) outperform TDNN systems trained on raw features 
+- Speaker adaption (MLLT+SAT) outperform TDNN systems trained on raw features. The power of such adaptation for visual speech features has already been demonstrated in this [paper](https://ueaeprints.uea.ac.uk/id/eprint/63479/1/Accepted_manuscript.pdf)  
 
 | AV-HuBerT       | Monophone  | Triphone(Δ+ΔΔ) | Triphone + LDA+MLLT | Triphone + LDA+MLLT+SAT |
 | ---------       | ----- | ----- | ----- |----- |
