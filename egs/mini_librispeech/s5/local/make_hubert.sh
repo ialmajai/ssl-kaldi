@@ -8,6 +8,7 @@ compress=true
 write_utt2num_frames=true  # If true writes utt2num_frames.
 write_utt2dur=true
 layer=9
+model_type="facebook/hubert-base-ls960"
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -16,25 +17,15 @@ if [ -f path.sh ]; then . ./path.sh; fi
 
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
   cat >&2 <<EOF
-Usage: $0 [options] <data-dir> [<log-dir> [<hubert-dir>] ]
+Usage: $0 [options] <data-dir>  ]
  e.g.: $0 data/train
-Note: <log-dir> defaults to <data-dir>/log, and
-      <hubert-dir> defaults to <data-dir>/data.
 EOF
    exit 1;
 fi
 
 data=$1
-if [ $# -ge 2 ]; then
-  logdir=$2
-else
-  logdir=$data/log
-fi
-if [ $# -ge 3 ]; then
-  ssldir=$3
-else
-  ssldir=$data/data
-fi
+logdir=$data/log
+ssldir=$data/data
 
 # make $ssldir an absolute pathname.
 ssldir=`perl -e '($dir,$pwd)= @ARGV; if($dir!~m:^/:) { $dir = "$pwd/$dir"; } print $dir; ' $ssldir ${PWD}`
@@ -94,11 +85,10 @@ if [ -f $data/segments ]; then
   $cmd JOB=1:$nj $logdir/make_hubert_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
     python local/compute_hubert_feats.py --layer $layer \
-         $write_utt2dur_opt ark:- ark:- \| \
+         --model-type $model_type $write_utt2dur_opt ark:- ark:- \| \
          copy-feats --compress=$compress $write_num_frames_opt ark:- \
          ark,scp:$ssldir/raw_hubert_$name.JOB.ark,$ssldir/raw_hubert_$name.JOB.scp \
          || exit 1;
-
 else
   echo "$0: [info]: no segments file exists: assuming wav.scp indexed by utterance."
   split_scps=
@@ -110,7 +100,7 @@ else
 
   $cmd JOB=1:$nj $logdir/make_hubert_${name}.JOB.log \
     python local/compute_hubert_feats.py --layer $layer \
-          $write_utt2dur_opt \
+          --model-type $model_type $write_utt2dur_opt \
 	   scp,p:$logdir/wav_${name}.JOB.scp ark:- \| \
            copy-feats $write_num_frames_opt --compress=$compress ark:- \
       ark,scp:$ssldir/raw_hubert_$name.JOB.ark,$ssldir/raw_hubert_$name.JOB.scp \
@@ -159,4 +149,4 @@ if (( nf < nu - nu/20 )); then
   exit 1
 fi
 
-echo "$0: Succeeded creating HuBert features for $name"
+echo "$0: Succeeded creating features for $name"

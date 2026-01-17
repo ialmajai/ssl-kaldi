@@ -6,7 +6,18 @@ data_url=www.openslr.org/resources/31
 lm_url=www.openslr.org/resources/11
 
 stage=0
-encoder_layer=9
+
+# choose either base or large model and layer to extract features
+# base model
+# model_type="facebook/hubert-base-ls960"
+# encoder_layer=9
+# feats_nj=8
+
+# large model
+model_type="facebook/hubert-large-ll60k"
+encoder_layer=12
+feats_nj=4
+
 pca_dim=30
 
 . ./cmd.sh
@@ -15,8 +26,8 @@ pca_dim=30
 
 set -euo pipefail
 
-featdir=feats-raw
-pca_feats_dir=feats-pca
+
+echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
 
 mkdir -p data
 
@@ -51,13 +62,20 @@ if [ $stage -le 2 ]; then
 fi
 
 if [ $stage -le 3 ]; then
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" == "Exclusive_Process" ]; then
+
+    echo "Feature extraction requires GPU compute mode to be set to default"
+    echo "run: sudo nvidia-smi -c 0"
+    exit 1
+  fi
 
   for part in dev_clean_2 train_clean_5; do
     echo "preparing features"
     utils/copy_data_dir.sh data/$part data/${part}_raw 
-    local/make_hubert.sh --cmd "$train_cmd" --nj 4  \
-	    --layer $encoder_layer data/${part}_raw exp/make_hubert/${part}_raw $featdir
-    steps/compute_cmvn_stats.sh data/${part}_raw exp/make_hubert/${part}_raw $featdir
+    local/make_hubert.sh --cmd "$train_cmd" --nj $feats_nj --model-type $model_type \
+	    --layer $encoder_layer data/${part}_raw 
+    steps/compute_cmvn_stats.sh data/${part}_raw 
   done  
 fi
 
@@ -65,7 +83,8 @@ if [ $stage -le 4 ]; then
   pca_model="pca-${pca_dim}d.pt"    
   pca_dir="pca"
   mkdir -p $pca_dir
-  if [ ! -f $pca_dir/$pca_model ]; then
+  if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
+          -ot data/train_clean_5_raw/feats.scp ]] ; then
     echo "Training PCA model"
     mkdir -p $pca_dir
     python local/pca.py  --pca_dim=$pca_dim --mode=train \
@@ -76,9 +95,10 @@ if [ $stage -le 4 ]; then
   for part in dev_clean_2 train_clean_5; do
     echo "preparing pca features"    
     utils/copy_data_dir.sh data/$part data/${part}_pca
-    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
-          data/${part}_raw data/${part}_pca exp/make_features_pca/${part}_pca $pca_feats_dir  || exit 1;
-    steps/compute_cmvn_stats.sh data/${part}_pca exp/make_features_pca/${part}_pca $pca_feats_dir  || exit 1;
+    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15 \
+        --pca-model $pca_dir/$pca_model \
+          data/${part}_raw data/${part}_pca   || exit 1;
+    steps/compute_cmvn_stats.sh data/${part}_pca  || exit 1;
     utils/fix_data_dir.sh data/${part}_pca
   done 
 fi
@@ -166,4 +186,18 @@ if [ $stage -le 11 ]; then
       data/$test exp/tri3b/decode_{tgsmall,tglarge}_$test
   done
 fi
+
+if [ $stage -le 12 ]; then
+  echo "$0: TDNN training started"
+  local/chain/run_common_hubert.sh --stage 13 \
+    --feats-nj $feats_nj \
+    --model-type $model_type \
+    --encoder-layer $encoder_layer \
+    --pca-dim $pca_dim
+
+  local/chain/run_tdnn_hubert.sh --stage 15 \
+    --gmm tri3b \
+    --affix "1a"
+fi
+
 

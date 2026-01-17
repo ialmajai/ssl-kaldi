@@ -3,7 +3,7 @@
 # Set -e here so that we catch if any executable fails immediately
 set -euo pipefail
 
-stage=13
+stage=15
 decode_nj=10
 train_set=train_clean_5
 test_sets=dev_clean_2
@@ -110,7 +110,7 @@ if [ $stage -le 18 ]; then
 
   num_targets=$(tree-info $tree_dir/tree |grep num-pdfs|awk '{print $2}')
   learning_rate_factor=$(echo "print (0.5/$xent_regularize)" | python)
-
+  feats_dim=`feat-to-dim scp:$train_data_dir/feats.scp  -`
   tdnn_opts="l2-regularize=0.03"
   tdnnf_opts="l2-regularize=0.03 bypass-scale=0.66"
   linear_opts="l2-regularize=0.03 orthonormal-constraint=-1.0"
@@ -119,7 +119,7 @@ if [ $stage -le 18 ]; then
 
   mkdir -p $dir/configs
   cat <<EOF > $dir/configs/network.xconfig
-  input dim=768 name=input
+  input dim=$feats_dim name=input
 
   no-op-component name=input2 input=Append(-1,0,1)
 
@@ -151,6 +151,12 @@ EOF
 fi
 
 if [ $stage -le 19 ]; then
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "Training requires GPU compute mode to be set to Exclusive_Process"
+    echo "run: sudo nvidia-smi -c 3"
+    exit 1
+  fi
 
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
@@ -174,8 +180,7 @@ if [ $stage -le 19 ]; then
     --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --egs.chunk-width=$chunk_width \
     --egs.dir="$common_egs_dir" \
-    --egs.opts="--frames-overlap-per-eg 0 --frame-subsampling-factor \
-                ${frame_subsampling_factor} --online-cmvn $online_cmvn" \
+    --egs.opts="--frames-overlap-per-eg 0  --online-cmvn $online_cmvn" \
     --cleanup.remove-egs=$remove_egs \
     --use-gpu=wait \
     --reporting.email="$reporting_email" \
