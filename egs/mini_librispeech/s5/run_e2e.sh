@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
 # Copyright 2017    Hossein Hadian
 #           2025    Ibrahim Almajai
-
 # end-to-end LF-MMI training  
 # stages 0-2 are the same as "run.sh"
 
 set -euo pipefail
 
 stage=0
+
+model_type="facebook/hubert-base-ls960"
 encoder_layer=9
+feats_nj=8
+
+#model_type="facebook/hubert-large-ll60k"
+#encoder_layer=12
+#feats_nj=4
+
+echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
+
 trainset=train_clean_5_raw
 frame_subsampling_factor=2
 . ./cmd.sh 
@@ -18,12 +27,10 @@ frame_subsampling_factor=2
 if [ $stage -le 3 ]; then
   echo "$0: perturbing the training data to allowed lengths"
   utils/data/get_utt2dur.sh data/$trainset  # necessary for the next command
-
   # 12 in the following command means the allowed lengths are spaced
   # by 12% change in length.
   utils/data/perturb_speed_to_allowed_lengths.py --frame-length 20 \
                                               --frame-shift 20 \
-                                              --frame-subsampling-factor ${frame_subsampling_factor} \
                                                 12 data/${trainset} \
                                                 data/${trainset}_spe2e
   cat data/${trainset}_spe2e/utt2dur | \
@@ -32,11 +39,15 @@ if [ $stage -le 3 ]; then
 fi
 
 if [ $stage -le 4 ]; then
-
-    featdir=feats-spe2e
-    local/make_hubert.sh --cmd "$train_cmd" --nj 4 \
-	    --layer $encoder_layer data/${trainset}_spe2e exp/make_hubert/${trainset}_spe2e $featdir
-    steps/compute_cmvn_stats.sh data/${trainset}_spe2e exp/make_hubert/${trainset}_spe2e $featdir   
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" == "Exclusive_Process" ]; then
+    echo "Feature extraction requires GPU compute mode to be set to default"
+    echo "run: sudo nvidia-smi -c 0"
+    exit 1
+  fi
+    local/make_hubert.sh --cmd "$train_cmd" --nj $feats_nj --model-type $model_type \
+	    --layer $encoder_layer data/${trainset}_spe2e
+    steps/compute_cmvn_stats.sh data/${trainset}_spe2e   
 fi
 
 if [ $stage -le 5 ]; then

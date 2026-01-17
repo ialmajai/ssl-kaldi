@@ -52,13 +52,19 @@ parser.add_argument(
     default=12,
     help="HuBERT encoder layer to extract (e.g., 12)",
 )
-
 parser.add_argument(
     "--write-utt2dur",
     "-wud",
     type=str,
     default=None,
     help="Optional utt2dur output: ark,t:path/to/utt2dur or ark:path/to/utt2dur",
+)
+parser.add_argument(
+    "--model-type",
+    "-model",
+    type=str,
+    default="facebook/hubert-base-ls960",
+    help="Pretrained HuBERT model type from HuggingFace",
 )
 
 args = parser.parse_args()
@@ -72,10 +78,10 @@ logger.info(f"Using device: {device}")
 logger.info(f"Loading HuBERT checkpoint")
 try:
     feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
-    "facebook/hubert-base-ls960"
+    args.model_type
     )
     model = HubertModel.from_pretrained(
-        "facebook/hubert-base-ls960"
+        args.model_type
     )
     model.to(device)
     model.eval()
@@ -141,8 +147,7 @@ def process_features():
 
                     print(wf_t)
                     sys.exit(0)
-                    feats = compute_hubert(wf_t, 16000)
-                        
+                    feats = compute_hubert(wf_t, 16000)                        
 
                     writer(utt_id, feats)
                     processed += 1

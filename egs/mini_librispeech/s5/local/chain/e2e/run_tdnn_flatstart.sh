@@ -80,6 +80,7 @@ fi
 if [ $stage -le 2 ]; then
   echo "$0: creating neural net configs using the xconfig parser";
   num_targets=$(tree-info $treedir/tree | grep num-pdfs | awk '{print $2}')
+  feats_dim=`feat-to-dim scp:data/$train_set/feats.scp  -`
   tdnn_opts="l2-regularize=0.01 dropout-proportion=0.0 dropout-per-dim-continuous=true"
   tdnnf_opts="l2-regularize=0.01 dropout-proportion=0.0 bypass-scale=0.66"
   linear_opts="l2-regularize=0.01 orthonormal-constraint=-1.0"
@@ -89,7 +90,7 @@ if [ $stage -le 2 ]; then
   mkdir -p $dir/configs
   cat <<EOF > $dir/configs/network.xconfig
 
-  input dim=768 name=input
+  input dim=$feats_dim name=input
 
   relu-batchnorm-dropout-layer name=tdnn1 input=Append(-1,0,1) $tdnn_opts dim=768
   tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
@@ -106,7 +107,6 @@ if [ $stage -le 2 ]; then
   tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
   linear-component name=prefinal-l dim=192 $linear_opts
 
-
   prefinal-layer name=prefinal-chain input=prefinal-l $prefinal_opts big-dim=768 small-dim=192
   output-layer name=output include-log-softmax=false dim=$num_targets $output_opts
 
@@ -115,9 +115,15 @@ EOF
 fi
 
 if [ $stage -le 3 ]; then
-  # no need to store the egs in a shared storage because we always
-  # remove them. Anyway, it takes only 5 minutes to generate them.
+  echo "$0: training the neural net using the chain e2e framework"
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "Training requires GPU compute mode to be set to Exclusive_Process"
+    echo "run: sudo nvidia-smi -c 3"
+    exit 1
+  fi
 
+  echo "$0: training started"
   steps/nnet3/chain/e2e/train_e2e.py --stage $train_stage \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "$cmvn_opts" \
@@ -126,7 +132,7 @@ if [ $stage -le 3 ]; then
     --chain.apply-deriv-weights false \
     --egs.dir "$common_egs_dir" \
     --egs.stage $get_egs_stage \
-    --egs.opts "--frame-subsampling-factor ${frame_subsampling_factor}" \
+    --egs.opts "" \
     --trainer.dropout-schedule $dropout_schedule \
     --trainer.num-chunk-per-minibatch $minibatch_size \
     --trainer.frames-per-iter $frames_per_iter \
@@ -141,7 +147,6 @@ if [ $stage -le 3 ]; then
     --cleanup.remove-egs true \
     --feat-dir data/${train_set} \
     --chain.frame-subsampling-factor ${frame_subsampling_factor} \
-    --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --use-gpu=wait \
     --tree-dir $treedir \
     --dir $dir  || exit 1;
@@ -170,11 +175,11 @@ if [ $stage -le 5 ]; then
       --extra-right-context-final 0 \
       --frames-per-chunk $frames_per_chunk \
       --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
-      $treedir/graph_tgsmall data/${data} ${dir}/decode_${lmtype}_${data_affix} || exit 1
+      $treedir/graph_tgsmall data/${data} ${dir}/decode_tgsmall_${data_affix} || exit 1
   
-    steps/lmrescore.sh --cmd "$decode_cmd" \
+    steps/lmrescore.sh --cmd "$decode_cmd" --self-loop-scale 1.0 \
       data/lang_nosp_test_{tgsmall,tgmed} \
-    data/${data} ${dir}/decode_{tgsmall,tgmed}_${data_affix}  || exit 1
+      data/${data} ${dir}/decode_{tgsmall,tgmed}_${data_affix}  || exit 1
 
     steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
       data/lang_nosp_test_{tgsmall,tglarge} \

@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-stage=0
+stage=12
 train_set=train_clean_5
 test_sets="dev_clean_2"
 gmm=tri3b
+model_type="facebook/hubert-base-ls960"
 encoder_layer=9
+feats_nj=8
+
+#model_type="facebook/hubert-large-ll60k"
+#encoder_layer=12
+#feats_nj=4
+
 pca_dim=30
 nnet3_affix=
 
@@ -16,7 +23,7 @@ nnet3_affix=
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
 
-for f in data/${train_set}/feats.scp ${gmm_dir}/final.mdl; do
+for f in data/${train_set}_raw/feats.scp ${gmm_dir}/final.mdl; do
   if [ ! -f $f ]; then
     echo "$0: expected file $f to exist"
     exit 1
@@ -24,6 +31,12 @@ for f in data/${train_set}/feats.scp ${gmm_dir}/final.mdl; do
 done
 
 if [ $stage -le 12 ]; then
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" == "Exclusive_Process" ]; then
+    echo "Feature extraction requires GPU compute mode to be set to default"
+    echo "run: sudo nvidia-smi -c 0"
+    exit 1
+  fi
   # Although the nnet will be trained by high resolution data, we still have to
   # perturb the normal data to get the alignment _sp stands for speed-perturbed
   echo "$0: preparing directory for low-resolution speed-perturbed data (for alignment)"
@@ -32,8 +45,8 @@ if [ $stage -le 12 ]; then
   utils/data/perturb_data_dir_volume.sh data/${train_set}_sp_raw || exit 1;
 
   echo "$0: making HuBERT features for low-resolution speed-perturbed data"
-  local/make_hubert.sh --cmd "run.pl" --nj 4 --layer $encoder_layer \
-	   data/${train_set}_sp_raw || exit 1;
+  local/make_hubert.sh --cmd "run.pl" --nj $feats_nj --layer $encoder_layer \
+	  --model-type $model_type data/${train_set}_sp_raw || exit 1;
   steps/compute_cmvn_stats.sh data/${train_set}_sp_raw || exit 1;
   utils/fix_data_dir.sh data/${train_set}_sp_raw
 fi
@@ -42,7 +55,8 @@ if [ $stage -le 13 ]; then
   pca_model="pca-${pca_dim}d-sp.pt"    
   pca_dir="pca"
   mkdir -p $pca_dir
-  if [ ! -f $pca_dir/$pca_model ]; then
+  if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
+       -ot data/${train_set}_sp_raw/feats.scp ]] ; then
     echo "Training PCA model"
     mkdir -p $pca_dir
     python local/pca.py  --pca_dim=$pca_dim --mode=train \
@@ -67,5 +81,3 @@ if [ $stage -le 14 ]; then
 fi
 
 exit 0
-
-
