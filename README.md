@@ -1,15 +1,24 @@
 # ssl-kaldi 
-Self-Supervised Learning Features in [Kaldi](https://github.com/kaldi-asr/kaldi)
+Self-Supervised Learning Features for [Kaldi](https://github.com/kaldi-asr/kaldi) ASR
 
-## SSL features are all you need!
+This repository contains recipes and tools for integrating self-supervised learning (SSL) features such as HuBERT, mHuBERT, and AV-HuBERT into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. The approach avoids the need for fine-tuning large pretrained models.
 
-This repository contains recipes and tools for integrating self-supervised learning (SSL) features into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets.
+## Pipeline Overview
+```
+Audio / Video
+      ↓
+Pretrained SSL model (PyTorch)
+      ↓
+Frame-level feature extraction
+      ↓
+PCA dimensionality reduction / Upsampling (Optional)
+      ↓
+Kaldi ark/scp features
+      ↓
+Standard Kaldi training & decoding
+```
 
-PCA Dimensionality Reduction: For SSL features in GMM-HMM systems.
-
-Kaldi Compatibility: Features are extracted in Kaldi's standard ark and scp file formats, ensuring seamless integration with Kaldi pipelines.
-
-Prerequisites
+### Prerequisites
 Kaldi Installation: Follow official Kaldi setup or use Docker image.
 
 Suggestions for improvements or new features are always welcome! Feel free to open an issue or submit a pull request.
