@@ -9,15 +9,8 @@ stage=0
 
 # choose either base or large model and layer to extract features
 # base model
-# model_type="facebook/hubert-base-ls960"
-# encoder_layer=9
-# feats_nj=8
 
-# large model
-model_type="facebook/hubert-large-ll60k"
-encoder_layer=12
-feats_nj=4
-
+model_size=base
 pca_dim=30
 
 . ./cmd.sh
@@ -26,6 +19,16 @@ pca_dim=30
 
 set -euo pipefail
 
+
+model_type="facebook/hubert-base-ls960"
+encoder_layer=9
+feats_nj=8
+
+if [ $model_size == "large" ]; then
+  model_type="facebook/hubert-large-ll60k"
+  encoder_layer=14
+  feats_nj=4
+fi
 
 echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
 
@@ -127,6 +130,7 @@ if [ $stage -le 6 ]; then
       data/$testset exp/mono/decode_{tgsmall,tglarge}_$testset
     done
 fi
+
 #delta + delta-delta triphone
 if [ $stage -le 7 ]; then
   steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
@@ -189,11 +193,12 @@ fi
 
 if [ $stage -le 12 ]; then
   echo "$0: TDNN training started"
-  local/chain/run_common_hubert.sh --stage 13 \
-    --feats-nj $feats_nj \
-    --model-type $model_type \
-    --encoder-layer $encoder_layer \
+  local/chain/run_common_hubert.sh --stage 12 \
+    --model-size $model_size \
     --pca-dim $pca_dim
+fi
+
+if [ $stage -le 13 ]; then
 
   local/chain/run_tdnn_hubert.sh --stage 15 \
     --gmm tri3b \

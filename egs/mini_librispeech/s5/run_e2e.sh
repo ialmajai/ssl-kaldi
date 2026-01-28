@@ -6,15 +6,19 @@
 
 set -euo pipefail
 
-stage=0
+stage=3
+
+model_size=base
 
 model_type="facebook/hubert-base-ls960"
 encoder_layer=9
 feats_nj=8
 
-#model_type="facebook/hubert-large-ll60k"
-#encoder_layer=12
-#feats_nj=4
+if [ $model_size == "large" ]; then
+  model_type="facebook/hubert-large-ll60k"
+  encoder_layer=14
+  feats_nj=4
+fi
 
 echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
 
@@ -29,10 +33,11 @@ if [ $stage -le 3 ]; then
   utils/data/get_utt2dur.sh data/$trainset  # necessary for the next command
   # 12 in the following command means the allowed lengths are spaced
   # by 12% change in length.
-  utils/data/perturb_speed_to_allowed_lengths.py --frame-length 20 \
-                                              --frame-shift 20 \
-                                                12 data/${trainset} \
-                                                data/${trainset}_spe2e
+  utils/data/perturb_speed_to_allowed_lengths.py --frame-shift 20 \
+              --frame-subsampling-factor $frame_subsampling_factor \
+              12 data/${trainset} \
+              data/${trainset}_spe2e
+
   cat data/${trainset}_spe2e/utt2dur | \
     awk '{print $1 " " substr($1,5)}' >data/${trainset}_spe2e/utt2uniq
   utils/fix_data_dir.sh data/${trainset}_spe2e
