@@ -56,6 +56,8 @@ if [ $stage -le 1 ]; then
   done
 fi
 
+exit 0
+
 if [ $stage -le 2 ]; then
   pca_model="pca-${pca_dim}d.pt"    
   pca_dir="pca"

@@ -1,4 +1,3 @@
-text
 # IqraEval Recipe
 
 **IqraEval** is an Arabic phone recognition recipe for the [IqraEval Challenge](https://huggingface.co/IqraEval) using SSL features in Kaldi pipelines. 
