@@ -5,6 +5,7 @@
 
 ```
 conda activate ssl-kaldi
+pip install pip==24.0
 pip install -r requirements.txt
 git clone https://github.com/facebookresearch/av_hubert.git --depth=1
 cd av_hubert
