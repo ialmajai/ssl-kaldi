@@ -7,7 +7,6 @@ set -e
 stage=0
 nj=8
 njtest=4
-njfeats=10
 
 pca_dim=30
 pca_train_utts=28000
@@ -17,13 +16,20 @@ upsample_factor=2
 #path to grid corpus dataset
 datasrc=grid-corpus
 
-# avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
-# encoder_layer=12
+model_size=base
+
 avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt
 encoder_layer=9
+njfeats=8
 
+if [ $model_size == "large" ]; then
+  avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
+  encoder_layer=14
+  njfeats=4
+ 
+fi
 
-#path to avhubert codebase
+#path to avhubert codebase 
 avhubert_path=/data/git/ssl-kaldi/egs/grid/s5/av_hubert
 
 lang=data/lang
@@ -66,12 +72,17 @@ if [ $stage -le 1 ]; then
 fi
 
 if [ $stage -le 2 ]; then
-  for x in test train; do
+  for x in train; do
+    if [ -f data/train_${x}/feats.scp ]; then
+      echo "$0: features for data/$x already exist, skipping feature preparation"
+      continue
+    fi
     echo "preparing features"
     rm -rf data/${x}_raw
     local/copy_data_dir.sh data/$x data/${x}_raw 
-    local/make_avhubert.sh --cmd "$decode_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
+    local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
      --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
+    exit 0
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
   done
@@ -166,17 +177,18 @@ if [ $stage -le 9 ]; then
       data/train data/lang exp/tri3b exp/tri3b_ali
 fi
 
+#extract fMLLR features for chain training
 data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
 if [ $stage -le 10 ]; then
-  # test
+  
   dirc=${data_fmllr}/test
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 4 --cmd "$train_cmd" \
      --transform-dir $gmm/decode \
      $dirc data/test $gmm $dirc/log $dirc/data
   steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
-  # train
+
   dirc=${data_fmllr}/train
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 8 --cmd "$train_cmd" \

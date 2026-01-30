@@ -45,7 +45,7 @@ where "nvcc" is installed.
 EOF
 fi
 
-lang=data/lang_e2e
+lang=data/lang_nosp_e2e
 treedir=exp/chain/e2e_tree  # it's actually just a trivial tree (no tree building)
 dir=exp/chain/e2e_tdnnf_${affix}
 
@@ -71,10 +71,10 @@ if [ $stage -le 1 ]; then
              data/lang_nosp \| \
              utils/sym2int.pl -f 2- data/lang_nosp/phones.txt \| \
              chain-est-phone-lm --num-extra-lm-states=2000 \
-             ark:- $treedir/phone_lm.fst
+             ark:- $treedir/phone_lm.fst || exit 1;
   steps/nnet3/chain/e2e/prepare_e2e.sh --nj 30 --cmd "$train_cmd" \
                                        --shared-phones true \
-                                       data/$train_set $lang $treedir
+                                       data/$train_set $lang $treedir || exit 1;
 fi
 
 if [ $stage -le 2 ]; then

@@ -16,11 +16,11 @@ affix=1a
 
 # training options
 dropout_schedule='0,0@0.20,0.5@0.50,0'
-num_epochs=10
+num_epochs=5
 num_jobs_initial=2
 num_jobs_final=5
 #Suggested:
-minibatch_size=150=64,32/200=32,16/500=16,8
+minibatch_size=150=256,128/200=128,64
 common_egs_dir=
 l2_regularize=0.00005
 frames_per_iter=1000000
@@ -91,14 +91,14 @@ if [ $stage -le 2 ]; then
   input dim=768 name=input
 
   relu-batchnorm-dropout-layer name=tdnn1 input=Append(-1,0,1) $tdnn_opts dim=768
-  tdnnf-layer name=tdnnf1 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
-  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=1
+  tdnnf-layer name=tdnnf1 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=0
+  tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
+  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=128 time-stride=2
   linear-component name=prefinal-l dim=192 $linear_opts
 
   prefinal-layer name=prefinal-chain input=prefinal-l $prefinal_opts big-dim=768 small-dim=192

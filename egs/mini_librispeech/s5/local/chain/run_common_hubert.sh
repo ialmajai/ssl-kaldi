@@ -5,20 +5,24 @@ stage=12
 train_set=train_clean_5
 test_sets="dev_clean_2"
 gmm=tri3b
-model_type="facebook/hubert-base-ls960"
-encoder_layer=9
-feats_nj=8
 
-#model_type="facebook/hubert-large-ll60k"
-#encoder_layer=12
-#feats_nj=4
-
+model_size=base
 pca_dim=30
 nnet3_affix=
 
 . ./cmd.sh
 . ./path.sh
 . utils/parse_options.sh
+
+model_type="facebook/hubert-base-ls960"
+encoder_layer=9
+feats_nj=8
+
+if [ $model_size == "large" ]; then
+  model_type="facebook/hubert-large-ll60k"
+  encoder_layer=14
+  feats_nj=4
+fi
 
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
