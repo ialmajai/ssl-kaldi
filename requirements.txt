@@ -2,4 +2,5 @@ numpy==1.19.5
 torch>=2.4.0
 transformers>=4.30.0
 torchdr>=0.1.0
+matplotlib==3.5
 kaldiio
