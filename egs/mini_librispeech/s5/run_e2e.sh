@@ -5,10 +5,14 @@
 # stages 0-2 are the same as "run.sh"
 
 set -euo pipefail
-
 stage=3
-
 model_size=base
+trainset=train_clean_5_raw
+frame_subsampling_factor=2
+
+. ./cmd.sh 
+. ./path.sh
+. utils/parse_options.sh
 
 model_type="facebook/hubert-base-ls960"
 encoder_layer=9
@@ -22,12 +26,6 @@ fi
 
 echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
 
-trainset=train_clean_5_raw
-frame_subsampling_factor=2
-. ./cmd.sh 
-. ./path.sh
-. utils/parse_options.sh
-
 if [ $stage -le 3 ]; then
   echo "$0: perturbing the training data to allowed lengths"
   utils/data/get_utt2dur.sh data/$trainset  # necessary for the next command
@@ -37,9 +35,9 @@ if [ $stage -le 3 ]; then
               --frame-subsampling-factor $frame_subsampling_factor \
               12 data/${trainset} \
               data/${trainset}_spe2e
-
-  cat data/${trainset}_spe2e/utt2dur | \
-    awk '{print $1 " " substr($1,5)}' >data/${trainset}_spe2e/utt2uniq
+  # creating utt2uniq does not work for such a small dataset
+  # cat data/${trainset}_spe2e/utt2dur | \
+  #   awk '{print $1 " " substr($1,5)}' >data/${trainset}_spe2e/utt2uniq
   utils/fix_data_dir.sh data/${trainset}_spe2e
 fi
 
@@ -57,5 +55,6 @@ fi
 
 if [ $stage -le 5 ]; then
   echo "$0: calling the flat-start chain recipe..."
-  local/chain/e2e/run_tdnn_flatstart.sh
+  local/chain/e2e/run_tdnn_flatstart.sh --affix 1a \
+    --frame-subsampling-factor $frame_subsampling_factor
 fi
