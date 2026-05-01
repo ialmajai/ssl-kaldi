@@ -18,12 +18,12 @@ datasrc=grid-corpus
 
 model_size=base
 
-avhubert_ckpt=input/base_vox_iter5.pt
+avhubert_ckpt=base_vox_iter5.pt
 encoder_layer=9
 njfeats=8
 
 if [ $model_size == "large" ]; then
-  avhubert_ckpt=input/large_vox_iter5.pt
+  avhubert_ckpt=large_vox_iter5.pt
   encoder_layer=14
   njfeats=4
  
@@ -64,16 +64,16 @@ if [ $stage -le 0 ]; then
     mv shape_predictor_68_face_landmarks.dat $dlib_dir
   fi
   
-  if [ ! -f "$models"/base_vox_iter5.pt ]; then
+  if [ ! -f $models/$avhubert_ckpt ]; then
     echo "Downloading AvHubert checkpoint"
-        # https://facebookresearch.github.io/av_hubert: AV-HuBERT Base | LRS3 + VoxCeleb2 (En) | No finetuning
-        model=https://dl.fbaipublicfiles.com/avhubert/model/lrs3_vox/clean-pretrain/base_vox_iter5.pt
-    wget $model -O $models/base_vox_iter5.pt
+    # https://facebookresearch.github.io/av_hubert: AV-HuBERT | LRS3 + VoxCeleb2 (En) | No finetuning
+    model=https://dl.fbaipublicfiles.com/avhubert/model/lrs3_vox/clean-pretrain/$avhubert_ckpt
+    wget $model -O $models/$avhubert_ckpt
   fi
 
 fi
 
-if [ $stage -le 1 ]; then 	
+if [ $stage -le 1 ]; then
   local/grid_data_prep.sh $datasrc
 fi
 
