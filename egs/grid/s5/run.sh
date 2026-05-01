@@ -91,15 +91,15 @@ if [ $stage -le 2 ]; then
 fi
 
 if [ $stage -le 3 ]; then
-  for x in train; do
-    if [ -f data/train_${x}/feats.scp ]; then
+  for x in train test ; do
+    if [ -f data/${x}_raw/feats.scp ]; then
       echo "$0: features for data/$x already exist, skipping feature preparation"
       continue
     fi
     echo "preparing features"
     rm -rf data/${x}_raw
     local/copy_data_dir.sh data/$x data/${x}_raw 
-    local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
+    local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt input/$avhubert_ckpt \
      --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
   
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
