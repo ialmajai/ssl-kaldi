@@ -4,7 +4,7 @@
 
 set -e
 
-stage=0
+stage=-1
 nj=8
 njtest=4
 
@@ -18,12 +18,12 @@ datasrc=grid-corpus
 
 model_size=base
 
-avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt
+avhubert_ckpt=input/base_vox_iter5.pt
 encoder_layer=9
 njfeats=8
 
 if [ $model_size == "large" ]; then
-  avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
+  avhubert_ckpt=input/large_vox_iter5.pt
   encoder_layer=14
   njfeats=4
  
@@ -54,11 +54,30 @@ if [ $stage -le -1 ]; then
   python local/download_grid_corpus.py --dir $datasrc
 fi
 
-if [ $stage -le 0 ]; then 	
+if [ $stage -le 0 ]; then
+  models=input
+  mkdir -p $models
+  
+  if [ ! -f $models/shape_predictor_68_face_landmarks.dat ]; then
+    wget http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+    bzip2 -d shape_predictor_68_face_landmarks.dat.bz2
+    mv shape_predictor_68_face_landmarks.dat $dlib_dir
+  fi
+  
+  if [ ! -f "$models"/base_vox_iter5.pt ]; then
+    echo "Downloading AvHubert checkpoint"
+        # https://facebookresearch.github.io/av_hubert: AV-HuBERT Base | LRS3 + VoxCeleb2 (En) | No finetuning
+        model=https://dl.fbaipublicfiles.com/avhubert/model/lrs3_vox/clean-pretrain/base_vox_iter5.pt
+    wget $model -O $models/base_vox_iter5.pt
+  fi
+
+fi
+
+if [ $stage -le 1 ]; then 	
   local/grid_data_prep.sh $datasrc
 fi
 
-if [ $stage -le 1 ]; then
+if [ $stage -le 2 ]; then
   echo "preparing dictionary and lang"
   local/chime1_prepare_dict.sh $dict || exit 1
    
@@ -71,7 +90,7 @@ if [ $stage -le 1 ]; then
   local/grid_prepare_grammar.sh || exit 1
 fi
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 3 ]; then
   for x in train; do
     if [ -f data/train_${x}/feats.scp ]; then
       echo "$0: features for data/$x already exist, skipping feature preparation"
@@ -82,13 +101,13 @@ if [ $stage -le 2 ]; then
     local/copy_data_dir.sh data/$x data/${x}_raw 
     local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
      --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
-    exit 0
+  
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
   done
 fi
 
-if [ $stage -le 3 ]; then
+if [ $stage -le 4 ]; then
   pca_model=pca-${pca_dim}d.pt    
   pca_dir=pca
   mkdir -p $pca_dir
