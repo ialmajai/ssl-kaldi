@@ -23,12 +23,6 @@ speed_perturb=true
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
 
-for f in data/${train_set}/feats.scp ${gmm_dir}/final.mdl; do
-  if [ ! -f $f ]; then
-    echo "$0: expected file $f to exist"
-    exit 1
-  fi
-done
 
 clean_data_dir=${train_set}_sp_raw
 if [ $stage -le 0 ]; then
