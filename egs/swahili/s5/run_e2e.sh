@@ -46,7 +46,15 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
-  # Test feature extraction
+  # Testset feature extraction
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" == "Exclusive_Process" ]; then
+
+    echo "Feature extraction requires GPU compute mode to be set to default"
+    echo "run: sudo nvidia-smi -c 0"
+    exit 1
+  fi
+
   local/make_ssl.sh  --cmd "$train_cmd" --ssl-model "$ssl_model" \
        --nj $feats_nj --layer $encoder_layer data/test
   steps/compute_cmvn_stats.sh data/test
