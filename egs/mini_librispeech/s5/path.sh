@@ -5,6 +5,7 @@ export KALDI_ROOT="/data/git/kaldi"
 # Add symbolic links to standard utils and steps if they don't exist
 [ ! -L utils ] && ln -s $KALDI_ROOT/egs/wsj/s5/utils utils
 [ ! -L steps ] && ln -s $KALDI_ROOT/egs/wsj/s5/steps steps
+[ ! -L conf ] && ln -s $KALDI_ROOT/egs/wsj/s5/conf conf
 
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$KALDI_ROOT/tools/irstlm/bin/:$PWD:$PATH
 [ ! -f $KALDI_ROOT/tools/config/common_path.sh ] && echo >&2 "The standard file $KALDI_ROOT/tools/config/common_path.sh is not present -> Exit!" && exit 1
