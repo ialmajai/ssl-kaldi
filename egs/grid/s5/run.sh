@@ -79,10 +79,11 @@ if [ $stage -le 2 ]; then
     fi
     echo "preparing features"
     rm -rf data/${x}_raw
-    local/copy_data_dir.sh data/$x data/${x}_raw 
+    local/copy_data_dir.sh data/$x data/${x}_raw
+	
     local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
      --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
-    exit 0
+    
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw
   done
