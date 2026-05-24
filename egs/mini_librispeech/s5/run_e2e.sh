@@ -7,7 +7,7 @@
 set -euo pipefail
 stage=3
 model_size=base
-trainset=train_clean_5_raw
+trainset=train_clean_5
 frame_subsampling_factor=2
 
 . ./cmd.sh 
