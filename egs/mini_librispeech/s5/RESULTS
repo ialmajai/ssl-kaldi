@@ -31,5 +31,7 @@ local/bwer.sh
 %WER 30.82 [ 6207 / 20138, 301 ins, 1472 del, 4434 sub ] exp/mono/decode_tgsmall_dev_clean_2_pca/wer_20_0.0
 
 
-Best reported results from original kaldi (mfcc/filterbank features):
-%WER 6.79 [ exp/chain/cnn_tdnn1d_sp/decode_tglarge_dev_clean_2 ]
+#(mfcc/filterbank features
+%WER 6.79 [ exp/chain/cnn_tdnn1d_sp/decode_tglarge_dev_clean_2 ] Best reported results from original kaldi
+%WER 13.18 [ 2654 / 20138, 379 ins, 308 del, 1967 sub ] exp/tri3b/decode_tglarge_dev_clean_2/wer_16_0.5
+%WER 43.09 [ 8677 / 20138, 462 ins, 2016 del, 6199 sub ] exp/mono/decode_tglarge_dev_clean_2/wer_9_0.0
