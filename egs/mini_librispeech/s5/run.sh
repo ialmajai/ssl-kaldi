@@ -23,7 +23,7 @@ pca_dim=30
 
 set -euo pipefail
 
-echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
+echo "Using model: $ssl_model and layer: $encoder_layer for feature extraction"
 
 mkdir -p data
 
@@ -69,7 +69,7 @@ if [ $stage -le 3 ]; then
   for part in dev_clean_2 train_clean_5; do
     echo "preparing features"
     utils/copy_data_dir.sh data/$part data/${part}_raw 
-    local/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $ssl_model \
+    shared/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $ssl_model \
 	    --layer $encoder_layer data/${part}_raw 
     steps/compute_cmvn_stats.sh data/${part}_raw 
   done  
@@ -83,37 +83,37 @@ if [ $stage -le 4 ]; then
           -ot data/train_clean_5_raw/feats.scp ]] ; then
     echo "Training PCA model"
     mkdir -p $pca_dir
-    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_clean_5_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
       --max_utts=1500 $pca_dir/$pca_model
   fi
   for part in dev_clean_2 train_clean_5; do
     echo "preparing pca features"    
-    utils/copy_data_dir.sh data/$part data/${part}
-    local/make_features.sh --cmd "$decode_cmd"  --nj 15 \
+    utils/copy_data_dir.sh data/$part data/${part}_pca
+    shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15 \
         --pca-model $pca_dir/$pca_model \
-          data/${part}_raw data/${part}   || exit 1;
-    steps/compute_cmvn_stats.sh data/${part}  || exit 1;
-    utils/fix_data_dir.sh data/${part}
+          data/${part}_raw data/${part}_pca   || exit 1;
+    steps/compute_cmvn_stats.sh data/${part}_pca  || exit 1;
+    utils/fix_data_dir.sh data/${part}_pca
   done 
 fi
 
 # train a monophone system
 if [ $stage -le 5 ]; then
-  utils/subset_data_dir.sh --shortest data/train_clean_5 500 data/train_500short
+  utils/subset_data_dir.sh --shortest data/train_clean_5_pca 500 data/train_500short
 
   steps/train_mono.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
     data/train_500short data/lang_nosp exp/mono
 
   steps/align_si.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5 data/lang_nosp exp/mono exp/mono_ali_train_clean_5
+    data/train_clean_5_pca data/lang_nosp exp/mono exp/mono_ali_train_clean_5
 fi
 
 if [ $stage -le 6 ]; then
     utils/mkgraph.sh data/lang_nosp_test_tgsmall \
                    exp/mono exp/mono/graph_tgsmall
-    for testset in dev_clean_2; do
+    for testset in dev_clean_2_pca; do
       steps/decode.sh --nj 20 --cmd "$decode_cmd" exp/mono/graph_tgsmall \
         data/$testset exp/mono/decode_tgsmall_$testset
       steps/lmrescore.sh --cmd "$decode_cmd" data/lang_nosp_test_{tgsmall,tgmed} \
@@ -128,26 +128,26 @@ fi
 #delta + delta-delta triphone
 if [ $stage -le 7 ]; then
   steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
-    2000 10000 data/train_clean_5 data/lang_nosp exp/mono_ali_train_clean_5 exp/tri1
+    2000 10000 data/train_clean_5_pca data/lang_nosp exp/mono_ali_train_clean_5 exp/tri1
 
   steps/align_si.sh --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5 data/lang_nosp exp/tri1 exp/tri1_ali_train_clean_5
+    data/train_clean_5_pca data/lang_nosp exp/tri1 exp/tri1_ali_train_clean_5
 fi
 
 # Train LDA+MLLT system
 if [ $stage -le 8 ]; then
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" 2500 15000 \
-    data/train_clean_5 data/lang_nosp exp/tri1_ali_train_clean_5 exp/tri2b
+    data/train_clean_5_pca data/lang_nosp exp/tri1_ali_train_clean_5 exp/tri2b
 
   steps/align_si.sh  --nj 5 --cmd "$train_cmd" --use-graphs true \
-    data/train_clean_5 data/lang_nosp exp/tri2b exp/tri2b_ali_train_clean_5
+    data/train_clean_5_pca data/lang_nosp exp/tri2b exp/tri2b_ali_train_clean_5
 fi
 
 # Train LDA+MLLT+SAT
 if [ $stage -le 9 ]; then
   steps/train_sat.sh --cmd "$train_cmd" 2500 15000 \
-    data/train_clean_5 data/lang_nosp exp/tri2b_ali_train_clean_5 exp/tri3b
+    data/train_clean_5_pca data/lang_nosp exp/tri2b_ali_train_clean_5 exp/tri3b
 fi
 
 # Now we compute the pronunciation and silence probabilities from training data,
@@ -173,7 +173,7 @@ if [ $stage -le 11 ]; then
   # decode using the tri3b model
   utils/mkgraph.sh data/lang_test_tgsmall \
                    exp/tri3b exp/tri3b/graph_tgsmall
-  for test in  dev_clean_2 ; do
+  for test in  dev_clean_2_pca ; do
     steps/decode_fmllr.sh --nj 10  --cmd "$decode_cmd" \
                           exp/tri3b/graph_tgsmall data/$test \
                           exp/tri3b/decode_tgsmall_$test
@@ -188,7 +188,7 @@ fi
 if [ $stage -le 12 ]; then
   echo "$0: TDNN training started"
   local/chain/run_common_ssl.sh --stage 12 \
-    --ssl-model $model_type \
+    --ssl-model $ssl_model \
     --encoder-layer $encoder_layer \
     --feats_nj $feats_nj \
     --pca-dim $pca_dim

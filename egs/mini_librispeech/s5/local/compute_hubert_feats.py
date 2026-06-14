@@ -145,8 +145,6 @@ def process_features():
                             waveform, dtype=torch.float32
                         ).unsqueeze(0)
 
-                    print(wf_t)
-                    sys.exit(0)
                     feats = compute_hubert(wf_t, 16000)                        
 
                     writer(utt_id, feats)

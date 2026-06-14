@@ -4,3 +4,4 @@ transformers>=4.30.0
 torchdr>=0.1.0
 matplotlib==3.5
 kaldiio
+transformers
