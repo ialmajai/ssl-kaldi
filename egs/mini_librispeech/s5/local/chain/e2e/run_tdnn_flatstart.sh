@@ -26,7 +26,7 @@ common_egs_dir=
 l2_regularize=0.00005
 frames_per_iter=1000000
 cmvn_opts="--norm-means=false --norm-vars=false"
-train_set=train_clean_5_raw_spe2e
+train_set=train_clean_5_spe2e
 test_sets="dev_clean_2_raw"
 frame_subsampling_factor=2
 

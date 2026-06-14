@@ -10,21 +10,21 @@ model_size=base
 trainset=train_clean_5
 frame_subsampling_factor=2
 
+# model_type="facebook/hubert-base-ls960"
+# encoder_layer=9
+# feats_nj=8
+
+ssl_model="facebook/mms-300m"
+encoder_layer=14
+feats_nj=4
+
+
 . ./cmd.sh 
 . ./path.sh
 . utils/parse_options.sh
 
-model_type="facebook/hubert-base-ls960"
-encoder_layer=9
-feats_nj=8
 
-if [ $model_size == "large" ]; then
-  model_type="facebook/hubert-large-ll60k"
-  encoder_layer=14
-  feats_nj=4
-fi
-
-echo "Using model: $model_type and layer: $encoder_layer for feature extraction"
+echo "Using model: $ssl_model and layer: $encoder_layer for feature extraction"
 
 if [ $stage -le 3 ]; then
   echo "$0: perturbing the training data to allowed lengths"
@@ -35,9 +35,6 @@ if [ $stage -le 3 ]; then
               --frame-subsampling-factor $frame_subsampling_factor \
               12 data/${trainset} \
               data/${trainset}_spe2e
-  # creating utt2uniq does not work for such a small dataset
-  # cat data/${trainset}_spe2e/utt2dur | \
-  #   awk '{print $1 " " substr($1,5)}' >data/${trainset}_spe2e/utt2uniq
   utils/fix_data_dir.sh data/${trainset}_spe2e
 fi
 
@@ -48,7 +45,7 @@ if [ $stage -le 4 ]; then
     echo "run: sudo nvidia-smi -c 0"
     exit 1
   fi
-    local/make_hubert.sh --cmd "$train_cmd" --nj $feats_nj --model-type $model_type \
+    local/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $ssl_model \
 	    --layer $encoder_layer data/${trainset}_spe2e
     steps/compute_cmvn_stats.sh data/${trainset}_spe2e   
 fi
