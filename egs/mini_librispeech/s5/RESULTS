@@ -1,34 +1,30 @@
 local/bwer.sh
 
-#facebook/hubert-base-ls960
+#facebook/hubert-base-ls960, layer 9
 %WER 4.28 [ 862 / 20138, 108 ins, 68 del, 686 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_11_1.0
 %WER 4.97 [ 1001 / 20138, 135 ins, 104 del, 762 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_11_0.5
-%WER 5.24 [ 1055 / 20138, 131 ins, 72 del, 852 sub ] exp/chain_online_cmn/tdnn_sp/decode_tgsmall_dev_clean_2/wer_11_0.0
-%WER 6.65 [ 1339 / 20138, 161 ins, 161 del, 1017 sub ] exp/chain/e2e_tdnnf_1a/decode_tgsmall_dev_clean_2_raw/wer_11_0.0
-
 %WER 11.29 [ 2273 / 20138, 237 ins, 453 del, 1583 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_21_0.0
-%WER 13.15 [ 2648 / 20138, 219 ins, 607 del, 1822 sub ] exp/tri3b/decode_tgsmall_dev_clean_2_pca/wer_28_0.0
 %WER 29.05 [ 5850 / 20138, 311 ins, 1436 del, 4103 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_18_0.0
-%WER 33.48 [ 6743 / 20138, 251 ins, 1930 del, 4562 sub ] exp/mono/decode_tgsmall_dev_clean_2_pca/wer_19_0.0
 
 #facebook/hubert-large-ll60k, layer 12
 %WER 4.70 [ 947 / 20138, 132 ins, 73 del, 742 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_12_0.0
 %WER 6.31 [ 1271 / 20138, 122 ins, 129 del, 1020 sub ] exp/chain_online_cmn/tdnn_sp/decode_tgsmall_dev_clean_2/wer_11_0.5
 %WER 11.64 [ 2345 / 20138, 300 ins, 425 del, 1620 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_26_0.0
-%WER 13.42 [ 2703 / 20138, 290 ins, 487 del, 1926 sub ] exp/tri3b/decode_tgsmall_dev_clean_2_pca/wer_22_0.0
 %WER 28.59 [ 5758 / 20138, 351 ins, 1212 del, 4195 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_20_0.0
-%WER 32.40 [ 6524 / 20138, 295 ins, 1600 del, 4629 sub ] exp/mono/decode_tgsmall_dev_clean_2_pca/wer_20_0.0
 
 
 #facebook/hubert-large-ll60k, layer 14
 %WER 4.15 [ 835 / 20138, 92 ins, 76 del, 667 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tglarge_dev_clean_2/wer_12_1.0
 %WER 4.90 [ 987 / 20138, 105 ins, 108 del, 774 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_10_1.0
-%WER 5.45 [ 1097 / 20138, 118 ins, 91 del, 888 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tgsmall_dev_clean_2/wer_11_0.5
-%WER 6.63 [ 1336 / 20138, 140 ins, 148 del, 1048 sub ] exp/chain/e2e_tdnnf_1a/decode_tgsmall_dev_clean_2_raw/wer_11_0.0
 %WER 10.92 [ 2200 / 20138, 271 ins, 363 del, 1566 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_22_0.0
-%WER 12.41 [ 2499 / 20138, 244 ins, 444 del, 1811 sub ] exp/tri3b/decode_tgsmall_dev_clean_2_pca/wer_24_0.0
 %WER 27.31 [ 5499 / 20138, 361 ins, 1087 del, 4051 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_19_0.0
-%WER 30.82 [ 6207 / 20138, 301 ins, 1472 del, 4434 sub ] exp/mono/decode_tgsmall_dev_clean_2_pca/wer_20_0.0
+
+
+#facebook/mms-300m, layer 14
+%WER 3.89 [ 783 / 20138, 100 ins, 69 del, 614 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tglarge_dev_clean_2/wer_9_1.0
+%WER 4.48 [ 902 / 20138, 123 ins, 85 del, 694 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_10_0.5
+%WER 10.87 [ 2190 / 20138, 246 ins, 433 del, 1511 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_26_0.0
+%WER 29.06 [ 5853 / 20138, 288 ins, 1528 del, 4037 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_19_0.0
 
 
 #(mfcc/filterbank features
