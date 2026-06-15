@@ -7,6 +7,7 @@ export KALDI_ROOT="/data/git/kaldi"
 [ ! -L utils ] && ln -s $KALDI_ROOT/egs/wsj/s5/utils utils
 [ ! -L steps ] && ln -s $KALDI_ROOT/egs/wsj/s5/steps steps
 [ ! -L conf ] && ln -s $KALDI_ROOT/egs/wsj/s5/conf conf
+[ ! -L shared ] && ln -s ../../../shared shared
 
 
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PWD:$PATH

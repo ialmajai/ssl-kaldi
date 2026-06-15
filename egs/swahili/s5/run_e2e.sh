@@ -55,7 +55,7 @@ if [ $stage -le 1 ]; then
     exit 1
   fi
 
-  local/make_ssl.sh  --cmd "$train_cmd" --ssl-model "$ssl_model" \
+  shared/make_ssl.sh  --cmd "$train_cmd" --ssl-model "$ssl_model" \
        --nj $feats_nj --layer $encoder_layer data/test
   steps/compute_cmvn_stats.sh data/test
 fi
@@ -83,7 +83,7 @@ if [ $stage -le 3 ]; then
     echo "run: sudo nvidia-smi -c 0"
     exit 1
   fi
-    local/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model "$ssl_model" \
+    shared/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model "$ssl_model" \
 	    --layer $encoder_layer data/${trainset}_spe2e
     steps/compute_cmvn_stats.sh data/${trainset}_spe2e   
 fi
