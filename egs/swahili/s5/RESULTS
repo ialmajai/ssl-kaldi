@@ -1,6 +1,12 @@
 local/bwer.sh 
+
+# ssl_model : ajesujoba/AfriHuBERT
 %WER 19.76 [ 3497 / 17700, 400 ins, 652 del, 2445 sub ] exp/chain/e2e_tdnnf_1a/decode_test/wer_10
 
-Best result reported in kaldi reprository using MFCCs:
+# ssl_model :  utter-project/mHuBERT-147
+%WER 19.82 [ 3508 / 17700, 390 ins, 673 del, 2445 sub ] exp/chain/e2e_tdnnf_1a/decode_test/wer_10
+
+
+# Best result reported in kaldi reprository using MFCCs:
 %WER 26.62 [ 4711 / 17700, 487 ins, 1076 del, 3148 sub ] exp/system1/sgmm2_5b2_mmi_b0.1/decode_test_it3.mbr/wer_9
 

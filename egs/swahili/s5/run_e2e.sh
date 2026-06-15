@@ -12,7 +12,8 @@ frame_subsampling_factor=2
 . ./path.sh
 . utils/parse_options.sh
 
-ssl_model="ajesujoba/AfriHuBERT"
+#ssl_model="ajesujoba/AfriHuBERT"
+ssl_model="utter-project/mHuBERT-147"
 encoder_layer=9
 feats_nj=8
 
