@@ -6,23 +6,15 @@ train_set=train_clean_5
 test_sets="dev_clean_2"
 gmm=tri3b
 
-model_size=base
 pca_dim=30
 nnet3_affix=
-
+ssl_model=
+feats_nj=
+encoder_layer= 
 . ./cmd.sh
 . ./path.sh
 . utils/parse_options.sh
 
-model_type="facebook/hubert-base-ls960"
-encoder_layer=9
-feats_nj=8
-
-if [ $model_size == "large" ]; then
-  model_type="facebook/hubert-large-ll60k"
-  encoder_layer=14
-  feats_nj=4
-fi
 
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
@@ -48,9 +40,9 @@ if [ $stage -le 12 ]; then
 
   utils/data/perturb_data_dir_volume.sh data/${train_set}_sp_raw || exit 1;
 
-  echo "$0: making HuBERT features for low-resolution speed-perturbed data"
-  local/make_hubert.sh --cmd "run.pl" --nj $feats_nj --layer $encoder_layer \
-	  --model-type $model_type data/${train_set}_sp_raw || exit 1;
+  echo "$0: making SSL features for low-resolution speed-perturbed data"
+  shared/make_ssl.sh --cmd "run.pl" --nj $feats_nj --layer $encoder_layer \
+	  --ssl-model $ssl_model data/${train_set}_sp_raw || exit 1;
   steps/compute_cmvn_stats.sh data/${train_set}_sp_raw || exit 1;
   utils/fix_data_dir.sh data/${train_set}_sp_raw
 fi
@@ -63,7 +55,7 @@ if [ $stage -le 13 ]; then
        -ot data/${train_set}_sp_raw/feats.scp ]] ; then
     echo "Training PCA model"
     mkdir -p $pca_dir
-    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/${train_set}_sp_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
       --max_utts=1500 $pca_dir/$pca_model
@@ -71,7 +63,7 @@ if [ $stage -le 13 ]; then
   for part in train_clean_5_sp; do
     echo "preparing pca features"    
     utils/copy_data_dir.sh data/${part}_raw data/${part}_pca
-    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
+    shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
           data/${part}_raw data/${part}_pca  || exit 1;
     steps/compute_cmvn_stats.sh data/${part}_pca  || exit 1;
     utils/fix_data_dir.sh data/${part}_pca

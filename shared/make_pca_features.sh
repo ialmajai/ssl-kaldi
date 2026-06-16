@@ -48,7 +48,7 @@ scp=$src_data/feats.scp
 utils/split_scp.pl $scp $split_scps || exit 1;
 
 $cmd JOB=1:$nj $pcadir/make_pca_${name}.JOB.log \
-python local/pca.py  --pca_dim=$pca_dim --mode=apply \
+python shared/pca.py  --pca_dim=$pca_dim --mode=apply \
     --feats_scp=$logdir/feats_${name}.JOB.scp \
     --pca_model=$pca_model ark:- \
     \|  copy-feats ark:- \
