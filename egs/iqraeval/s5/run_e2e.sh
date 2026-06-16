@@ -12,10 +12,11 @@ encoder_layer=9
 trainset=train
 frame_subsampling_factor=2
 feats_nj=8
+ssl_model="utter-project/mHuBERT-147"
 
-. ./cmd.sh
-. ./path.sh
-. utils/parse_options.sh
+. ./cmd.sh || exit 1
+. ./path.sh || exit 1
+. utils/parse_options.sh || exit 1
 
 if [ $stage -le 2 ]; then
   echo "$0: perturbing the training data to allowed lengths"
@@ -32,10 +33,9 @@ if [ $stage -le 2 ]; then
 fi
 
 if [ $stage -le 3 ]; then
-    featdir=feats-spe2e_raw 
-    local/make_mhubert.sh --cmd "$train_cmd" --nj $feats_nj \
-	    --layer $encoder_layer data/${trainset}_spe2e_raw exp/make_mhubert/${trainset}_spe2e_raw $featdir
-    steps/compute_cmvn_stats.sh data/${trainset}_spe2e_raw exp/make_mhubert/${trainset}_spe2e_raw $featdir   
+    shared/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $ssl_model \
+	    --layer $encoder_layer data/${trainset}_spe2e_raw 
+    steps/compute_cmvn_stats.sh data/${trainset}_spe2e_raw
 fi
 
 if [ $stage -le 4 ]; then

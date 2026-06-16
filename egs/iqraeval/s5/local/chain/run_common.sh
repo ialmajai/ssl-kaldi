@@ -9,6 +9,7 @@ feats_nj=8
 train_set=train
 test_set=dev
 gmm=tri2
+ssl_model=
 layer=9
 pca_dim=30
 
@@ -20,10 +21,12 @@ speed_perturb=true
 . ./path.sh
 . utils/parse_options.sh
 
+[ -z "$ssl_model" ] && echo "$0: --ssl-model is required" && exit 1
+
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
 
-for f in data/${train_set}/feats.scp ${gmm_dir}/final.mdl; do
+for f in data/${train_set}_raw/feats.scp ${gmm_dir}/final.mdl; do
   if [ ! -f $f ]; then
     echo "$0: expected file $f to exist"
     exit 1
@@ -33,9 +36,10 @@ done
 clean_data_dir=${train_set}_sp_raw
 if [ $stage -le 0 ]; then
   echo "$0: preparing directory for low-resolution speed-perturbed data (for alignment)"
-  utils/data/perturb_data_dir_speed_3way.sh data/${train_set} data/${clean_data_dir}
-  echo "$0: making mHuBERT features for low-resolution speed-perturbed data"
-  local/make_mhubert.sh --cmd "run.pl" --nj $feats_nj --layer $layer data/${clean_data_dir} || exit 1;
+  utils/data/perturb_data_dir_speed_3way.sh data/${train_set}_raw data/${clean_data_dir}
+  echo "$0: making ssl features for low-resolution speed-perturbed data"
+  shared/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $ssl_model \
+	  --layer $layer data/${clean_data_dir} || exit 1;
   steps/compute_cmvn_stats.sh data/${clean_data_dir} || exit 1;
   utils/fix_data_dir.sh data/${clean_data_dir}
 fi
@@ -47,8 +51,7 @@ if [ $stage -le 1 ]; then
   if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
           -ot data/${clean_data_dir}/feats.scp ]] ; then
     echo "Training PCA model"
-    mkdir -p $pca_dir
-    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/${clean_data_dir}/feats.scp \
       --pca_model=$pca_dir/$pca_model \
       --max_utts=20000 $pca_dir/$pca_model
@@ -57,7 +60,7 @@ if [ $stage -le 1 ]; then
   echo "preparing pca features"    
   utils/copy_data_dir.sh data/$clean_data_dir data/${train_set}_sp_pca
   rm -rf data/${train_set}_sp_pca/feats.scp data/${train_set}_sp_pca/data 
-  local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
+  shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
         data/${clean_data_dir} data/${train_set}_sp_pca  || exit 1;
   steps/compute_cmvn_stats.sh data/${train_set}_sp_pca  || exit 1;
   utils/fix_data_dir.sh data/${train_set}_sp_pca  
@@ -90,10 +93,10 @@ if [ $stage -le 3 ]; then
 fi
 
 if [ $stage -le 4 ]; then
-  echo "$0: extract raw mHUBERT features"
+  echo "$0: extract raw ssl features"
   utils/data/perturb_data_dir_volume.sh data/${rev_data_dir} || exit 1;
   
-  local/make_mhubert.sh --nj $feats_nj --layer $layer   \
+  shared/make_ssl.sh --nj $feats_nj --ssl-model $ssl_model --layer $layer \
     --cmd "$train_cmd" data/${rev_data_dir} || exit 1;
   steps/compute_cmvn_stats.sh data/${rev_data_dir} || exit 1;
   utils/fix_data_dir.sh data/${rev_data_dir} || exit 1;  

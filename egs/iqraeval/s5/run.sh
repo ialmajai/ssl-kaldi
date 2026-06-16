@@ -23,6 +23,8 @@ feats_nj=8
 train_nj=16
 decode_nj=16
 
+ssl_model="utter-project/mHuBERT-147"
+
 #Modify dataset path
 IqraEvalData=/data/git/interspeech_IqraEval/sws_data
 
@@ -35,9 +37,9 @@ if [ $stage -le 0 ]; then
 
   local/iqra_data_prep.sh  $IqraEvalData || exit 1
   # Verify data directories were created
-  for x in train dev; do
-    utils/fix_data_dir.sh data/$x || exit 1	  
-    utils/validate_data_dir.sh --no-feats data/$x  || exit 1
+  for x in train dev; do  
+    utils/fix_data_dir.sh data/$x  
+    utils/validate_data_dir.sh --no-feats data/$x 
   done
   local/iqra_prepare_dict.sh || exit 1
   utils/validate_dict_dir.pl  data/local/dict || exit 1
@@ -48,9 +50,17 @@ fi
 
 if [ $stage -le 1 ]; then
   # Feature Extration & CMVN
-  for x in dev train ; do
+  compute_mode=$(nvidia-smi --query-gpu=compute_mode --format=csv,noheader)
+  if [ "$compute_mode" == "Exclusive_Process" ]; then
+
+    echo "Feature extraction requires GPU compute mode to be set to default"
+    echo "run: sudo nvidia-smi -c 0"
+    exit 1
+  fi
+
+  for x in train dev ; do
     utils/copy_data_dir.sh data/$x data/${x}_raw
-    local/make_mhubert.sh  --cmd "$train_cmd" \
+    shared/make_ssl.sh  --cmd "$train_cmd" --ssl-model $ssl_model \
        --nj $feats_nj --layer $encoder_layer data/${x}_raw 
     steps/compute_cmvn_stats.sh data/${x}_raw 
   done
@@ -63,8 +73,7 @@ if [ $stage -le 2 ]; then
   if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
           -ot data/train_raw/feats.scp ]] ; then
     echo "Training PCA model"
-    mkdir -p $pca_dir
-    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
       --max_utts=20000 $pca_dir/$pca_model
@@ -72,7 +81,7 @@ if [ $stage -le 2 ]; then
   for x in dev train; do
     echo "preparing pca features"    
     utils/copy_data_dir.sh data/$x data/${x}_pca
-    local/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
+    shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \
           data/${x}_raw data/${x}_pca   || exit 1;
     steps/compute_cmvn_stats.sh data/${x}_pca   || exit 1;
     utils/fix_data_dir.sh data/${x}_pca
@@ -92,7 +101,7 @@ fi
 # tri1: Δ + ΔΔ
 if [ $stage -le 4 ]; then
   steps/align_si.sh --boost-silence 1.25 --nj "$train_nj" --cmd "$train_cmd" \
-    data/train_pca data/lang exp/mono exp/mono_ali
+    data/train_pca_5k data/lang exp/mono exp/mono_ali
   steps/train_deltas.sh --cmd "$train_cmd" \
     $numLeavesTri1 $numGaussTri1 data/train_pca data/lang exp/mono_ali exp/tri1
 
@@ -104,7 +113,7 @@ fi
 # tri2: LDA + MLLT 
 if [ $stage -le 5 ]; then
   steps/align_si.sh --nj "$train_nj" --cmd "$train_cmd" \
-     data/train_pca data/lang exp/tri1 exp/tri1_ali
+     data/train_pca_5k data/lang exp/tri1 exp/tri1_ali
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
     $numLeavesMLLT $numGaussMLLT data/train_pca data/lang exp/tri1_ali exp/tri2
@@ -116,9 +125,10 @@ fi
 
 # DNN training and decoding
 if [ $stage -le 6 ]; then
-  local/chain/run_common.sh --stage 0 --gmm tri2 --layer $encoder_layer \
-                            --pca-dim $pca_dim --num-data-reps 1
-  local/chain/run_tdnn_mhubert_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
+  local/chain/run_common.sh --stage 0 --gmm tri2 --ssl-model $ssl_model \
+	  --layer $encoder_layer --pca-dim $pca_dim --num-data-reps 1
+
+  local/chain/run_tdnn_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
 fi
 
 if [ $stage -le 7 ]; then
