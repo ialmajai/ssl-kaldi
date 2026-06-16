@@ -8,7 +8,7 @@ compress=true
 write_utt2num_frames=true  # If true writes utt2num_frames.
 write_utt2dur=true
 layer=9
-ssl_model="facebook/ssl-base-ls960"
+ssl_model="facebook/hubert-base-ls960"
 
 echo "$0 $@"  # Print the command line for logging.
 
