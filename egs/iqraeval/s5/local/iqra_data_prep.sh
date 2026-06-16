@@ -1,16 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Copyright 2025, author: Ibrahim Almajai         
+# Copyright 2025, author: Ibrahim Almajai
 # Apache 2.0
+
+set -euo pipefail
 
 if [ $# != 1 ]; then
   echo "Usage: local/iqra_data_prep.sh /path/to/IqraEval-dataset "
-  exit 1; 
-fi 
+  exit 1;
+fi
 
 export LC_ALL=C
 
 IQRAROOT=$1
+[ ! -d "$IQRAROOT" ] && echo "$0: directory not found: $IQRAROOT" && exit 1
 
 tmpdir=data/local/tmp
 mkdir -p $tmpdir
@@ -19,7 +22,7 @@ mkdir -p $tmpdir
 label_convert() {
     local label_dir="$1"      
 
-    find $label_dir -name 'transcript_*.txt' -print0 | \
+    find $label_dir -name 'phoneme_ref_*.txt' -print0 | \
        xargs -0 -I{} awk '
         BEGIN {OFS=" "}
         {
@@ -58,9 +61,9 @@ sed -i -e 's: : sox ":' -e 's:$:" -t wav -b 16 -e signed-integer -r 16000 - |:' 
 
 rm -f  $dir/text
 
-label_convert $IQRAROOT/TTS/train   | sed 's:transcript:tts:' > $dir/text
-label_convert $IQRAROOT/CV-Ar/train | sed 's:transcript:cvar:' >> $dir/text
-
+label_convert $IQRAROOT/TTS/train   | sed 's:phoneme-ref:tts:' > $dir/text
+label_convert $IQRAROOT/CV-Ar/train/phoneme_ref | sed 's:phoneme-ref:cvar:' >> $dir/text
+sort -k1 -o $dir/text $dir/text
 
 awk '{print $1,$1}' $dir/wav.scp  > $dir/utt2spk
 cp $dir/utt2spk $dir/spk2utt
@@ -81,7 +84,7 @@ local/flist2scp.pl $tmpdir/dev_wav.flist | sort  | sed 's:audio-:cvar-:'   > $di
 sed -i -e 's: : sox ":' -e 's:$:" -t wav -b 16 -e signed-integer -r 16000 - |:' $dir/wav.scp
 
 rm -f  $dir/text
-label_convert $IQRAROOT/CV-Ar/dev  | sed 's:transcript:cvar:' > $dir/text
+label_convert $IQRAROOT/CV-Ar/dev/phoneme_ref  | sed 's:phoneme-ref:cvar:' > $dir/text
 
 sort -k1 -o $dir/text $dir/text
 
