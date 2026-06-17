@@ -27,7 +27,7 @@ if  $use_upsampling && [ $stage -le 3 ]; then
     src=data/${x}_raw
     dst=data/${x}_raw_upsampled 
     local/copy_data_dir.sh $src $dst    
-    local/upsample_features.sh --cmd "$decode_cmd" --nj 15 \
+    shared/upsample_features.sh --cmd "$decode_cmd" --nj 15 \
       --interp-mode $interp_mode --upsample-factor $upsample_factor \
        $src $dst   || exit 1;
     steps/compute_cmvn_stats.sh $dst   || exit 1;
