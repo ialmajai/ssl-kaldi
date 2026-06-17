@@ -2,7 +2,7 @@
 # Copyright   2025  Ibrahim Almajai
 # License: Apache 2.0.
 
-set -e
+set -euo pipefail
 
 stage=0
 nj=8
@@ -75,7 +75,7 @@ fi
 if [ $stage -le 2 ]; then
 
   if [ ! -f "input/$avhubert_model" ]; then
-    log "Downloading AvHubert checkpoint"
+    echo "Downloading AvHubert checkpoint"
 	# https://facebookresearch.github.io/av_hubert: AV-HuBERT Base | LRS3 + VoxCeleb2 (En) | No finetuning
 	model_link=https://dl.fbaipublicfiles.com/avhubert/model/lrs3_vox/clean-pretrain/$avhubert_model
     wget $model_link -O input/$avhubert_model
@@ -102,7 +102,6 @@ if [ $stage -le 3 ]; then
   if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
 	  -ot data/train_raw/feats.scp ]] ; then
     echo "Training PCA model"
-    mkdir -p $pca_dir
     python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
@@ -197,7 +196,6 @@ if [ $stage -le 11 ]; then
       data/train$data_affix data/lang exp/tri3b exp/tri3b_ali
 fi
 
-#extract fMLLR features for chain training
 data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
 if [ $stage -le 12 ]; then
