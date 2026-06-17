@@ -18,12 +18,12 @@ datasrc=grid-corpus
 
 model_size=base
 
-avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt
+avhubert_model=base_vox_iter5.pt
 encoder_layer=9
 njfeats=8
 
 if [ $model_size == "large" ]; then
-  avhubert_ckpt=/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/large_vox_iter5.pt
+  avhubert_model=large_vox_iter5.pt
   encoder_layer=14
   njfeats=4
  
@@ -35,6 +35,7 @@ avhubert_path=/data/git/ssl-kaldi/egs/grid/s5/av_hubert
 lang=data/lang
 dict=data/local/dict
 langtmp=data/local/lang
+data_affix=_upsampled
 mkdir -p $langtmp
 mkdir -p $dict
 
@@ -72,16 +73,20 @@ if [ $stage -le 1 ]; then
 fi
 
 if [ $stage -le 2 ]; then
+
+  if [ ! -f "input/$avhubert_model" ]; then
+    log "Downloading AvHubert checkpoint"
+	# https://facebookresearch.github.io/av_hubert: AV-HuBERT Base | LRS3 + VoxCeleb2 (En) | No finetuning
+	model_link=https://dl.fbaipublicfiles.com/avhubert/model/lrs3_vox/clean-pretrain/$avhubert_model
+    wget $model_link -O input/$avhubert_model
+  fi
+
   for x in train test; do
-    if [ -f data/${x}_raw/feats.scp ]; then
-      echo "$0: features for data/$x already exist, skipping feature preparation"
-      continue
-    fi
     echo "preparing features"
     rm -rf data/${x}_raw
     local/copy_data_dir.sh data/$x data/${x}_raw
 	
-    local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt $avhubert_ckpt \
+    local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt input/$avhubert_model \
      --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
     
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
@@ -115,83 +120,100 @@ if [ $stage -le 3 ]; then
 fi
 
 if [ $stage -le 4 ]; then
-  steps/train_mono.sh --nj 8 --cmd "$train_cmd" --boost-silence 1.5 \
-    data/train data/lang exp/mono
+
+  for x in train test; do
+    echo "upsampling features"
+    src=data/${x}
+    dst=data/${x}_upsampled
+    local/copy_data_dir.sh $src $dst
+    shared/upsample_features.sh --cmd "$decode_cmd" --nj 15 \
+      --interp-mode $interp_mode --upsample-factor $upsample_factor \
+       $src $dst   || exit 1;
+
+    steps/compute_cmvn_stats.sh $dst   || exit 1;
+    utils/fix_data_dir.sh $dst
+  done
 fi
 
 if [ $stage -le 5 ]; then
-  utils/mkgraph.sh  data/lang  exp/mono exp/mono/graph
-  steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-    exp/mono/graph data/test exp/mono/decode  
+  steps/train_mono.sh --nj 8 --cmd "$train_cmd" --boost-silence 1.5 \
+    data/train$data_affix data/lang exp/mono
 fi
 
 if [ $stage -le 6 ]; then
-  # Get alignments from monophone system.
-  steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang exp/mono exp/mono_ali
-
-  steps/train_deltas.sh --cmd "$train_cmd" --boost-silence 1.5 \
-  $numLeavesTri1  $numGaussTri1 data/train data/lang exp/mono_ali exp/tri1
-
-  utils/mkgraph.sh data/lang exp/tri1 exp/tri1/graph
-  steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-    exp/tri1/graph data/test exp/tri1/decode
-  
-  # align tri1
-  steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang exp/tri1 exp/tri1_ali
+  utils/mkgraph.sh  data/lang  exp/mono exp/mono/graph
+  steps/decode.sh  --nj $njtest --cmd "$decode_cmd" \
+    exp/mono/graph data/test$data_affix exp/mono/decode  
 fi
 
 if [ $stage -le 7 ]; then
-  # train and decode tri2b [LDA+MLLT]
-  steps/train_lda_mllt.sh --cmd "$train_cmd" \
-    --splice-opts "--left-context=3 --right-context=3" $numLeavesMLLT \
-    $numGaussMLLT data/train data/lang exp/tri1_ali exp/tri2b
+  # Get alignments from monophone system.
+  steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+    data/train$data_affix data/lang exp/mono exp/mono_ali
 
-  utils/mkgraph.sh data/lang exp/tri2b exp/tri2b/graph
-  steps/decode.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-    exp/tri2b/graph data/test exp/tri2b/decode 
+  steps/train_deltas.sh --cmd "$train_cmd" --boost-silence 1.5 \
+    $numLeavesTri1  $numGaussTri1 data/train$data_affix data/lang \
+    exp/mono_ali exp/tri1
+
+  utils/mkgraph.sh data/lang exp/tri1 exp/tri1/graph
+  steps/decode.sh  --nj $njtest --cmd "$decode_cmd" \
+    exp/tri1/graph data/test$data_affix exp/tri1/decode
+  
+  # align tri1
+  steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+    data/train$data_affix data/lang exp/tri1 exp/tri1_ali
 fi
 
 if [ $stage -le 8 ]; then
-# Align all data with LDA+MLLT system (tri2b)
-steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-   data/train data/lang exp/tri2b exp/tri2b_ali
+  # train and decode tri2b [LDA+MLLT]
+  steps/train_lda_mllt.sh --cmd "$train_cmd" \
+    --splice-opts "--left-context=3 --right-context=3" $numLeavesMLLT \
+    $numGaussMLLT data/train$data_affix data/lang exp/tri1_ali exp/tri2b
+
+  utils/mkgraph.sh data/lang exp/tri2b exp/tri2b/graph
+  steps/decode.sh --nj $njtest --cmd "$decode_cmd" \
+    exp/tri2b/graph data/test$data_affix exp/tri2b/decode 
 fi
 
 if [ $stage -le 9 ]; then
-  # Do LDA+MLLT+SAT, and decode.
-  steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT data/train \
-    data/lang exp/tri2b_ali exp/tri3b
-    
-  utils/mkgraph.sh data/lang exp/tri3b exp/tri3b/graph
-  steps/decode_fmllr.sh --config conf/decode.config --nj $njtest --cmd "$decode_cmd" \
-      exp/tri3b/graph data/test exp/tri3b/decode
+# Align all data with LDA+MLLT system (tri2b)
+steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+   data/train$data_affix data/lang exp/tri2b exp/tri2b_ali
 fi
 
 if [ $stage -le 10 ]; then
+  # Do LDA+MLLT+SAT, and decode.
+  steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT \
+    data/train$data_affix data/lang exp/tri2b_ali exp/tri3b
+    
+  utils/mkgraph.sh data/lang exp/tri3b exp/tri3b/graph
+  steps/decode_fmllr.sh --nj $njtest --cmd "$decode_cmd" \
+      exp/tri3b/graph data/test$data_affix exp/tri3b/decode
+fi
+
+if [ $stage -le 11 ]; then
   # Align all data with LDA+MLLT+SAT
   steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-      data/train data/lang exp/tri3b exp/tri3b_ali
+      data/train$data_affix data/lang exp/tri3b exp/tri3b_ali
 fi
 
 #extract fMLLR features for chain training
 data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
-if [ $stage -le 11 ]; then
+if [ $stage -le 12 ]; then
 
   dirc=${data_fmllr}/test
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 4 --cmd "$train_cmd" \
      --transform-dir $gmm/decode \
-     $dirc data/test $gmm $dirc/log $dirc/data
+     $dirc data/test$data_affix $gmm $dirc/log $dirc/data
   steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
 
   dirc=${data_fmllr}/train
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 8 --cmd "$train_cmd" \
      --transform-dir ${gmm}_ali \
-     $dirc data/train $gmm $dirc/log $dirc/data
+     $dirc data/train$data_affix $gmm $dirc/log $dirc/data
   steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
 fi
 
