@@ -50,7 +50,7 @@ scp=$src_data/feats.scp
 utils/split_scp.pl $scp $split_scps || exit 1;
 
 $cmd JOB=1:$nj $feats_dir/make_interpolate_${name}.JOB.log \
-python local/interpolate.py  --feats_scp=$logdir/feats_${name}.JOB.scp \
+python shared/interpolate.py  --feats_scp=$logdir/feats_${name}.JOB.scp \
     --interp_mode=$interp_mode --upsample_factor=$upsample_factor ark:- \| \
     copy-feats ark:- \
     ark,scp:$feats_dir/feats_$name.JOB.ark,$feats_dir/feats_$name.JOB.scp \
