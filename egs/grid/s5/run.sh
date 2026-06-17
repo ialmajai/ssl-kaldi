@@ -72,8 +72,8 @@ if [ $stage -le 1 ]; then
 fi
 
 if [ $stage -le 2 ]; then
-  for x in train; do
-    if [ -f data/train_${x}/feats.scp ]; then
+  for x in train test; do
+    if [ -f data/${x}_raw/feats.scp ]; then
       echo "$0: features for data/$x already exist, skipping feature preparation"
       continue
     fi
@@ -101,15 +101,12 @@ if [ $stage -le 3 ]; then
     python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
-      --max_utts=$pca_train_utts \
-      --interp_mode=$interp_mode --upsample_factor=$upsample_factor \
-      $pca_dir/$pca_model
+      --max_utts=$pca_train_utts
   fi
 
   for x in train test; do
     echo "preparing pca features"    
     shared/make_pca_features.sh --cmd "$decode_cmd" --nj 15 \
-	  --interp-mode $interp_mode --upsample-factor $upsample_factor \
 	  --pca-model $pca_dir/$pca_model \
           data/${x}_raw data/${x}   || exit 1;
     steps/compute_cmvn_stats.sh data/$x   || exit 1;
@@ -145,7 +142,7 @@ if [ $stage -le 6 ]; then
     data/train data/lang exp/tri1 exp/tri1_ali
 fi
 
-if [ $stage -le 6 ]; then
+if [ $stage -le 7 ]; then
   # train and decode tri2b [LDA+MLLT]
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" $numLeavesMLLT \
@@ -156,13 +153,13 @@ if [ $stage -le 6 ]; then
     exp/tri2b/graph data/test exp/tri2b/decode 
 fi
 
-if [ $stage -le 7 ]; then
+if [ $stage -le 8 ]; then
 # Align all data with LDA+MLLT system (tri2b)
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
    data/train data/lang exp/tri2b exp/tri2b_ali
 fi
 
-if [ $stage -le 8 ]; then
+if [ $stage -le 9 ]; then
   # Do LDA+MLLT+SAT, and decode.
   steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT data/train \
     data/lang exp/tri2b_ali exp/tri3b
@@ -172,8 +169,8 @@ if [ $stage -le 8 ]; then
       exp/tri3b/graph data/test exp/tri3b/decode
 fi
 
-if [ $stage -le 9 ]; then
-  # Align all data with LDA+MLLT+SAT 
+if [ $stage -le 10 ]; then
+  # Align all data with LDA+MLLT+SAT
   steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
       data/train data/lang exp/tri3b exp/tri3b_ali
 fi
@@ -181,8 +178,8 @@ fi
 #extract fMLLR features for chain training
 data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
-if [ $stage -le 10 ]; then
-  
+if [ $stage -le 11 ]; then
+
   dirc=${data_fmllr}/test
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 4 --cmd "$train_cmd" \

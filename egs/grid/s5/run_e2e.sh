@@ -36,12 +36,14 @@ if  $use_upsampling && [ $stage -le 3 ]; then
 
 fi
 
-# required files for flat-start
-echo -e '2.96\n3.00' > data/$trainset/allowed_durs.txt
-if  $use_upsampling ; then
-  echo -e '148\n150' > data/$trainset/allowed_lengths.txt
+# required files for flat-start — write after trainset is finalised
+if $use_upsampling; then
   trainset=${trainset}_upsampled
   testset=${testset}_upsampled
+fi
+echo -e '2.96\n3.00' > data/$trainset/allowed_durs.txt
+if $use_upsampling; then
+  echo -e '148\n150' > data/$trainset/allowed_lengths.txt
 else
   echo -e '74\n75' > data/$trainset/allowed_lengths.txt
 fi

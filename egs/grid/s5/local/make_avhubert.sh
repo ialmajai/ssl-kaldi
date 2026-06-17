@@ -109,23 +109,23 @@ else
 
   utils/split_scp.pl $scp $split_scps || exit 1;
 
-  $cmd JOB=1:$nj $logdir/make_mhubert_${name}.JOB.log \
+  $cmd JOB=1:$nj $logdir/make_avhubert_${name}.JOB.log \
     python local/compute_avhubert_feats.py --layer $layer  $write_utt2dur_opt \
       --ckpt $ckpt --path $avhubert_path scp,p:$logdir/video_${name}.JOB.scp ark:- \| \
       copy-feats $write_num_frames_opt --compress=$compress ark:- \
-      ark,scp:$ssldir/raw_mhubert_$name.JOB.ark,$ssldir/raw_mhubert_$name.JOB.scp \
+      ark,scp:$ssldir/raw_avhubert_$name.JOB.ark,$ssldir/raw_avhubert_$name.JOB.scp \
       || exit 1;
 fi
 
 if [ -f $logdir/.error.$name ]; then
   echo "$0: Error producing features for $name:"
-  tail $logdir/make_mhubert_${name}.1.log
+  tail $logdir/make_avhubert_${name}.1.log
   exit 1;
 fi
 
 # concatenate the .scp files together.
 for n in $(seq $nj); do
-  cat $ssldir/raw_mhubert_$name.$n.scp || exit 1
+  cat $ssldir/raw_avhubert_$name.$n.scp || exit 1
 done > $data/feats.scp || exit 1
 
 if $write_utt2num_frames; then
