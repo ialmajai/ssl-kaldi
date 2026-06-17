@@ -98,7 +98,7 @@ if [ $stage -le 3 ]; then
 	  -ot data/train_raw/feats.scp ]] ; then
     echo "Training PCA model"
     mkdir -p $pca_dir
-    python local/pca.py  --pca_dim=$pca_dim --mode=train \
+    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_raw/feats.scp \
       --pca_model=$pca_dir/$pca_model \
       --max_utts=$pca_train_utts \
@@ -108,7 +108,7 @@ if [ $stage -le 3 ]; then
 
   for x in train test; do
     echo "preparing pca features"    
-    local/make_pca_features.sh --cmd "$decode_cmd" --nj 15 \
+    shared/make_pca_features.sh --cmd "$decode_cmd" --nj 15 \
 	  --interp-mode $interp_mode --upsample-factor $upsample_factor \
 	  --pca-model $pca_dir/$pca_model \
           data/${x}_raw data/${x}   || exit 1;
