@@ -8,10 +8,11 @@ cmd=run.pl
 pca_dim=30
 pca_dir="pca"
 pca_model="ipca.pt"
-echo "$0 $@"  
 
 if [ -f path.sh ]; then . ./path.sh; fi
 . parse_options.sh || exit 1;
+
+echo "$0 $@"
 
 src_data=$1
 dst_data=$2
@@ -54,12 +55,6 @@ python shared/pca.py  --pca_dim=$pca_dim --mode=apply \
     \|  copy-feats ark:- \
     ark,scp:$pcadir/feats_$name.JOB.ark,$pcadir/feats_$name.JOB.scp \
     || exit 1;
-
-if [ -f $logdir/.error.$name ]; then
-  echo "$0: Error producing features for $name:"
-  tail $logdir/make_pca_${name}.1.log
-  exit 1;
-fi
 
 # concatenate the .scp files together.
 for n in $(seq $nj); do

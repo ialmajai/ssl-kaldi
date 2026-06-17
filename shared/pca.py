@@ -72,7 +72,7 @@ def main():
     parser.add_argument("--pca_dim", type=int, default=30)
     parser.add_argument("--max_utts", type=int, default=-1)
     parser.add_argument("--pca_model", default="ipca.pt")
-    parser.add_argument("output", type=str, default="ark:-")
+    parser.add_argument("output", type=str, nargs="?", default="ark:-")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
