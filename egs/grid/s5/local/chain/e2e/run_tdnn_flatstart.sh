@@ -26,9 +26,10 @@ common_egs_dir=
 l2_regularize=0.00005
 frames_per_iter=500000
 cmvn_opts="--norm-means=false --norm-vars=false"
-train_set=train_raw_upsampled
-test_set=test_raw_upsampled
+train_set=train_raw
+test_set=test_raw
 frame_subsampling_factor=2
+
 
 # End configuration section.
 echo "$0 $@"  # Print the command line for logging
@@ -46,8 +47,9 @@ EOF
 fi
 
 lang=data/lang_e2e
-treedir=exp/chain/e2e_tree  # it's actually just a trivial tree (no tree building)
+treedir=exp/chain/e2e_tree 
 dir=exp/chain/e2e_tdnnf_${affix}
+
 
 if [ $stage -le 0 ]; then
   # Create a version of the lang/ directory that has one state per phone in the
@@ -117,6 +119,15 @@ fi
 
 if [ $stage -le 3 ]; then
 
+  echo "$0: training the neural net using the chain e2e framework"
+  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  if [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "Training requires GPU compute mode to be set to Exclusive_Process"
+    echo "run: sudo nvidia-smi -c 3"
+    exit 1
+  fi
+
+
   steps/nnet3/chain/e2e/train_e2e.py --stage $train_stage \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "$cmvn_opts" \
@@ -158,7 +169,7 @@ if [ $stage -le 5 ]; then
   frames_per_chunk=150
   rm $dir/.error 2>/dev/null || true
 
-      nspk=$(wc -l <data/test/spk2utt)  
+      nspk=$(wc -l <data/$test_set/spk2utt)
       steps/nnet3/decode.sh \
         --acwt 1.0 --post-decode-acwt 10.0 \
         --lattice-beam 2.0 \
