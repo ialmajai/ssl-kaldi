@@ -1,0 +1,26 @@
+# GRID recipe extras: visual speech / AV-HuBERT dependencies on top of the base image
+# Build the base first:  docker build -t ssl-kaldi docker/
+# Then:                  docker build -t ssl-kaldi-grid -f docker/Dockerfile.grid docker/
+# Run:                   docker run --gpus all -it ssl-kaldi-grid
+FROM ssl-kaldi
+
+# cmake: dlib builds from source; libgl1/libglib2.0-0: opencv runtime libs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/ssl-kaldi/egs/grid/s5
+
+# pip 24.0: newer pip rejects the old omegaconf/fairseq package metadata
+# Note: downgrades numpy to the AV-HuBERT-era pin (1.23.5); still >=1.22 as the base requires
+RUN pip3 install --no-cache-dir pip==24.0 \
+    && pip3 install --no-cache-dir -r requirements.txt
+
+# AV-HuBERT codebase + its fairseq submodule (editable install, per recipe README);
+# local/make_avhubert.sh expects the checkout at av_hubert/ inside the recipe dir
+RUN git clone --depth=1 https://github.com/facebookresearch/av_hubert.git \
+    && cd av_hubert \
+    && git submodule init \
+    && git submodule update \
+    && cd fairseq \
+    && pip3 install --no-cache-dir --editable ./
