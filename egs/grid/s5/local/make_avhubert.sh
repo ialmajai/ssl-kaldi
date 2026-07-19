@@ -6,8 +6,8 @@ compress=true
 write_utt2num_frames=true
 write_utt2dur=true
 layer=9
-ckpt="/data/git/av_hubert/avhubert/checkpoints/lrs3_vox/clean-pretrain/base_vox_iter5.pt"
-avhubert_path=/data/git/kaldi/egs/grid/s5/av_hubert
+ckpt=input/base_vox_iter5.pt
+avhubert_path=av_hubert  # see README: cloned into this directory
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -54,7 +54,7 @@ fi
 
 scp=$data/video.scp
 
-required="$scp"
+required="$scp $ckpt"
 
 for f in $required; do
   if [ ! -f $f ]; then
@@ -63,7 +63,11 @@ for f in $required; do
   fi
 done
 
-vtln_opts=""
+if [ ! -d $avhubert_path ]; then
+  echo "$0: av_hubert codebase not found at $avhubert_path;"
+  echo "    clone it as described in the README or pass --avhubert-path"
+  exit 1;
+fi
 
 for n in $(seq $nj); do
   utils/create_data_link.pl $ssldir/raw_avhubert_$name.$n.ark
@@ -82,46 +86,25 @@ else
 fi
 
 if [ -f $data/segments ]; then
-  echo "$0 [info]: segments file exists: using that."
-
-  split_segments=
-  for n in $(seq $nj); do
-    split_segments="$split_segments $logdir/segments.$n"
-  done
-
-  utils/split_scp.pl $data/segments $split_segments || exit 1;
-  rm $logdir/.error 2>/dev/null
-
-  $cmd JOB=1:$nj $logdir/make_avhubert_${name}.JOB.log \
-    extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
-    python local/compute_avhubert_feats.py --layer $layer $write_utt2dur_opt \
-      --ckpt $ckpt --path $avhubert_path ark:- ark:- \|  copy-feats \
-      --compress=$compress $write_num_frames_opt ark:- \
-      ark,scp:$ssldir/raw_avhubert_$name.JOB.ark,$ssldir/raw_avhubert_$name.JOB.scp \
-     || exit 1;
-
-else
-  echo "$0: [info]: no segments file exists: assuming video.scp indexed by utterance."
-  split_scps=
-  for n in $(seq $nj); do
-    split_scps="$split_scps $logdir/video_${name}.$n.scp"
-  done
-
-  utils/split_scp.pl $scp $split_scps || exit 1;
-
-  $cmd JOB=1:$nj $logdir/make_avhubert_${name}.JOB.log \
-    python local/compute_avhubert_feats.py --layer $layer  $write_utt2dur_opt \
-      --ckpt $ckpt --path $avhubert_path scp,p:$logdir/video_${name}.JOB.scp ark:- \| \
-      copy-feats $write_num_frames_opt --compress=$compress ark:- \
-      ark,scp:$ssldir/raw_avhubert_$name.JOB.ark,$ssldir/raw_avhubert_$name.JOB.scp \
-      || exit 1;
-fi
-
-if [ -f $logdir/.error.$name ]; then
-  echo "$0: Error producing features for $name:"
-  tail $logdir/make_avhubert_${name}.1.log
+  # extract-segments only works on wav data; segmenting video is not supported.
+  echo "$0: segments file found in $data, but video segmentation is not supported;"
+  echo "    video.scp must be indexed by utterance."
   exit 1;
 fi
+
+split_scps=
+for n in $(seq $nj); do
+  split_scps="$split_scps $logdir/video_${name}.$n.scp"
+done
+
+utils/split_scp.pl $scp $split_scps || exit 1;
+
+$cmd JOB=1:$nj $logdir/make_avhubert_${name}.JOB.log \
+  python local/compute_avhubert_feats.py --layer $layer  $write_utt2dur_opt \
+    --ckpt $ckpt --path $avhubert_path scp,p:$logdir/video_${name}.JOB.scp ark:- \| \
+    copy-feats $write_num_frames_opt --compress=$compress ark:- \
+    ark,scp:$ssldir/raw_avhubert_$name.JOB.ark,$ssldir/raw_avhubert_$name.JOB.scp \
+    || exit 1;
 
 # concatenate the .scp files together.
 for n in $(seq $nj); do
@@ -141,9 +124,9 @@ if $write_utt2dur; then
 fi
 
 frame_shift=0.04
-echo ${frame_shift:-'0.04'} > $data/frame_shift
+echo ${frame_shift} > $data/frame_shift
 
-rm $logdir/video_${name}.*.scp  $logdir/segments.* \
+rm $logdir/video_${name}.*.scp \
    $logdir/utt2num_frames.* $logdir/utt2dur.* 2>/dev/null
 
 nf=$(wc -l < $data/feats.scp)

@@ -27,7 +27,7 @@ for f in data/${train_set}_raw/feats.scp ${gmm_dir}/final.mdl; do
 done
 
 if [ $stage -le 12 ]; then
-  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
   if [ "$compute_mode" == "Exclusive_Process" ]; then
     echo "Feature extraction requires GPU compute mode to be set to default"
     echo "run: sudo nvidia-smi -c 0"

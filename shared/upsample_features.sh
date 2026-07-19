@@ -6,13 +6,23 @@ nj=2
 cmd=run.pl
 
 #interpolation
-interp_mode=
+interp_mode=linear
 upsample_factor=2
 
 echo "$0 $@"  
 
 if [ -f path.sh ]; then . ./path.sh; fi
 . parse_options.sh || exit 1;
+
+if [ $# -lt 2 ] || [ $# -gt 4 ]; then
+  cat >&2 <<EOF
+Usage: $0 [options] <src-data-dir> <dst-data-dir> [<log-dir> [<feats-dir>]]
+ e.g.: $0 data/train data/train_upsampled
+Note: <log-dir> defaults to <dst-data-dir>/log, and
+      <feats-dir> defaults to <dst-data-dir>/data.
+EOF
+  exit 1;
+fi
 
 src_data=$1
 dst_data=$2
@@ -61,12 +71,15 @@ for n in $(seq $nj); do
   cat $feats_dir/feats_$name.$n.scp || exit 1
 done > $dst_data/feats.scp || exit 1
 
-frame_shift=0.02
-if [ $upsample_factor -eq 4 ]; then
-    frame_shift=0.01 
+if [ -f $src_data/frame_shift ]; then
+  src_frame_shift=$(cat $src_data/frame_shift)
+else
+  echo "$0: WARNING: $src_data/frame_shift not found, assuming 0.02"
+  src_frame_shift=0.02
 fi
-echo ${frame_shift} > $data/frame_shift
+frame_shift=$(perl -e "print $src_frame_shift / $upsample_factor")
+echo ${frame_shift} > $dst_data/frame_shift
 
-echo "$0: Succeeded creating PCA features for $name"
+echo "$0: Succeeded creating upsampled features for $name"
 
 exit 0;

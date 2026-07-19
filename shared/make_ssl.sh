@@ -80,7 +80,6 @@ if [ -f $data/segments ]; then
   done
 
   utils/split_scp.pl $data/segments $split_segments || exit 1;
-  rm $logdir/.error 2>/dev/null
 
   $cmd JOB=1:$nj $logdir/make_ssl_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
@@ -105,12 +104,6 @@ else
            copy-feats $write_num_frames_opt --compress=$compress ark:- \
       ark,scp:$ssldir/raw_ssl_$name.JOB.ark,$ssldir/raw_ssl_$name.JOB.scp \
       || exit 1;
-fi
-
-if [ -f $logdir/.error.$name ]; then
-  echo "$0: Error producing features for $name:"
-  tail $logdir/make_ssl_${name}.1.log
-  exit 1;
 fi
 
 # concatenate the .scp files together.

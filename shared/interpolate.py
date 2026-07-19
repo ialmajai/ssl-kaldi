@@ -40,7 +40,7 @@ def main() -> None:
     parser.add_argument("--interp_mode", default="linear", choices=["linear", "nearest"])
     parser.add_argument("--upsample_factor", type=int, default=2)
     parser.add_argument("--device", default="cpu", help="torch device (cpu or cuda)")
-    parser.add_argument("output", type=str, default="ark:-")
+    parser.add_argument("output", type=str, nargs="?", default="ark:-")
     args = parser.parse_args()
 
     logger.info(f"device={args.device} mode={args.interp_mode} factor={args.upsample_factor}")

@@ -98,6 +98,18 @@ def _centroid(lm: np.ndarray, i: int, j: int) -> tuple[int, int]:
     return (int(lm[i, 0]) + int(lm[j, 0])) // 2, (int(lm[i, 1]) + int(lm[j, 1])) // 2
 
 
+def _crop_roi(
+    gray: np.ndarray, lm: np.ndarray, h_w: int, h_h: int, mouth_w: int, mouth_h: int
+) -> np.ndarray:
+    """Crop a full-size mouth ROI around the lip-corner centroid, clamped to the frame."""
+    height, width = gray.shape
+    cx, cy = _centroid(lm, 48, 54)
+    x1 = min(max(0, cx - h_w), max(0, width - mouth_w))
+    y1 = min(max(0, cy - h_h), max(0, height - mouth_h))
+    roi = gray[y1: y1 + mouth_h, x1: x1 + mouth_w]
+    return cv2.resize(roi, (88, 88))
+
+
 def mouth_tracking(
     video: str,
     detector,
@@ -147,16 +159,13 @@ def mouth_tracking(
             if faces:
                 pts = predictor(gray, faces[0]).parts()
                 last_lm = np.array([[p.x, p.y] for p in pts], dtype=np.int16)
-            else:
-                last_lm = np.zeros((68, 2), dtype=np.int16)
+            # else: carry last_lm forward so a detection gap doesn't drop frames
+            # (which would splice later video earlier in time)
 
         lm_cache.append(last_lm.copy())
 
         if np.any(last_lm):
-            cx, cy = _centroid(last_lm, 48, 54)
-            x1, y1 = max(0, cx - h_w), max(0, cy - h_h)
-            roi = gray[y1: y1 + mouth_h, x1: x1 + mouth_w]
-            frames.append(cv2.resize(roi, (88, 88)))
+            frames.append(_crop_roi(gray, last_lm, h_w, h_h, mouth_w, mouth_h))
 
         frame_idx += 1
 
@@ -190,10 +199,7 @@ def _roi_pass(
         if not np.any(lm):
             continue
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        cx, cy = _centroid(lm, 48, 54)
-        x1, y1 = max(0, cx - h_w), max(0, cy - h_h)
-        roi = gray[y1: y1 + mouth_h, x1: x1 + mouth_w]
-        frames.append(cv2.resize(roi, (88, 88)))
+        frames.append(_crop_roi(gray, lm, h_w, h_h, mouth_w, mouth_h))
 
     vidcap.release()
     result = np.stack(frames) if frames else np.empty((0, 88, 88), dtype=np.uint8)
@@ -263,6 +269,11 @@ def process_features(
     logger.info("=" * 70)
     logger.info(f"Processed: {processed} | Failed: {failed}")
     logger.info("=" * 70)
+
+    if processed == 0:
+        logger.error("No utterances were successfully processed")
+        sys.exit(1)
+
     return utt2dur
 
 

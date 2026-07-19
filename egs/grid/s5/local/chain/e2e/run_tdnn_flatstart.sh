@@ -120,7 +120,7 @@ fi
 if [ $stage -le 3 ]; then
 
   echo "$0: training the neural net using the chain e2e framework"
-  compute_mode=`nvidia-smi --query-gpu=compute_mode --format=csv,noheader`
+  compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
   if [ "$compute_mode" != "Exclusive_Process" ]; then
     echo "Training requires GPU compute mode to be set to Exclusive_Process"
     echo "run: sudo nvidia-smi -c 3"

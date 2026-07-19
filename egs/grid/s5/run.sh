@@ -29,15 +29,14 @@ if [ $model_size == "large" ]; then
  
 fi
 
-#path to avhubert codebase 
-avhubert_path=/data/git/ssl-kaldi/egs/grid/s5/av_hubert
+#path to avhubert codebase (see README: cloned into this directory)
+avhubert_path=$PWD/av_hubert
 
 lang=data/lang
 dict=data/local/dict
 langtmp=data/local/lang
 data_affix=_upsampled
-mkdir -p $langtmp
-mkdir -p $dict
+njpca=15
 
 monogauss=1000
 numLeavesTri1=2000
@@ -61,6 +60,7 @@ fi
 
 if [ $stage -le 1 ]; then
   echo "preparing dictionary and lang"
+  mkdir -p $langtmp $dict
   local/chime1_prepare_dict.sh $dict || exit 1
    
   utils/prepare_lang.sh --num-sil-states 5 \
@@ -78,7 +78,8 @@ if [ $stage -le 2 ]; then
     echo "Downloading AvHubert checkpoint"
 	# https://facebookresearch.github.io/av_hubert: AV-HuBERT Base | LRS3 + VoxCeleb2 (En) | No finetuning
 	model_link=https://dl.fbaipublicfiles.com/avhubert/model/lrs3_vox/clean-pretrain/$avhubert_model
-    wget $model_link -O input/$avhubert_model
+    wget $model_link -O input/$avhubert_model.tmp || { rm -f input/$avhubert_model.tmp; exit 1; }
+    mv input/$avhubert_model.tmp input/$avhubert_model
   fi
 
   for x in train test; do
@@ -110,7 +111,7 @@ if [ $stage -le 3 ]; then
 
   for x in train test; do
     echo "preparing pca features"    
-    shared/make_pca_features.sh --cmd "$decode_cmd" --nj 15 \
+    shared/make_pca_features.sh --cmd "$decode_cmd" --nj $njpca \
 	  --pca-model $pca_dir/$pca_model \
           data/${x}_raw data/${x}   || exit 1;
     steps/compute_cmvn_stats.sh data/$x   || exit 1;
@@ -125,7 +126,7 @@ if [ $stage -le 4 ]; then
     src=data/${x}
     dst=data/${x}_upsampled
     local/copy_data_dir.sh $src $dst
-    shared/upsample_features.sh --cmd "$decode_cmd" --nj 15 \
+    shared/upsample_features.sh --cmd "$decode_cmd" --nj $njpca \
       --interp-mode $interp_mode --upsample-factor $upsample_factor \
        $src $dst   || exit 1;
 
