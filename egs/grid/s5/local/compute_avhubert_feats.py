@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 # Copyright   2025  (author: Ibrahim Almajai)
 # Apache 2.0
-from __future__ import annotations
 """
 AV-HuBERT Visual Feature Extraction for Kaldi
 Extracts AV-HuBERT visual hidden-layer features from dlib-tracked lip regions in videos,
 using Kaldi I/O (scp/ark).
 """
+from __future__ import annotations
 
 import sys
 import os
@@ -62,7 +62,8 @@ def load_avhubert(args: argparse.Namespace, device: torch.device):
     sys.path.insert(0, args.path)
 
     from avhubert.utils import Compose, Normalize
-    import avhubert.hubert_pretraining, avhubert.hubert  # noqa: F401 — registers fairseq tasks
+    import avhubert.hubert_pretraining  # noqa: F401 — registers fairseq tasks
+    import avhubert.hubert  # noqa: F401 — registers fairseq tasks
     from fairseq import checkpoint_utils
 
     logger.info("Loading AV-HuBERT checkpoint...")
