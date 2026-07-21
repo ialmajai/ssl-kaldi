@@ -1,8 +1,12 @@
 # IqraEval Recipe
 
-**IqraEval** is an Arabic phone recognition recipe for the [IqraEval Challenge](https://huggingface.co/IqraEval) using SSL features in Kaldi pipelines. 
+**IqraEval** is an Arabic phone recognition recipe for the [IqraEval Challenge](https://huggingface.co/IqraEval), using SSL features in Kaldi pipelines.
 
-### Download CV-Ar and TTS data from huggingface as described in [Iqra-Eval](https://github.com/Iqra-Eval/interspeech_IqraEval)
+## Setup
+
+### 1. Download the data
+
+Download the CV-Ar and TTS data from Hugging Face, as described in [Iqra-Eval](https://github.com/Iqra-Eval/interspeech_IqraEval):
 
 ```
 python download_hugg_data.py --path "IqraEval/Iqra_train" --split "train" --output_dir "./sws_data/CV-Ar"
@@ -12,25 +16,30 @@ python download_hugg_data.py --path "IqraEval/Iqra_train" --split "dev" --output
 python download_hugg_data_tts.py --path "IqraEval/Iqra_TTS" --split "train" --output_dir "./data/TTS" --dev_name "Amer"
 ```
 
-### Install KenLM
+### 2. Install KenLM
+
+KenLM is used to train the trigram language model for decoding:
 
 ```
 git clone https://github.com/kpu/kenlm.git
 cd kenlm
 mkdir build && cd build
 cmake ..
-make -j$(nproc) 
+make -j$(nproc)
 ```
 
-
 ## Expected Results (PER)
-- 30-dimensional PCA for HMM-GMM systems
-- SSL features are extracted at 50 fps (100 fps for MFCCs)
-- A trigram language model is trained using KenLM for decoding
-- Layer 9 performs best for the GMM system:
+
+Setup notes:
+
+- 30-dimensional PCA for the HMM-GMM systems.
+- SSL features are extracted at 50 fps (100 fps for MFCCs).
+- A trigram language model is trained with KenLM for decoding.
+
+Layer 9 performs best for the GMM system:
 
 | SSL Layer | mono  | Δ+ΔΔ  | LDA+MLLT  |
-| --------- | ----- | ----- | ----- |
+| --------- | ----- | ----- | --------- |
 | 5         | 31.96 | 24.27 | 22.63 |
 | 6         | 29.31 | 22.29 | 20.93 |
 | 7         | 28.17 | 22.27 | 20.69 |
@@ -40,39 +49,37 @@ make -j$(nproc)
 | 11        | 29.49 | 22.62 | 21.57 |
 | 12        | 30.11 | 22.84 | 21.90 |
 
-- The following results show:
-  - Comparison with MFCCs
-  -  tdnnf system:
-     -   raw SSL (mHuBert) w/o ivectors
-     -   reduced frame-subsampling-factor from the default 3 → 2 
-     -   monophone topology
-     -   W/O GMMs    
+Comparison with MFCCs. The TDNN-F system uses:
 
-| Model Type | mono  | Δ+ΔΔ  | LDA+MLLT  | tdnnf       |  e2e_tdnnf |
-| ---------- | ----- | ----- | ----- | ----------- | -----
-| MFCC       | 53.85 | 43.47 | 41.65 | -           | - |
-| SSL (9th layer)       | **26.59** | **20.48** | **18.82** |**11.27**       | 11.88
-| IqraEval baseline       | - | - | - |16.42       | - |
+- raw SSL (mHuBERT) features without i-vectors,
+- a reduced frame-subsampling-factor (default 3 → 2),
+- a monophone topology,
+- and no GMMs.
 
-#
-![This is a sample phone alignment for one of the decoded dev utterances](images/alignment.png)
+| Model Type      | mono  | Δ+ΔΔ  | LDA+MLLT | tdnnf     | e2e_tdnnf |
+| --------------- | ----- | ----- | -------- | --------- | --------- |
+| MFCC            | 53.85 | 43.47 | 41.65    | -         | -         |
+| SSL (9th layer) | **26.59** | **20.48** | **18.82** | **11.27** | 11.88     |
+| IqraEval baseline | -   | -     | -        | 16.42     | -         |
+
+![Sample phone alignment for one of the decoded dev utterances](images/alignment.png)
 
 ## Citation
+
 ```
 @misc{ssl_kaldi_iqraeval,
-author = {Ibrahim Almajai},
-title = {ssl-kaldi: IqraEval Recipe - Arabic Phone Recognition with mHuBERT},
-year = {2025},
-howpublished = {\url{https://github.com/ialmajai/ssl-kaldi/tree/main/egs/iqraeval}}
-note = {Accessed: 2025-11}
+  author       = {Ibrahim Almajai},
+  title        = {ssl-kaldi: IqraEval Recipe - Arabic Phone Recognition with mHuBERT},
+  year         = {2025},
+  howpublished = {\url{https://github.com/ialmajai/ssl-kaldi/tree/main/egs/iqraeval}},
+  note         = {Accessed: 2025-11}
 }
 
-@inproceedings{elkheir2025iqraeval, title = {Iqra’Eval: A Shared Task on Qur’anic Pronunciation Assessment},
-author = {El Kheir, Yassine and Meghanani, Amit and Toyin, Hawau Olamide and Almarwani, Nada and Ibrahim, Omnia and Elshahawy, Youssef and Shahin, Mostafa and Ali, Ahmed},
-booktitle = {Proceedings of the Third Arabic Natural Language Processing Conference}, 
-year = {2025},
-publisher = {Association for Computational Linguistics}, 
+@inproceedings{elkheir2025iqraeval,
+  title     = {Iqra'Eval: A Shared Task on Qur'anic Pronunciation Assessment},
+  author    = {El Kheir, Yassine and Meghanani, Amit and Toyin, Hawau Olamide and Almarwani, Nada and Ibrahim, Omnia and Elshahawy, Youssef and Shahin, Mostafa and Ali, Ahmed},
+  booktitle = {Proceedings of the Third Arabic Natural Language Processing Conference},
+  year      = {2025},
+  publisher = {Association for Computational Linguistics}
 }
-
-
 ```

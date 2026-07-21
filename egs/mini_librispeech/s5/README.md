@@ -21,7 +21,7 @@ This recipe demonstrates how to use self-supervised speech representations as ac
 - This corresponds to a **39% relative WER reduction** compared to the Kaldi baseline (6.79% → 4.15%).
 - Intermediate HuBERT layers perform best for ASR; layer 14 outperformed layer 12 in our experiments.
 - Traditional GMM-HMM systems (Tri3b and Mono) also benefit substantially from SSL representations, demonstrating that HuBERT embeddings contain strong phonetic information.
-- See RESULTS for a complete set of experimental results and analysis
+- See [RESULTS](RESULTS) for the complete set of experimental results and analysis.
 
 ## Tested SSL Models
 
@@ -31,4 +31,5 @@ This recipe demonstrates how to use self-supervised speech representations as ac
 ## Alignment Accuracy
 
 ![Alignment Sample](docs/misc/spectrogram.png)
-[play audio](https://rawcdn.githack.com/ialmajai/ssl-kaldi/02d212f330085da3ac7bce5d014dd1027dc6ae5a/egs/mini_librispeech/s5/docs/index.html)
+
+[Play audio](https://rawcdn.githack.com/ialmajai/ssl-kaldi/02d212f330085da3ac7bce5d014dd1027dc6ae5a/egs/mini_librispeech/s5/docs/index.html)
