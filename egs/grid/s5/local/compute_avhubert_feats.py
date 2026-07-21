@@ -62,8 +62,8 @@ def load_avhubert(args: argparse.Namespace, device: torch.device):
     sys.path.insert(0, args.path)
 
     from avhubert.utils import Compose, Normalize
-    import avhubert.hubert_pretraining  # noqa: F401 — registers fairseq tasks
-    import avhubert.hubert  # noqa: F401 — registers fairseq tasks
+    import avhubert.hubert_pretraining  # noqa: F401  (registers fairseq tasks)
+    import avhubert.hubert  # noqa: F401  (registers fairseq tasks)
     from fairseq import checkpoint_utils
 
     logger.info("Loading AV-HuBERT checkpoint...")
@@ -122,7 +122,7 @@ def mouth_tracking(
     """
     Extract mouth ROI frames and FPS from video.
 
-    Cache-miss path: single decode pass — landmark detection and ROI crop happen in the
+    Cache-miss path: single decode pass; landmark detection and ROI crop happen in the
     same loop, then landmarks are saved. Cache-hit path: single ROI-only decode pass.
 
     Returns:

@@ -36,7 +36,7 @@ if  $use_upsampling && [ $stage -le 3 ]; then
 
 fi
 
-# required files for flat-start — write after trainset is finalised
+# required files for flat-start: write after trainset is finalised
 if $use_upsampling; then
   trainset=${trainset}_upsampled
   testset=${testset}_upsampled
