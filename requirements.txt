@@ -1,6 +1,9 @@
-numpy>=1.22
+# Shared dependencies for the audio recipes (Python 3.10).
+# The GRID lipreading recipe pins its own stack for Python 3.8 in
+# egs/grid/s5/requirements.txt (AV-HuBERT / fairseq / dlib).
+numpy>=1.22,<2.0
 torch>=2.4.0
-transformers>=4.30.0
-torchdr>=0.1.0
+transformers>=4.46.0
+torchdr>=0.3.0
 matplotlib>=3.5
-kaldiio
+kaldiio>=2.18.0

@@ -9,13 +9,16 @@ jobs:
   lint:
     name: Lint Python
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.10 is the general target for the audio recipes; 3.8 keeps the
+        # GRID recipe's AV-HuBERT / fairseq code parseable on its required floor.
+        python-version: ['3.8', '3.10']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          # 3.8 is the repo floor: the GRID recipe's AV-HuBERT / fairseq
-          # stack requires it, so CI validates against the same version.
-          python-version: '3.8'
+          python-version: ${{ matrix.python-version }}
       - name: Install flake8
         run: pip install flake8
       - name: Syntax errors & undefined names
