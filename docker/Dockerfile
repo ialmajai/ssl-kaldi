@@ -26,6 +26,11 @@ RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi \
     && make -j"$(nproc)" \
     && find /opt/kaldi -type f -name '*.o' -delete
 
+# Kaldi scripts pass --project_output, removed in OpenFST 1.8.x (tools above
+# install 1.8.4). Repoint to --project_type. No-op if upstream fixes it.
+RUN grep -rl 'project_output' /opt/kaldi/egs/wsj/s5/steps /opt/kaldi/egs/wsj/s5/utils \
+    | xargs -r sed -i 's/--project_output=true/--project_type=output/g; s/--project_output=false/--project_type=input/g'
+
 # SSL requirements (pinned lock for reproducible, README-matching results)
 RUN git clone --depth 1 https://github.com/ialmajai/ssl-kaldi.git /opt/ssl-kaldi \
     && pip3 install --no-cache-dir -r /opt/ssl-kaldi/requirements.lock
