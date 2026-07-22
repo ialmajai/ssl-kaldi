@@ -31,6 +31,11 @@ RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi \
 RUN grep -rl 'project_output' /opt/kaldi/egs/wsj/s5/steps /opt/kaldi/egs/wsj/s5/utils \
     | xargs -r sed -i 's/--project_output=true/--project_type=output/g; s/--project_output=false/--project_type=input/g'
 
+# SSL data dirs have feats.scp but no wav.scp (features come from SSL models,
+# not audio); let copy_data_dir.sh validate such dirs instead of failing.
+RUN sed -i '/--no-text"/a [ ! -f $srcdir/wav.scp ] && validate_opts="$validate_opts --no-wav"' \
+    /opt/kaldi/egs/wsj/s5/utils/copy_data_dir.sh
+
 # SSL requirements (pinned lock for reproducible, README-matching results)
 RUN git clone --depth 1 https://github.com/ialmajai/ssl-kaldi.git /opt/ssl-kaldi \
     && pip3 install --no-cache-dir -r /opt/ssl-kaldi/requirements.lock

@@ -4,3 +4,4 @@ hydra-core>=1.0.7
 zenodo_get
 opencv-python
 dlib
+python_speech_features

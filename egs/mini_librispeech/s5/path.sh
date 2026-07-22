@@ -1,4 +1,4 @@
-export KALDI_ROOT="/data/git/kaldi"
+export KALDI_ROOT=${KALDI_ROOT:-/data/git/kaldi}
 
 [ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
 
