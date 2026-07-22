@@ -1,0 +1,38 @@
+# Experiment output and generated data (per-recipe s5 dirs)
+egs/*/s5/data/
+egs/*/s5/data-fmllr-*/
+egs/*/s5/exp/
+egs/*/s5/exp-*/
+egs/*/s5/mfcc/
+egs/*/s5/pca/
+egs/*/s5/corpus/
+egs/*/s5/kenlm/
+egs/*/s5/ctm_per_utt/
+egs/*/s5/grid-corpus/
+egs/*/s5/asr_swahili/
+
+# Symlinks into a Kaldi checkout / shared dir
+egs/*/s5/steps
+egs/*/s5/utils
+egs/*/s5/shared
+egs/*/s5/conf
+
+# Cloned upstream codebases
+egs/*/s5/av_hubert/
+
+# Model checkpoints and large binaries
+*.pt
+*.dat
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor / merge leftovers and scratch
+*.orig
+.DS_Store
+/t
+
+# Corpus download markers and cached landmarks
+.downloaded
+*.landmarks.npz

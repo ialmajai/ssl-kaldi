@@ -2,7 +2,25 @@
 
 **Self-Supervised Learning features for [Kaldi](https://github.com/kaldi-asr/kaldi) ASR.**
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
+
 This repository contains recipes and tools for integrating self-supervised learning (SSL) features — such as HuBERT, mHuBERT, and AV-HuBERT — into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. The approach uses frozen pretrained models and avoids fine-tuning them.
+
+<p align="center">
+  <img src="egs/grid/s5/demo/tracking-demo.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
+  <br>
+  <em>Lip-region tracking from the <a href="egs/grid/s5/README.md">GRID lipreading recipe</a> (AV-HuBERT visual features).</em>
+</p>
+
+## Why ssl-kaldi?
+
+- **Frozen features, no fine-tuning.** Pretrained SSL models act as fixed feature extractors — cheap to run, no GPU-hungry fine-tuning loop.
+- **Straight into Kaldi.** Features are written as standard `ark/scp`, so Kaldi's hybrid and chain (TDNN-F) pipelines work unchanged.
+- **One toolkit, audio *and* video.** Shared extraction, PCA, and upsampling blocks drive HuBERT, mHuBERT, AfriHuBERT, and AV-HuBERT alike.
+- **Low-resource friendly.** Recipes span English, Arabic, Swahili, and visual speech — with strong results on small datasets.
 
 ## Pipeline Overview
 

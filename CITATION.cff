@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ssl-kaldi: SSL features are all you need"
+authors:
+  - family-names: Almajai
+    given-names: Ibrahim
+    email: ialmajai@gmail.com
+url: "https://github.com/ialmajai/ssl-kaldi"
+repository-code: "https://github.com/ialmajai/ssl-kaldi"
+license: Apache-2.0
