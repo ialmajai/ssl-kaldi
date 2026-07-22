@@ -68,7 +68,7 @@ The `docker/` directory also ships `Dockerfile.grid`, which adds the extra depen
 ```
 git clone https://github.com/ialmajai/ssl-kaldi.git
 cd ssl-kaldi
-conda create -n ssl-kaldi python=3.8 -y
+conda create -n ssl-kaldi python=3.11 -y
 conda activate ssl-kaldi
 
 pip install -r requirements.txt        # or: pip install -r requirements.lock  (pinned, reproducible)
