@@ -26,9 +26,9 @@ RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi \
     && make -j"$(nproc)" \
     && find /opt/kaldi -type f -name '*.o' -delete
 
-# SSL requirements
+# SSL requirements (pinned lock for reproducible, README-matching results)
 RUN git clone --depth 1 https://github.com/ialmajai/ssl-kaldi.git /opt/ssl-kaldi \
-    && pip3 install --no-cache-dir -r /opt/ssl-kaldi/requirements.txt
+    && pip3 install --no-cache-dir -r /opt/ssl-kaldi/requirements.lock
 
 ENV KALDI_ROOT=/opt/kaldi
 WORKDIR /opt/ssl-kaldi
