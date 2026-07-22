@@ -1,7 +1,7 @@
 # Contributing to ssl-kaldi
 
 Thanks for your interest in improving **ssl-kaldi**. Contributions of all kinds
-are welcome — new recipes, bug fixes, better documentation, or results.
+are welcome: new recipes, bug fixes, better documentation, or results.
 
 ## Reporting issues
 
@@ -43,7 +43,7 @@ pip-compile requirements.txt -o requirements.lock
 
 - CI runs `flake8` for **syntax errors and undefined names** (`E9,F63,F7,F82`).
   Keep Python parse-clean; match the style of the surrounding code.
-- Target **Python 3.8** — the floor for the whole repo (the GRID recipe's
+- Target **Python 3.8**, the floor for the whole repo (the GRID recipe's
   AV-HuBERT / fairseq stack requires it). If you use newer typing syntax
   (`list[...]`, `X | Y`), guard the module with
   `from __future__ import annotations`.

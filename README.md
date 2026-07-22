@@ -7,7 +7,7 @@
 [![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-This repository contains recipes and tools for integrating self-supervised learning (SSL) features — such as HuBERT, mHuBERT, and AV-HuBERT — into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. The approach uses frozen pretrained models and avoids fine-tuning them.
+This repository contains recipes and tools for integrating self-supervised learning (SSL) features, such as HuBERT, mHuBERT, and AV-HuBERT, into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. The approach uses frozen pretrained models and avoids fine-tuning them.
 
 <p align="center">
   <img src="egs/grid/s5/demo/tracking-demo.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
@@ -17,10 +17,10 @@ This repository contains recipes and tools for integrating self-supervised learn
 
 ## Why ssl-kaldi?
 
-- **Frozen features, no fine-tuning.** Pretrained SSL models act as fixed feature extractors — cheap to run, no GPU-hungry fine-tuning loop.
+- **Frozen features, no fine-tuning.** Pretrained SSL models act as fixed feature extractors: cheap to run, no GPU-hungry fine-tuning loop.
 - **Straight into Kaldi.** Features are written as standard `ark/scp`, so Kaldi's hybrid and chain (TDNN-F) pipelines work unchanged.
 - **One toolkit, audio *and* video.** Shared extraction, PCA, and upsampling blocks drive HuBERT, mHuBERT, AfriHuBERT, and AV-HuBERT alike.
-- **Low-resource friendly.** Recipes span English, Arabic, Swahili, and visual speech — with strong results on small datasets.
+- **Low-resource friendly.** Recipes span English, Arabic, Swahili, and visual speech, with strong results on small datasets.
 
 ## Pipeline Overview
 
@@ -74,12 +74,12 @@ conda activate ssl-kaldi
 pip install -r requirements.txt        # or: pip install -r requirements.lock  (pinned, reproducible)
 ```
 
-Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) also needs AV-HuBERT, fairseq, and dlib — see its own [`requirements.txt`](egs/grid/s5/requirements.txt).
+Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) also needs AV-HuBERT, fairseq, and dlib (see its own [`requirements.txt`](egs/grid/s5/requirements.txt)).
 
 ### Run your first recipe
 
 [Mini LibriSpeech](egs/mini_librispeech/s5/README.md) is the lightest end-to-end
-path — one command downloads the corpus and language model, extracts SSL
+path: one command downloads the corpus and language model, extracts SSL
 features, and trains through to a decoded WER:
 
 ```
@@ -94,7 +94,7 @@ full model/result matrix.
 
 ## Contributing
 
-Suggestions for improvements or new features are always welcome — feel free to open an issue or submit a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and how to add a recipe.
+Suggestions for improvements or new features are always welcome. Feel free to open an issue or submit a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and how to add a recipe.
 
 ## Citation
 
@@ -114,4 +114,4 @@ Released under the [Apache 2.0](LICENSE) license.
 
 ## Contact
 
-Ibrahim Almajai — ialmajai@gmail.com
+Ibrahim Almajai (ialmajai@gmail.com)

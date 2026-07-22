@@ -1,5 +1,5 @@
 # Shared dependencies for the audio recipes (Python 3.8+).
-# The GRID lipreading recipe additionally needs AV-HuBERT / fairseq / dlib —
+# The GRID lipreading recipe additionally needs AV-HuBERT / fairseq / dlib;
 # see egs/grid/s5/requirements.txt.
 # For a reproducible install, use the pinned lock: pip install -r requirements.lock
 numpy>=1.22,<2.0

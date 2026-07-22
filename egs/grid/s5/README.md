@@ -80,4 +80,4 @@ If you use this recipe, please cite **ssl-kaldi**, [AV-HuBERT](https://github.co
 
 ## Contact
 
-Ibrahim Almajai — ialmajai@gmail.com
+Ibrahim Almajai (ialmajai@gmail.com)

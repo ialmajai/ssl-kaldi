@@ -70,4 +70,4 @@ If you use this recipe, please cite **ssl-kaldi** and the
 
 ## Contact
 
-Ibrahim Almajai — ialmajai@gmail.com
+Ibrahim Almajai (ialmajai@gmail.com)
