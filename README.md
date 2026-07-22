@@ -3,7 +3,7 @@
 **Self-Supervised Learning features for [Kaldi](https://github.com/kaldi-asr/kaldi) ASR.**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
@@ -68,13 +68,13 @@ The `docker/` directory also ships `Dockerfile.grid`, which adds the extra depen
 ```
 git clone https://github.com/ialmajai/ssl-kaldi.git
 cd ssl-kaldi
-conda create -n ssl-kaldi python=3.10 -y
+conda create -n ssl-kaldi python=3.8 -y
 conda activate ssl-kaldi
 
-pip install -r requirements.txt
+pip install -r requirements.txt        # or: pip install -r requirements.lock  (pinned, reproducible)
 ```
 
-Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) needs a separate **Python 3.8** environment (AV-HuBERT / fairseq / dlib) with its own [`requirements.txt`](egs/grid/s5/requirements.txt).
+Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) also needs AV-HuBERT, fairseq, and dlib — see its own [`requirements.txt`](egs/grid/s5/requirements.txt).
 
 ### Run your first recipe
 

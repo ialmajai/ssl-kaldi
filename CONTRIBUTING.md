@@ -15,25 +15,38 @@ Open a GitHub issue with:
 ## Development setup
 
 ```
-conda create -n ssl-kaldi python=3.10 -y
+conda create -n ssl-kaldi python=3.8 -y
 conda activate ssl-kaldi
-pip install -r requirements.txt
+pip install -r requirements.txt        # or requirements.lock for a pinned, reproducible install
 ```
 
-The GRID lipreading recipe is the exception: it needs a separate **Python 3.8**
-environment (AV-HuBERT / fairseq / dlib) with `egs/grid/s5/requirements.txt`.
+The GRID lipreading recipe additionally needs AV-HuBERT / fairseq / dlib
+(`egs/grid/s5/requirements.txt`).
 
 A working [Kaldi](https://github.com/kaldi-asr/kaldi) checkout is required; each
 recipe expects the usual `steps`, `utils`, `shared`, and `conf` symlinks.
+
+### Dependency lock
+
+`requirements.txt` is the loose, human-edited spec; `requirements.lock` pins the
+full dependency closure to tested versions for reproducible installs
+(`pip install -r requirements.lock`). It is platform-specific
+(linux/x86_64, CUDA 12). After editing `requirements.txt`, regenerate the lock
+from a validated Python 3.8 environment:
+
+```
+pip install pip-tools
+pip-compile requirements.txt -o requirements.lock
+```
 
 ## Code style
 
 - CI runs `flake8` for **syntax errors and undefined names** (`E9,F63,F7,F82`).
   Keep Python parse-clean; match the style of the surrounding code.
-- Target **Python 3.10** for the audio recipes and shared code. Code under the
-  GRID recipe must stay **Python 3.8**-compatible (its AV-HuBERT / fairseq stack);
-  if you use newer typing syntax there (`list[...]`, `X | Y`), guard the module
-  with `from __future__ import annotations`.
+- Target **Python 3.8** — the floor for the whole repo (the GRID recipe's
+  AV-HuBERT / fairseq stack requires it). If you use newer typing syntax
+  (`list[...]`, `X | Y`), guard the module with
+  `from __future__ import annotations`.
 - Prefer reusing the shared building blocks in [`shared/`](shared/)
   (`make_ssl.sh`, `compute_ssl_feats.py`, `pca.py`, `interpolate.py`) over
   per-recipe copies.
