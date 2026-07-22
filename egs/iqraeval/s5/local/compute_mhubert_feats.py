@@ -9,10 +9,15 @@ mHuBERT Feature Extraction for Kaldi
 import sys
 import argparse
 import logging
+from pathlib import Path
 import numpy as np
 import torch
 from transformers import Wav2Vec2FeatureExtractor, HubertModel
 from kaldiio import ReadHelper, WriteHelper
+
+# The recipe root's "shared" symlink holds helpers common to all recipes.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
+from kaldi_io_utils import write_utt2dur  # noqa: E402
 
 # Setup logging
 logging.basicConfig(
@@ -93,7 +98,7 @@ def compute_mhubert(waveform: torch.Tensor, sample_rate: int = 16000) -> np.ndar
     
     # Forward pass
     output = model(**inputs, output_hidden_states=True)
-    features = output.hidden_states[args.layer].squeeze()  # [T, 768]
+    features = output.hidden_states[args.layer].squeeze(0)  # [T, 768]
    
     return features.cpu().numpy()
 
@@ -118,19 +123,21 @@ def main():
     processed_count = 0
     failed_count = 0    
     try:
-        with ReadHelper(args.input) as reader, WriteHelper('ark:-') as writer:
+        with ReadHelper(args.input) as reader, WriteHelper(args.output) as writer:
             for utt_id, (sample_rate, waveform) in reader:
-                try:                             
+                try:
                     # Calculate duration
                     duration = calculate_duration(waveform.shape[0], sample_rate)
-                    utt2dur_data[utt_id] = duration 
-                    
+
                     # Extract features
                     features = compute_mhubert(torch.tensor(waveform), sample_rate)
-                
+
                     # Write to ark
                     writer(utt_id, features)
-                    
+                    # Record duration only after a successful write, so utt2dur
+                    # never lists an utterance missing from the feature ark.
+                    utt2dur_data[utt_id] = duration
+
                     processed_count += 1
                     if processed_count % 100 == 0:
                         logger.info(f"Processed {processed_count} utterances...")
@@ -152,35 +159,13 @@ def main():
     
     return utt2dur_data
 
-def write_utt2dur(utt2dur_data: dict):
-    """Write utt2dur file if specified."""
-    
-    if not args.write_utt2dur:
-        return
-    
-    # Parse output format
-    output_path = args.write_utt2dur
-    if output_path.startswith("ark,t:"):
-        output_path = output_path[6:]
-    elif output_path.startswith("ark:"):
-        output_path = output_path[4:]
-    
-    logger.info(f"Writing duration file: {output_path}")
-    
-    try:
-        with open(output_path, "w") as f:
-            for utt_id, duration in sorted(utt2dur_data.items()):
-                f.write(f"{utt_id} {duration:.3f}\n")
-        logger.info(f"Wrote {len(utt2dur_data)} durations to {output_path}")
-    except Exception as e:
-        logger.error(f"Failed to write utt2dur: {e}")
 # ------------------------------------------------------------------------- #
 # Main
 # ------------------------------------------------------------------------- #
 if __name__ == "__main__":
     try:
-        utt2dur_data = main()        
-        write_utt2dur(utt2dur_data)        
+        utt2dur_data = main()
+        write_utt2dur(utt2dur_data, args.write_utt2dur)
         logger.info("Feature extraction completed successfully!")
     
     except Exception as e:

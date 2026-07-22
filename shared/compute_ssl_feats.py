@@ -8,6 +8,8 @@ from kaldiio import ReadHelper, WriteHelper
 import argparse
 from transformers import AutoFeatureExtractor, AutoModel
 
+from kaldi_io_utils import write_utt2dur
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -117,10 +119,11 @@ def process_features(args):
                         f"sample rate {sample_rate} != {EXPECTED_SAMPLE_RATE}; "
                         "resample the audio first"
                     )
-                utt2dur_data[utt_id] = waveform.shape[0] / float(sample_rate)
+                dur = waveform.shape[0] / float(sample_rate)
                 waveform = preprocess_waveform(waveform)
                 feats = ssl_extractor.extract(waveform.squeeze())
                 writer(utt_id, feats)
+                utt2dur_data[utt_id] = dur
                 processed += 1
                 if processed % 100 == 0:
                     logger.info(f"Processed {processed} utterances...")
@@ -139,22 +142,6 @@ def process_features(args):
         sys.exit(1)
 
     return utt2dur_data
-
-
-def write_utt2dur(utt2dur_data: dict, out_spec: str):
-    if not out_spec:
-        return
-    path = out_spec
-    for prefix in ("ark,t:", "ark:"):
-        if path.startswith(prefix):
-            path = path[len(prefix):]
-            break
-
-    logger.info(f"Writing utt2dur to: {path}")
-    with open(path, "w") as f:
-        for utt_id, dur in sorted(utt2dur_data.items()):
-            f.write(f"{utt_id} {dur:.3f}\n")
-    logger.info(f"Wrote {len(utt2dur_data)} durations")
 
 
 if __name__ == "__main__":

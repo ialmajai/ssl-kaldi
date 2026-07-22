@@ -22,6 +22,10 @@ import cv2
 import dlib
 from kaldiio import WriteHelper
 
+# The recipe root's "shared" symlink holds helpers common to all recipes.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
+from kaldi_io_utils import write_utt2dur  # noqa: E402
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -245,8 +249,6 @@ def process_features(
                         failed += 1
                         continue
 
-                    utt2dur[utt_id] = len(roi_frames) / fps
-
                     roi_frames = transform(roi_frames)
                     tensor = (
                         torch.from_numpy(np.ascontiguousarray(roi_frames))
@@ -257,6 +259,7 @@ def process_features(
                     )
                     feats = extract_avhubert(tensor, model, args.layer)
                     writer(utt_id, feats.astype(np.float32))
+                    utt2dur[utt_id] = len(roi_frames) / fps
                     processed += 1
 
                 except Exception as e:
@@ -276,24 +279,6 @@ def process_features(
         sys.exit(1)
 
     return utt2dur
-
-
-def write_utt2dur(utt2dur: dict[str, float], output_spec: Optional[str]) -> None:
-    if not output_spec:
-        return
-    path = output_spec
-    for prefix in ("ark,t:", "ark:"):
-        if path.startswith(prefix):
-            path = path[len(prefix):]
-            break
-    logger.info(f"Writing utt2dur: {path}")
-    try:
-        with open(path, "w") as f:
-            for utt_id, dur in sorted(utt2dur.items()):
-                f.write(f"{utt_id} {dur:.3f}\n")
-        logger.info(f"Wrote {len(utt2dur)} durations")
-    except OSError as e:
-        logger.error(f"Failed to write utt2dur: {e}")
 
 
 def main() -> None:
