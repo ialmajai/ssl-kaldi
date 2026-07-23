@@ -68,11 +68,17 @@ def load_avhubert(args: argparse.Namespace, device: torch.device):
     from avhubert.utils import Compose, Normalize
     import avhubert.hubert_pretraining  # noqa: F401  (registers fairseq tasks)
     import avhubert.hubert  # noqa: F401  (registers fairseq tasks)
+    import avhubert.hubert_asr  # noqa: F401  (registers fine-tuned model classes)
     from fairseq import checkpoint_utils
 
     logger.info("Loading AV-HuBERT checkpoint...")
     models, cfg, task = checkpoint_utils.load_model_ensemble_and_task([args.ckpt])
-    model = models[0].to(device)
+    model = models[0]
+    if hasattr(model, "encoder") and hasattr(model.encoder, "w2v_model"):
+        # fine-tuned seq2seq checkpoint: unwrap the AV-HuBERT encoder
+        logger.info("Fine-tuned checkpoint detected; extracting from encoder.w2v_model")
+        model = model.encoder.w2v_model
+    model = model.to(device)
     model.eval()
     if args.layer is not None:
         model.encoder.layers = model.encoder.layers[: args.layer]
