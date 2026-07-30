@@ -58,6 +58,26 @@ def parse_args() -> argparse.Namespace:
         default="input/shape_predictor_68_face_landmarks.dat",
         help="Path to dlib 68-point face landmark model (.dat)",
     )
+    parser.add_argument(
+        "--crop-mode",
+        choices=["centroid", "meanface"],
+        default="centroid",
+        help="ROI crop method. 'centroid': legacy lip-corner-centred 64->88 crop. "
+             "'meanface': canonical AV-HuBERT similarity-warp to a mean face, 96->88 "
+             "centre crop (matches the training preprocessing; requires scikit-image).",
+    )
+    parser.add_argument(
+        "--mean-face",
+        type=str,
+        default="av_hubert/avhubert/20words_mean_face.npy",
+        help="Mean-face reference landmarks (.npy) for --crop-mode meanface.",
+    )
+    parser.add_argument(
+        "--window-margin",
+        type=int,
+        default=12,
+        help="Temporal smoothing window for the mean-face transform (meanface mode).",
+    )
     return parser.parse_args()
 
 
@@ -217,6 +237,79 @@ def _roi_pass(
     return result, fps
 
 
+# --- Mean-face alignment (canonical AV-HuBERT preprocessing) --------------------
+# Ports av_hubert/avhubert/preparation/align_mouth.py: per-frame dlib landmarks ->
+# temporal smoothing -> similarity warp of stable points (eye corners + nose tip)
+# onto a mean face in a 256x256 canvas -> 96x96 mouth crop -> 88x88 centre crop.
+# The reference functions are reused verbatim so the geometry matches training.
+STABLE_PTS = [33, 36, 39, 42, 45]   # nose tip + outer/inner eye corners
+STD_SIZE = (256, 256)
+_CROP = 96                          # align_mouth crop_height/width
+_CENTER = (_CROP - 88) // 2         # 96 -> 88 centre-crop margin
+
+
+def load_meanface_aligner(args: argparse.Namespace):
+    """Import the reference align_mouth functions and load the mean-face landmarks."""
+    import importlib.util as il
+    am_path = os.path.join(args.path, "avhubert/preparation/align_mouth.py")
+    spec = il.spec_from_file_location("align_mouth", am_path)
+    am = il.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(am)
+    except ImportError as e:
+        raise SystemExit(
+            f"--crop-mode meanface needs scikit-image (align_mouth import failed: {e}).\n"
+            f"Install it, e.g.:  conda install -c conda-forge scikit-image"
+        )
+    mean_face = np.load(args.mean_face)
+    return am, mean_face
+
+
+def detect_landmarks_list(video: str, detector, predictor, detect_every: int = 1):
+    """Per-frame dlib 68-landmarks as a list (None where no face was found), in the
+    format align_mouth.landmarks_interpolate expects."""
+    cap = cv2.VideoCapture(video)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video}")
+    fps: float = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    lms: list = []
+    cur = None
+    idx = 0
+    while True:
+        ok, image = cap.read()
+        if not ok:
+            break
+        if idx % detect_every == 0:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            faces = detector(gray)
+            cur = (np.array([[p.x, p.y] for p in predictor(gray, faces[0]).parts()],
+                            dtype=np.float64) if faces else None)
+        lms.append(cur)
+        idx += 1
+    cap.release()
+    return lms, fps
+
+
+def meanface_tracking(video: str, detector, predictor, am, mean_face,
+                      window_margin: int = 12) -> tuple[np.ndarray, float]:
+    """Mean-face-aligned mouth ROIs. Returns (T, 88, 88) uint8 grayscale frames and
+    fps, or an empty array if no face was ever detected."""
+    landmarks, fps = detect_landmarks_list(video, detector, predictor)
+    landmarks = am.landmarks_interpolate(landmarks)
+    if landmarks is None:            # no face detected on any frame
+        return np.empty((0, 88, 88), dtype=np.uint8), fps
+    seq = am.crop_patch(video, landmarks, mean_face, STABLE_PTS, STD_SIZE,
+                        window_margin=window_margin, start_idx=48, stop_idx=68,
+                        crop_height=_CROP, crop_width=_CROP)
+    if seq is None:
+        return np.empty((0, 88, 88), dtype=np.uint8), fps
+    out = np.empty((len(seq), 88, 88), dtype=np.uint8)
+    for i, patch in enumerate(seq):
+        gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY) if patch.ndim == 3 else patch
+        out[i] = gray[_CENTER:_CENTER + 88, _CENTER:_CENTER + 88]
+    return out, fps
+
+
 @torch.no_grad()
 def extract_avhubert(roi_video: torch.Tensor, model, layer: Optional[int]) -> np.ndarray:
     feature_vid, _ = model.extract_finetune(
@@ -234,6 +327,8 @@ def process_features(
     detector,
     predictor,
     device: torch.device,
+    aligner=None,
+    mean_face=None,
 ) -> dict[str, float]:
     logger.info("=" * 70)
     logger.info(f"Input:      {args.input}")
@@ -248,7 +343,12 @@ def process_features(
         with WriteHelper(args.output) as writer:
             for utt_id, video_path in iter_scp(args.input):
                 try:
-                    roi_frames, fps = mouth_tracking(video_path, detector, predictor)
+                    if args.crop_mode == "meanface":
+                        roi_frames, fps = meanface_tracking(
+                            video_path, detector, predictor, aligner, mean_face,
+                            args.window_margin)
+                    else:
+                        roi_frames, fps = mouth_tracking(video_path, detector, predictor)
 
                     if len(roi_frames) < 74:
                         logger.warning(f"{utt_id}: only {len(roi_frames)} mouth frames, skipping")
@@ -305,7 +405,13 @@ def main() -> None:
 
     model, transform = load_avhubert(args, device)
 
-    utt2dur = process_features(args, model, transform, detector, predictor_model, device)
+    aligner = mean_face = None
+    if args.crop_mode == "meanface":
+        logger.info(f"Mean-face alignment enabled (mean face: {args.mean_face})")
+        aligner, mean_face = load_meanface_aligner(args)
+
+    utt2dur = process_features(args, model, transform, detector, predictor_model, device,
+                               aligner=aligner, mean_face=mean_face)
     write_utt2dur(utt2dur, args.write_utt2dur)
     logger.info("AV-HuBERT feature extraction completed successfully!")
 
