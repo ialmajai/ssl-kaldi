@@ -26,6 +26,10 @@ RUN git clone --depth 1 https://github.com/kaldi-asr/kaldi.git /opt/kaldi \
     && make -j"$(nproc)" \
     && find /opt/kaldi -type f -name '*.o' -delete
 
+# IRSTLM is not part of the default Kaldi tools build, but the TIMIT recipe
+# needs it to estimate the phone bigram LM (local/timit_prepare_dict.sh).
+RUN cd /opt/kaldi/tools && ./extras/install_irstlm.sh
+
 # Kaldi scripts pass --project_output, removed in OpenFST 1.8.x (tools above
 # install 1.8.4). Repoint to --project_type. No-op if upstream fixes it.
 RUN grep -rl 'project_output' /opt/kaldi/egs/wsj/s5/steps /opt/kaldi/egs/wsj/s5/utils \
