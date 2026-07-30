@@ -3,6 +3,8 @@ egs/*/s5/data/
 egs/*/s5/data-fmllr-*/
 egs/*/s5/exp/
 egs/*/s5/exp-*/
+egs/*/s5/exp_*/
+egs/*/s5/pca_*/
 egs/*/s5/mfcc/
 egs/*/s5/pca/
 egs/*/s5/corpus/
@@ -16,6 +18,8 @@ egs/*/s5/steps
 egs/*/s5/utils
 egs/*/s5/shared
 egs/*/s5/conf
+# ...except TIMIT, which ships a real conf/ (speaker lists + 60-48-39 map)
+!egs/timit/s5/conf/
 
 # Cloned upstream codebases
 egs/*/s5/av_hubert/

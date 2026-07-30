@@ -48,6 +48,7 @@ The shared building blocks live in [`shared/`](shared/) (SSL extraction, PCA, in
 | [iqraeval](egs/iqraeval/README.md) | Arabic phone recognition | mHuBERT | **11.27% PER** (TDNN-F) |
 | [grid](egs/grid/s5/README.md) | Visual speech recognition (lipreading) | AV-HuBERT | **6.36% WER** (unseen speakers) |
 | [swahili](egs/swahili/s5/README.md) | Swahili ASR | AfriHuBERT / mHuBERT | **19.76% WER** (E2E TDNN-F) |
+| [timit](egs/timit/s5/README.md) | English phone recognition | MMS / HuBERT | **10.19% PER** (core test, chain TDNN) |
 
 ## Getting Started
 

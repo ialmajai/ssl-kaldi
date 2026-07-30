@@ -1,0 +1,189 @@
+#!/bin/bash
+# Collect the best PER for each decode directory. Pass "dev" or "test" to
+# restrict to one set, e.g.: bash RESULTS dev
+for x in exp/{mono,tri,chain}*/decode* exp/chain*/*/decode*; do
+  [ -d $x ] && echo $x | grep "${1:-.*}" >/dev/null && \
+    grep WER $x/wer_* 2>/dev/null | utils/best_wer.sh
+done
+for x in exp/{mono,tri,chain}*/decode* exp/chain*/*/decode*; do
+  [ -d $x ] && echo $x | grep "${1:-.*}" >/dev/null && \
+    grep Sum $x/score_*/*.sys 2>/dev/null | utils/best_wer.sh
+done
+exit 0
+
+# Use caution when comparing these results with other published results.
+Training Set   : 3696 sentences (SA utterances excluded)
+Dev Set        : 400 sentences
+Test Set       : 192 sentences Core Test Set (different from Full 1680 sent. set)
+Language Model : Bigram phoneme language model extracted from the training set
+Phone mapping  : Training with 48 phonemes, for testing mapped to 39 phonemes
+Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
+
+# ---------------------------------------------------------------------------
+# SSL features (this recipe, run.sh), facebook/hubert-base-ls960 layer 9,
+# PCA-30 for the GMM stages, full 768-d features for the chain model.
+# %PER, 39 phone classes, compute-wer scoring (local/score.sh).
+# ---------------------------------------------------------------------------
+%WER 23.17 [ 3488 / 15057, 182 ins, 1837 del, 1469 sub ] exp/mono/decode_dev/wer_4
+%WER 24.63 [ 1777 / 7215, 81 ins, 929 del, 767 sub ] exp/mono/decode_test/wer_4
+%WER 16.92 [ 2547 / 15057, 242 ins, 1079 del, 1226 sub ] exp/tri1/decode_dev/wer_6
+%WER 18.38 [ 1326 / 7215, 113 ins, 560 del, 653 sub ] exp/tri1/decode_test/wer_8
+%WER 14.86 [ 2237 / 15057, 213 ins, 1003 del, 1021 sub ] exp/tri2/decode_dev/wer_4
+%WER 16.15 [ 1165 / 7215, 103 ins, 525 del, 537 sub ] exp/tri2/decode_test/wer_4
+%WER 14.88 [ 2241 / 15057, 207 ins, 1025 del, 1009 sub ] exp/tri3/decode_dev/wer_4
+%WER 16.31 [ 1177 / 7215, 89 ins, 535 del, 553 sub ] exp/tri3/decode_test/wer_5
+%WER 9.93 [ 1495 / 15057, 325 ins, 322 del, 848 sub ] exp/chain/tdnn_1a_sp/decode_dev/wer_6
+%WER 11.43 [ 825 / 7215, 209 ins, 164 del, 452 sub ] exp/chain/tdnn_1a_sp/decode_test/wer_5
+
+# Notes from that run:
+#  - SAT (tri3) gives nothing over LDA+MLLT (tri2): 14.88 vs 14.86 dev,
+#    16.31 vs 16.15 test, and the speaker-independent pass is better on test
+#    (decode_test.si = 15.98). SSL features are already largely
+#    speaker-normalised, so fMLLR only adds variance on 3.7 h of data.
+#  - Chain training overfits mildly: final train objf -0.051 vs valid -0.258
+#    for 'output'. Fewer epochs or stronger l2 may help.
+
+# ---------------------------------------------------------------------------
+# facebook/hubert-large-ll60k layer 14, same pipeline (2026-07-29). No gain
+# over Base layer 9 at the chain stage, for ~3x the extraction cost.
+# ---------------------------------------------------------------------------
+%WER 23.40 [ 3523 / 15057, 192 ins, 1746 del, 1585 sub ] exp/mono/decode_dev/wer_4
+%WER 24.85 [ 1793 / 7215, 97 ins, 914 del, 782 sub ] exp/mono/decode_test/wer_3
+%WER 17.06 [ 2568 / 15057, 213 ins, 1104 del, 1251 sub ] exp/tri1/decode_dev/wer_11
+%WER 18.88 [ 1362 / 7215, 109 ins, 558 del, 695 sub ] exp/tri1/decode_test/wer_5
+%WER 14.45 [ 2176 / 15057, 194 ins, 1014 del, 968 sub ] exp/tri2/decode_dev/wer_5
+%WER 15.98 [ 1153 / 7215, 95 ins, 549 del, 509 sub ] exp/tri2/decode_test/wer_6
+%WER 14.56 [ 2193 / 15057, 180 ins, 1037 del, 976 sub ] exp/tri3/decode_dev/wer_5
+%WER 15.79 [ 1139 / 7215, 101 ins, 526 del, 512 sub ] exp/tri3/decode_test/wer_3
+%WER 10.02 [ 1509 / 15057, 297 ins, 355 del, 857 sub ] exp/chain/tdnn_1a_sp/decode_dev/wer_7
+%WER 11.48 [ 828 / 7215, 174 ins, 203 del, 451 sub ] exp/chain/tdnn_1a_sp/decode_test/wer_7
+
+# Chain objf for Large: train -0.038 vs valid -0.220.
+
+# Large L14, chain with --frame-subsampling-factor 1 (20 ms output frames)
+# instead of the default 2. Worse on both sets; see README for the analysis.
+# Undertrained relative to the default: Kaldi scales num_archives_to_process by
+# the subsampling factor, so 8 epochs at factor 1 is 15 iters, not 31.
+%WER 10.79 [ 1624 / 15057, 274 ins, 425 del, 925 sub ] exp/chain/tdnn_1b_fsf1_sp/decode_dev/wer_5
+%WER 11.70 [ 844 / 7215, 111 ins, 250 del, 483 sub ] exp/chain/tdnn_1b_fsf1_sp/decode_test/wer_6
+
+# ---------------------------------------------------------------------------
+# facebook/hubert-base-ls960 layer 12. The same model as the layer 9 block
+# above, tapped four layers deeper, so the two isolate layer choice within one
+# model. Layer 12 is not uniformly better or worse: it wins at mono and tri1,
+# loses at tri2 and at the chain stage.
+# Dir: exp_hubert_base_frozen_l12.
+# ---------------------------------------------------------------------------
+%WER 22.53 [ 3393 / 15057, 144 ins, 1925 del, 1324 sub ] exp/mono/decode_dev/wer_5
+%WER 24.59 [ 1774 / 7215, 80 ins, 988 del, 706 sub ] exp/mono/decode_test/wer_4
+%WER 16.57 [ 2495 / 15057, 224 ins, 1096 del, 1175 sub ] exp/tri1/decode_dev/wer_8
+%WER 17.93 [ 1294 / 7215, 104 ins, 596 del, 594 sub ] exp/tri1/decode_test/wer_10
+%WER 15.96 [ 2403 / 15057, 213 ins, 1093 del, 1097 sub ] exp/tri2/decode_dev/wer_6
+%WER 17.30 [ 1248 / 7215, 108 ins, 579 del, 561 sub ] exp/tri2/decode_test/wer_5
+%WER 15.69 [ 2362 / 15057, 218 ins, 1058 del, 1086 sub ] exp/tri3/decode_dev/wer_5
+%WER 16.11 [ 1162 / 7215, 100 ins, 545 del, 517 sub ] exp/tri3/decode_test/wer_3
+%WER 10.85 [ 1633 / 15057, 330 ins, 369 del, 934 sub ] exp/chain/tdnn_1a_sp/decode_dev/wer_6
+%WER 11.74 [ 847 / 7215, 163 ins, 205 del, 479 sub ] exp/chain/tdnn_1a_sp/decode_test/wer_6
+
+# Note on scoring range: local/score.sh sweeps LM weights 1..20 rather than
+# Kaldi's 1..10, because some systems genuinely peak above 10 and truncating the
+# sweep silently under-reports them. Every number in this file uses the wider
+# range; rescoring the earlier systems changed only two of them
+# (hubert-large-l14 tri1 dev 17.10 -> 17.06, MFCC tri2 test 23.41 -> 23.34).
+
+# ---------------------------------------------------------------------------
+# facebook/wav2vec2-large-lv60 layer 14, pretrained on the 60k-hour LibriVox
+# set. Worst of the four models at every GMM stage, second best at the chain
+# stage. Dir: exp_w2v2_large_lv60_l14.
+# ---------------------------------------------------------------------------
+%WER 25.58 [ 3851 / 15057, 163 ins, 1997 del, 1691 sub ] exp/mono/decode_dev/wer_3
+%WER 26.76 [ 1931 / 7215, 75 ins, 1005 del, 851 sub ] exp/mono/decode_test/wer_3
+%WER 17.92 [ 2698 / 15057, 229 ins, 1155 del, 1314 sub ] exp/tri1/decode_dev/wer_6
+%WER 19.18 [ 1384 / 7215, 104 ins, 592 del, 688 sub ] exp/tri1/decode_test/wer_5
+%WER 16.13 [ 2429 / 15057, 241 ins, 1099 del, 1089 sub ] exp/tri2/decode_dev/wer_3
+%WER 18.14 [ 1309 / 7215, 109 ins, 588 del, 612 sub ] exp/tri2/decode_test/wer_5
+%WER 16.17 [ 2435 / 15057, 199 ins, 1110 del, 1126 sub ] exp/tri3/decode_dev/wer_2
+%WER 17.73 [ 1279 / 7215, 92 ins, 602 del, 585 sub ] exp/tri3/decode_test/wer_4
+%WER 9.87 [ 1486 / 15057, 370 ins, 287 del, 829 sub ] exp/chain/tdnn_1a_sp/decode_dev/wer_5
+%WER 10.99 [ 793 / 7215, 204 ins, 166 del, 423 sub ] exp/chain/tdnn_1a_sp/decode_test/wer_5
+
+# Chain objf: train -0.066 vs valid -0.237.
+#
+# Chain test summary across all four extractors:
+#   mms-300m L14              10.19
+#   wav2vec2-large-lv60 L14   10.99
+#   hubert-base-ls960 L9      11.43
+#   hubert-large-ll60k L14    11.48
+# The GMM stages rank these differently and get wav2vec2 badly wrong: worst by
+# 2-3 points at tri2, second best at the chain stage. PCA-30 plus diagonal
+# GMMs is not a reliable proxy for cross-model comparison.
+
+# ---------------------------------------------------------------------------
+# Layer sweep for hubert-large-ll60k, scored at tri2 (stages 1-5 only, so these
+# are PCA-30 numbers and only a proxy for what the chain model would do).
+# ---------------------------------------------------------------------------
+#   layer   tri2 dev   tri2 test
+#     10      16.04      17.20
+#     11      15.26      16.78
+#     12      14.86      16.40
+#     13      14.58      15.90
+#     14      14.45      15.98
+#
+# ---------------------------------------------------------------------------
+# facebook/mms-300m layer 14, same pipeline. BEST OVERALL: 10.19 test at the
+# chain stage, 90 fewer errors than HuBERT Base (~3.2 sigma), winning on
+# insertions, deletions and substitutions at once. Experiment dir:
+# exp_mms300m_l14.
+# ---------------------------------------------------------------------------
+%WER 23.43 [ 3528 / 15057, 156 ins, 1823 del, 1549 sub ] exp/mono/decode_dev/wer_4
+%WER 24.75 [ 1786 / 7215, 88 ins, 906 del, 792 sub ] exp/mono/decode_test/wer_2
+%WER 17.13 [ 2580 / 15057, 225 ins, 1054 del, 1301 sub ] exp/tri1/decode_dev/wer_6
+%WER 18.41 [ 1328 / 7215, 94 ins, 577 del, 657 sub ] exp/tri1/decode_test/wer_9
+%WER 14.43 [ 2173 / 15057, 204 ins, 986 del, 983 sub ] exp/tri2/decode_dev/wer_4
+%WER 15.27 [ 1102 / 7215, 88 ins, 521 del, 493 sub ] exp/tri2/decode_test/wer_4
+%WER 14.68 [ 2211 / 15057, 199 ins, 1015 del, 997 sub ] exp/tri3/decode_dev/wer_3
+%WER 15.70 [ 1133 / 7215, 93 ins, 520 del, 520 sub ] exp/tri3/decode_test/wer_2
+%WER 9.19 [ 1383 / 15057, 282 ins, 323 del, 778 sub ] exp/chain/tdnn_1a_sp/decode_dev/wer_7
+%WER 10.19 [ 735 / 7215, 174 ins, 157 del, 404 sub ] exp/chain/tdnn_1a_sp/decode_test/wer_5
+
+# SAT is a no-op for a third model: tri3 is worse than its own tri2, and the
+# speaker-independent pass ties it exactly on test (15.70, same error count).
+#
+# Chain test errors, best LM weight per system:
+#   Base L9        209 ins / 164 del / 452 sub = 825
+#   Large L14      174 ins / 203 del / 451 sub = 828
+#   mms-300m L14   174 ins / 157 del / 404 sub = 735
+# mms-300m wins on all three error types, so this is an acoustic gain and not a
+# better insertion/deletion operating point. Note that model size is not the
+# variable: mms-300m (~300M) and HuBERT Large (~317M) are the same scale, yet
+# Large only ties Base. What differs is pretraining data, ~491k hours across
+# 1400+ languages against 60k hours of English audiobooks.
+
+# Monotone improvement from 10 to 13, then flat: 13 and 14 are within noise of
+# each other and swap ranks between dev and test. So the phonetic quality of
+# Large is still rising at 14, not past its peak, and the layer choice does not
+# explain why Large fails to beat Base. Probing upward (16, 18, 20) is the
+# open question. Experiment dirs: exp_hubert_large_l{10,11,12,13}.
+# Experiment dirs from both runs are kept as exp_hubert_base_l9 /
+# exp_hubert_large_l14 (likewise pca_* and run_ssl_*.log).
+
+# ---------------------------------------------------------------------------
+# MFCC baseline from run-mfcc.sh, run here with the same data prep, speaker
+# lists and scoring script as the SSL results above. Dir: exp_mfcc_baseline.
+#
+#   system      dev    test
+#   mono       31.78  32.13
+#   tri1       24.94  26.36
+#   tri2       22.85  23.34
+#   tri3       20.31  21.95
+#   tri3 .si   23.64  24.16
+#
+# Reproduces the numbers published in Kaldi's egs/timit/s5/RESULTS (sclite
+# scoring) to within a few tenths: 31.7/32.7, 25.1/25.6, 23.0/23.7, 20.3/21.6.
+# Kaldi also publishes SGMM2 17.8/19.7 and nnet1 DNN 17.5/18.5, neither of which
+# is part of this recipe.
+#
+# fMLLR gain, tri3 .si vs tri3 adapted, on test: MFCC +2.21 (24.16 -> 21.95),
+# HuBERT Base -0.33, HuBERT Large -0.27, mms-300m 0.00. Speaker adaptation
+# works fine on this corpus; SSL features simply leave nothing for it to remove.
+# ---------------------------------------------------------------------------
