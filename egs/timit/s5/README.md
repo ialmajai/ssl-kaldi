@@ -41,13 +41,10 @@ Stages:
 | 7 | Speed-perturbed features and tri3 alignments (`local/chain/run_common_ssl.sh`) |
 | 8 | Chain TDNN-F on raw SSL features (`local/chain/run_tdnn_ssl.sh`) |
 
-Pick the SSL model and layer by editing `ssl_model` / `encoder_layer` at the top
-of `run.sh` (or passing them as options). The default is `facebook/mms-300m`
-layer 14, the best configuration measured here.
-`facebook/hubert-base-ls960` layer 9 is commented out alongside it: 1.2 points
-worse but a third of the extraction cost, which is the one to use if you are
-iterating on the rest of the pipeline. See
-[Base vs. Large vs. mms-300m](#model-comparison) for the full comparison.
+Pick the SSL model and layer with `ssl_model` / `encoder_layer` at the top of
+`run.sh`, or as options. The default `facebook/mms-300m` layer 14 is the best
+measured here; `facebook/hubert-base-ls960` layer 9 is 1.2 points worse at a
+third of the extraction cost, which is the one to use while iterating.
 
 Feature extraction needs the GPU in default compute mode
 (`sudo nvidia-smi -c 0`); chain training is happier in exclusive mode
@@ -55,18 +52,13 @@ Feature extraction needs the GPU in default compute mode
 
 ## Scoring
 
-`local/score.sh` maps both reference and hypothesis to the 39 phone classes and
-reports PER with `compute-wer`, so no external scoring tool is needed
-(this is Kaldi's `score_basic.sh`; upstream TIMIT defaults to sclite instead).
-`local/score_sclite.sh` is included for the sclite/`hubscr.pl` numbers if you
-have `tools/sctk` built; the decode scripts always call `local/score.sh`, so
-swap it in with `ln -sf score_sclite.sh local/score.sh`.
+`local/score.sh` maps reference and hypothesis to the 39 phone classes and
+reports PER with `compute-wer`, so no external scoring tool is needed. For the
+sclite numbers upstream TIMIT reports, swap in the included alternative with
+`ln -sf score_sclite.sh local/score.sh`.
 
-Both scripts sweep LM weights 1 to 20, wider than Kaldi's default of 10, because
-some systems genuinely peak above 10: a more confident acoustic model needs a
-heavier LM weight to balance it, and truncating the sweep at 10 silently
-under-reports them. All numbers in this README were produced with the wider
-range.
+Both sweep LM weights 1 to 20 rather than Kaldi's 1 to 10, because some systems
+genuinely peak above 10 and a truncated sweep under-reports them.
 
 Collect results with `bash RESULTS dev` / `bash RESULTS test`.
 
@@ -101,22 +93,10 @@ breakdown for each is in [RESULTS](RESULTS).
 | `facebook/hubert-base-ls960` | 9 | 768 | 16.15 | 16.31 | 9.93 | 11.43 |
 | `facebook/hubert-large-ll60k` | 14 | 1024 | 15.98 | 15.79 | 10.02 | 11.48 |
 
-**mms-300m wins**, and it is the one comparison here that is statistically
-solid: 735 test errors against HuBERT Base's 825, roughly 3.2 standard errors.
-It also wins on insertions, deletions and substitutions at once (174/157/404
-against 209/164/452), so this is a real acoustic gain and not a better
-insertion/deletion operating point.
-
-**Model size is not the variable.** mms-300m (~300 M parameters) and HuBERT
-Large (~317 M) are the same scale, yet Large only ties Base (11.48 against
-11.43, a 3-error difference). What separates them is the pretraining corpus:
-~491 k hours across 1400+ languages against 60 k hours of English audiobooks.
-
-**The GMM stages do not rank the models.** wav2vec2-large-lv60 is the worst of
-the four by 2 to 3 points at every GMM stage and the second best at the chain
-stage. Its information is evidently not recoverable from 30 PCA components with
-diagonal-covariance GMMs, but a network with all 1024 dimensions finds it. Treat
-tri2 as a smoke test, not as a model-selection criterion.
+mms-300m wins by 90 errors over HuBERT Base (~3.2 standard errors), and on
+insertions, deletions and substitutions at once. Note the GMM columns rank the
+models differently from the chain column: wav2vec2 is last at tri2 and second at
+the chain stage.
 
 mms-300m layer 14 is the recipe default. Use
 `--ssl-model facebook/hubert-base-ls960 --encoder-layer 9` when extraction cost
@@ -124,9 +104,8 @@ matters more than the last point of PER.
 
 ### Layer choice within one model
 
-Which layer you tap matters, and not in a single direction. Comparing
-`facebook/hubert-base-ls960` at layer 9 against layer 12, both frozen (%PER
-test):
+Which layer you tap matters, and not in a single direction
+(`facebook/hubert-base-ls960`, frozen, %PER test):
 
 | Acoustic model | layer 9 | layer 12 |
 |----------------|---------|----------|
@@ -136,13 +115,12 @@ test):
 | tri3 | 16.31 | **16.11** |
 | chain TDNN-F | **11.43** | 11.74 |
 
-The deeper layer wins for the weakest models and loses once the acoustic model
-is strong enough to exploit the richer mid-stack representation. Layer 9 is the
-better choice for the chain system, which is the one that matters.
+The deeper layer wins for the weakest models and loses for the strongest. Layer
+9 is the better choice for the chain system.
 
 ### Layer sweep (HuBERT Large)
 
-Layer 14 is not the reason. Sweeping Large's encoder layer, scored at tri2
+Sweeping Large's encoder layer, scored at tri2
 (`./run.sh --stage 1 --stop-stage 5 --encoder-layer N`):
 
 | layer | tri2 dev | tri2 test |
@@ -153,64 +131,25 @@ Layer 14 is not the reason. Sweeping Large's encoder layer, scored at tri2
 | 13 | **14.58** | **15.90** |
 | 14 | **14.45** | 15.98 |
 
-A monotone improvement from 10 to 13, then flat: layers 13 and 14 are within
-noise of each other and swap ranks between dev and test. Large's phonetic
-quality is still rising at the layer we use, not past its peak, so a shallower
-layer will not recover a Large advantage. The same ordering holds at mono and
-tri1, so it is not a decoding artefact. Two caveats, and the first turned out to
-matter: these are PCA-30 tri2 numbers, and the model comparison above shows tri2
-rank can be wrong by 2 to 3 points across models, so read this sweep as
-depth-within-one-model only. The whole spread
-from 12 to 14 is about 0.5 points, close to the noise floor on 7215 phones.
+Monotone from 10 to 13, then flat, so Large's phonetic quality is still rising
+at the layer we use rather than past its peak. These are tri2 numbers, which
+rank layers within one model reliably enough but not models against each other,
+and the 12-to-14 spread is close to the noise floor.
 
 ## Key findings
 
-- **10.19% PER on the core test set** with a frozen mms-300m (11.43% with
-  HuBERT Base): a 53% relative reduction over the MFCC SAT baseline (21.6%),
-  and 45% better than the best system in Kaldi's published TIMIT results.
-- Every GMM stage improves substantially, and the SSL *monophone* system
-  (24.63%) is already close to the MFCC *triphone* baseline (25.6%). The
-  phonetic information is in the features, not the acoustic model.
-- **SAT buys nothing here, and that is a property of the features, not of
-  TIMIT.** Comparing tri3's speaker-independent pass against its fMLLR-adapted
-  pass isolates the adaptation exactly: same model, same tree, same graph.
-
-  | features | tri3 `.si` test | tri3 adapted test | fMLLR gain |
-  |----------|-----------------|-------------------|------------|
-  | MFCC | 24.16 | 21.95 | **+2.21** |
-  | HuBERT Base L9 | 15.98 | 16.31 | −0.33 |
-  | HuBERT Large L14 | 15.52 | 15.79 | −0.27 |
-  | mms-300m L14 | 15.70 | 15.70 | 0.00 |
-
-  MFCCs gain 2.2 points from fMLLR on this corpus, with roughly 8 utterances
-  (~25 s) per speaker, so the corpus supports speaker adaptation fine. All three
-  SSL models gain nothing or slightly less than nothing: the representations are
-  already largely speaker-normalised, leaving fMLLR only estimation variance to
-  contribute. Use tri2 rather than tri3 if you only need alignments.
-- **Pretraining data beats parameter count.** HuBERT Large (~317 M) only ties
-  Base at the chain stage (11.48 vs 11.43 test) for triple the extraction cost,
-  while mms-300m at the same scale as Large reaches 10.19. The models that
-  differ in size tie; the model trained on far more and far more diverse audio
-  wins.
-- Chain training overfits mildly on this amount of data (final train objective
-  −0.051 vs −0.258 on the validation set; −0.038 vs −0.220 for Large, i.e. the
-  larger model overfits slightly more). Fewer epochs or stronger regularisation
-  is the obvious thing to try.
-
-## Notes
-
-- SSL features come out at a 20 ms frame shift, so the chain script uses
-  `frame_subsampling_factor=2` (40 ms output frames), matching the other
-  recipes. Dropping to `1` (20 ms output) was tried on the Large L14 features
-  and is *worse*: 10.79 / 11.70 against 10.02 / 11.48. Insertions fall (174 to
-  111 at the best LM weight) but deletions and substitutions both rise, so the
-  coarser rate appears to act as useful smoothing rather than as a bottleneck.
-  Note that Kaldi scales `num_archives_to_process` by the subsampling factor,
-  so at `1` the same `--num-epochs` is half the parameter updates; that run was
-  therefore also undertrained relative to the default.
-- The GMM stages use PCA-30 features because full 768/1024-d embeddings are too
-  high-dimensional for diagonal-covariance GMMs; the chain model consumes the
-  full-dimensional features directly.
-- SA utterances are excluded (as upstream), silence has `--sil-prob 0.0`, and
-  `sil` is a scored word. Do not "fix" these, they are what makes the numbers
-  comparable to the published TIMIT literature.
+- **10.19% PER on the core test set**, a 53% relative reduction over the MFCC
+  SAT baseline (21.95%) and better than any system in Kaldi's published TIMIT
+  results.
+- **Pretraining data beats parameter count.** mms-300m and HuBERT Large are the
+  same scale, but Large only ties Base (11.48 vs 11.43) while mms-300m reaches
+  10.19. What separates them is 491k hours across 1400+ languages against 60k
+  hours of English audiobooks.
+- **SAT buys nothing.** fMLLR gains 2.21 points with MFCCs and between 0.00 and
+  −0.33 with every SSL model, so SSL features are already speaker-normalised.
+  Use tri2 rather than tri3 if you only need alignments.
+- **The GMM stages do not rank models.** wav2vec2-large-lv60 is the worst of the
+  four by 2 to 3 points at tri2 and the second best at the chain stage. Treat
+  tri2 as a smoke test, not a model-selection criterion.
+- Chain training overfits mildly on 3.7 h; fewer epochs or stronger
+  regularisation is the obvious thing to try.
