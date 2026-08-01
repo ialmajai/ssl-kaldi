@@ -6,6 +6,7 @@ data_url=www.openslr.org/resources/31
 lm_url=www.openslr.org/resources/11
 
 stage=0
+stop_stage=100   # last stage to run
 
 # model_type="facebook/hubert-base-ls960"
 # encoder_layer=9
@@ -16,6 +17,8 @@ encoder_layer=14
 feats_nj=4
 
 pca_dim=30
+pca_dir="pca"
+pca_model=""       # defaults to $pca_dir/pca-${pca_dim}d.pt
 
 . ./cmd.sh
 . ./path.sh
@@ -27,18 +30,18 @@ echo "Using model: $ssl_model and layer: $encoder_layer for feature extraction"
 
 mkdir -p data
 
-if [ $stage -le 0 ]; then
+if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
   mkdir -p $data
   for part in dev-clean-2 train-clean-5; do
     local/download_and_untar.sh $data $data_url $part
   done
 fi
 
-if [ $stage -le 1 ]; then
+if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
   local/download_lm.sh $lm_url $data data/local/lm
 fi
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
   # format the data as Kaldi data directories
   for part in dev-clean-2 train-clean-5; do
     # use underscore-separated names in data directories.
@@ -57,7 +60,7 @@ if [ $stage -le 2 ]; then
     data/lang_nosp data/lang_nosp_test_tglarge
 fi
 
-if [ $stage -le 3 ]; then
+if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
   compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
   if [ "$compute_mode" == "Exclusive_Process" ]; then
 
@@ -75,24 +78,22 @@ if [ $stage -le 3 ]; then
   done  
 fi
 
-if [ $stage -le 4 ]; then
-  pca_model="pca-${pca_dim}d.pt"    
-  pca_dir="pca"
-  mkdir -p $pca_dir
-  if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
+if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
+  [ -z "$pca_model" ] && pca_model="$pca_dir/pca-${pca_dim}d.pt"
+  mkdir -p $(dirname $pca_model)
+  if [[ ! -f $pca_model  ||  $pca_model \
           -ot data/train_clean_5_raw/feats.scp ]] ; then
     echo "Training PCA model"
-    mkdir -p $pca_dir
     python shared/pca.py  --pca_dim=$pca_dim --mode=train \
       --feats_scp=data/train_clean_5_raw/feats.scp \
-      --pca_model=$pca_dir/$pca_model \
-      --max_utts=1500 $pca_dir/$pca_model
+      --pca_model=$pca_model \
+      --max_utts=1500 $pca_model
   fi
   for part in dev_clean_2 train_clean_5; do
     echo "preparing pca features"    
     utils/copy_data_dir.sh data/$part data/${part}_pca
     shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15 \
-        --pca-model $pca_dir/$pca_model \
+        --pca-model $pca_model \
           data/${part}_raw data/${part}_pca   || exit 1;
     steps/compute_cmvn_stats.sh data/${part}_pca  || exit 1;
     utils/fix_data_dir.sh data/${part}_pca
@@ -100,7 +101,7 @@ if [ $stage -le 4 ]; then
 fi
 
 # train a monophone system
-if [ $stage -le 5 ]; then
+if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   utils/subset_data_dir.sh --shortest data/train_clean_5_pca 500 data/train_500short
 
   steps/train_mono.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
@@ -110,7 +111,7 @@ if [ $stage -le 5 ]; then
     data/train_clean_5_pca data/lang_nosp exp/mono exp/mono_ali_train_clean_5
 fi
 
-if [ $stage -le 6 ]; then
+if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
     utils/mkgraph.sh data/lang_nosp_test_tgsmall \
                    exp/mono exp/mono/graph_tgsmall
     for testset in dev_clean_2_pca; do
@@ -126,7 +127,7 @@ fi
 
  
 #delta + delta-delta triphone
-if [ $stage -le 7 ]; then
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
   steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
     2000 10000 data/train_clean_5_pca data/lang_nosp exp/mono_ali_train_clean_5 exp/tri1
 
@@ -135,7 +136,7 @@ if [ $stage -le 7 ]; then
 fi
 
 # Train LDA+MLLT system
-if [ $stage -le 8 ]; then
+if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" 2500 15000 \
     data/train_clean_5_pca data/lang_nosp exp/tri1_ali_train_clean_5 exp/tri2b
@@ -145,14 +146,14 @@ if [ $stage -le 8 ]; then
 fi
 
 # Train LDA+MLLT+SAT
-if [ $stage -le 9 ]; then
+if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
   steps/train_sat.sh --cmd "$train_cmd" 2500 15000 \
     data/train_clean_5_pca data/lang_nosp exp/tri2b_ali_train_clean_5 exp/tri3b
 fi
 
 # Now we compute the pronunciation and silence probabilities from training data,
 # and re-create the lang directory.
-if [ $stage -le 10 ]; then
+if [ $stage -le 10 ] && [ $stop_stage -ge 10 ]; then
   steps/get_prons.sh --cmd "$train_cmd" \
     data/train_clean_5 data/lang_nosp exp/tri3b
   utils/dict_dir_add_pronprobs.sh --max-normalize true \
@@ -169,7 +170,7 @@ if [ $stage -le 10 ]; then
     data/local/lm/lm_tglarge.arpa.gz data/lang data/lang_test_tglarge
 fi
 
-if [ $stage -le 11 ]; then
+if [ $stage -le 11 ] && [ $stop_stage -ge 11 ]; then
   # decode using the tri3b model
   utils/mkgraph.sh data/lang_test_tgsmall \
                    exp/tri3b exp/tri3b/graph_tgsmall
@@ -185,7 +186,7 @@ if [ $stage -le 11 ]; then
   done
 fi
 
-if [ $stage -le 12 ]; then
+if [ $stage -le 12 ] && [ $stop_stage -ge 12 ]; then
   echo "$0: TDNN training started"
   local/chain/run_common_ssl.sh --stage 12 \
     --ssl-model $ssl_model \
@@ -194,7 +195,7 @@ if [ $stage -le 12 ]; then
     --pca-dim $pca_dim
 fi
 
-if [ $stage -le 13 ]; then
+if [ $stage -le 13 ] && [ $stop_stage -ge 13 ]; then
 
   local/chain/run_tdnn_ssl.sh --stage 15 \
     --gmm tri3b \
