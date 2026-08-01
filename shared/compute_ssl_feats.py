@@ -18,6 +18,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 EXPECTED_SAMPLE_RATE = 16000
+# Whisper pads to a fixed 30 s window; its encoder emits one frame per 20 ms,
+# i.e. one per 320 samples at 16 kHz, the same rate as the wav2vec2 models.
+WHISPER_WINDOW_SECONDS = 30
+WHISPER_SAMPLES_PER_FRAME = 320
 
 
 def parse_args():
@@ -81,6 +85,13 @@ class SSLExtractor:
                 f"Layer {layer} out of bounds (model has {total_layers} layers)"
             )
         self.model.encoder.layers = self.model.encoder.layers[:layer]
+        # Whisper is an encoder-decoder over log-mel, not a waveform model. Keep
+        # only the encoder, which runs at the same 20 ms frame rate as the
+        # wav2vec2-style models, and drop the decoder so it is neither loaded
+        # onto the GPU nor called.
+        self.is_whisper = type(self.model).__name__.startswith("Whisper")
+        if self.is_whisper:
+            self.model = self.model.encoder
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = self.model.to(self.device)
 
@@ -95,7 +106,23 @@ class SSLExtractor:
 
         # hidden_states = embeddings + one entry per remaining encoder layer,
         # so the last entry is the requested layer after truncation.
-        return outputs.hidden_states[-1].cpu().squeeze(0).numpy()
+        feats = outputs.hidden_states[-1].cpu().squeeze(0).numpy()
+
+        if self.is_whisper:
+            # Whisper's feature extractor pads every utterance to 30 s, so the
+            # encoder always returns 1500 frames. Keep only the frames that
+            # correspond to real audio, or a 3 s utterance would carry 1350
+            # frames of encoded padding.
+            n_samples = len(waveform)
+            if n_samples > WHISPER_WINDOW_SECONDS * EXPECTED_SAMPLE_RATE:
+                raise ValueError(
+                    f"utterance is {n_samples / EXPECTED_SAMPLE_RATE:.1f}s; "
+                    f"Whisper truncates above {WHISPER_WINDOW_SECONDS}s, which "
+                    "would silently discard audio. Split it first"
+                )
+            feats = feats[: n_samples // WHISPER_SAMPLES_PER_FRAME]
+
+        return feats
 
 
 def preprocess_waveform(waveform: np.ndarray) -> np.ndarray:
