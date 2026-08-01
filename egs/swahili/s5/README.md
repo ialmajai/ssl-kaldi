@@ -56,10 +56,10 @@ If you use this recipe, please cite **ssl-kaldi** and the
 ```
 @misc{ssl_kaldi,
   author       = {Ibrahim Almajai},
-  title        = {ssl-kaldi: SSL features are all you need},
+  title        = {ssl-kaldi: self-supervised speech features for Kaldi ASR recipes},
   year         = {2025},
   howpublished = {\url{https://github.com/ialmajai/ssl-kaldi}},
-  note         = {Accessed: 2025-12}
+  note         = {Accessed: 2026-08}
 }
 
 @misc{openslr25_swahili,

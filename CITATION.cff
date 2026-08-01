@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "ssl-kaldi: SSL features are all you need"
+title: "ssl-kaldi: self-supervised speech features for Kaldi ASR recipes"
 authors:
   - family-names: Almajai
     given-names: Ibrahim
