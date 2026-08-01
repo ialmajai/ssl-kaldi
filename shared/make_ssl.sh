@@ -9,6 +9,7 @@ write_utt2num_frames=true  # If true writes utt2num_frames.
 write_utt2dur=true
 layer=9
 ssl_model="facebook/hubert-base-ls960"
+allow_missing=false  # if true, tolerate utterances that produced no features
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -106,6 +107,18 @@ else
       || exit 1;
 fi
 
+# A job that aborted leaves no utt2dur, so without this the failure surfaces
+# further down as a confusing "cat: utt2dur.1: No such file".
+if grep -qi "^aborting after" $logdir/make_ssl_${name}.*.log 2>/dev/null; then
+  echo "$0: ERROR: feature extraction aborted."
+  grep -hiE "Failed to process|^aborting after" $logdir/make_ssl_${name}.*.log \
+    | sed "s|^|$0:   |"
+  echo "$0: If it is CUDA OOM, re-run with a smaller --nj (currently $nj)."
+  echo "$0: To tolerate failures instead, raise --max-failures in the"
+  echo "$0: compute_ssl_feats.py call and pass --allow-missing true here."
+  exit 1
+fi
+
 # concatenate the .scp files together.
 for n in $(seq $nj); do
   cat $ssldir/raw_ssl_$name.$n.scp || exit 1
@@ -132,8 +145,17 @@ rm $logdir/wav_${name}.*.scp  $logdir/segments.* \
 nf=$(wc -l < $data/feats.scp)
 nu=$(wc -l < $data/utt2spk)
 if [ $nf -ne $nu ]; then
-  echo "$0: It seems not all of the feature files were successfully procesed" \
-       "($nf != $nu); consider using utils/fix_data_dir.sh $data"
+  # Unlike MFCCs, where a dropped utterance means a corrupt wav, here it is
+  # usually a transient CUDA OOM: the utterance is fine and would succeed on a
+  # quieter GPU. Tolerating it silently shrinks the data directory, and a test
+  # set that lost utterances cannot be compared against a run that kept them.
+  echo "$0: ERROR: only $nf of $nu utterances produced features."
+  echo "$0: grep -i 'failed to process' $logdir/make_ssl_${name}.*.log"
+  echo "$0: If it is CUDA OOM, re-run with a smaller --nj (currently $nj)."
+  echo "$0: To accept the loss instead, pass --allow-missing true and then run"
+  echo "$0: utils/fix_data_dir.sh $data"
+  $allow_missing || exit 1
+  echo "$0: --allow-missing was set; continuing with $nf utterances."
 fi
 
 if (( nf < nu - nu/20 )); then

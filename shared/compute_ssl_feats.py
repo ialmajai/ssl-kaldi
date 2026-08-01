@@ -49,6 +49,14 @@ def parse_args():
         help="Optional utt2dur output: ark,t:path/to/utt2dur or ark:path/to/utt2dur",
     )
     parser.add_argument(
+        "--max-failures",
+        type=int,
+        default=0,
+        help="how many utterances may fail before the job aborts. A tolerated "
+             "failure silently shrinks the data directory, which later looks "
+             "like a smaller test set rather than an error",
+    )
+    parser.add_argument(
         "--ssl-model",
         "-model",
         type=str,
@@ -107,7 +115,7 @@ def process_features(args):
 
     utt2dur_data = {}
     processed = 0
-    failed = 0
+    failed_utts = []
 
     # kaldiio yields (utt_id, (sample_rate, waveform)) for wav input,
     # whether read from an scp or from an ark on stdin.
@@ -128,13 +136,22 @@ def process_features(args):
                 if processed % 100 == 0:
                     logger.info(f"Processed {processed} utterances...")
             except Exception as e:
-                logger.warning(f"Failed to process {utt_id}: {e}")
-                failed += 1
+                logger.error(f"Failed to process {utt_id}: {e}")
+                failed_utts.append(utt_id)
+                if len(failed_utts) > args.max_failures:
+                    raise SystemExit(
+                        f"aborting after {len(failed_utts)} failure(s), "
+                        f"--max-failures is {args.max_failures}. "
+                        f"Failed: {' '.join(failed_utts)}"
+                    )
 
     logger.info("=" * 70)
     logger.info(f"Successfully processed: {processed} utterances")
-    if failed > 0:
-        logger.warning(f"Failed: {failed} utterances")
+    if failed_utts:
+        logger.warning(
+            f"Failed: {len(failed_utts)} utterances, tolerated because "
+            f"--max-failures is {args.max_failures}: {' '.join(failed_utts)}"
+        )
     logger.info("=" * 70)
 
     if processed == 0:
