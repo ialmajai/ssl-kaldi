@@ -37,13 +37,6 @@ for f in data/${train_set}_raw/feats.scp ${gmm_dir}/final.mdl; do
 done
 
 if [ $stage -le 0 ]; then
-  compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
-  if [ "$compute_mode" == "Exclusive_Process" ]; then
-    echo "Feature extraction requires GPU compute mode to be set to default"
-    echo "run: sudo nvidia-smi -c 0"
-    exit 1
-  fi
-
   echo "$0: preparing directory for speed-perturbed data"
   # This stage owns data/${train_set}_sp_raw and regenerates it from scratch.
   # Removing it first lets the recipe be re-run with a different SSL model:

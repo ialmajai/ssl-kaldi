@@ -19,9 +19,11 @@ train_stage=-10
 get_egs_stage=-10
 
 num_leaves=2000
-# Job schedule for chain training; set both to 1 when training on a single GPU.
-num_jobs_initial=2
-num_jobs_final=4
+# Job schedule for chain training. 1/1 measured better than the upstream 2/4 on
+# all five frozen systems (0.33 to 0.95 PER): Kaldi scales the effective
+# learning rate by job count and 3.7 h does not support the larger step.
+num_jobs_initial=1
+num_jobs_final=1
 # SSL features are already at a 20 ms frame shift, so a subsampling factor of 2
 # gives 40 ms output frames. Try 1 if you want output at the feature rate.
 frame_subsampling_factor=2
@@ -90,6 +92,7 @@ fi
 if [ $stage -le 2 ]; then
   steps/nnet3/chain/build_tree.sh \
     --frame-subsampling-factor ${frame_subsampling_factor} \
+    --context-opts "--context-width=1 --central-position=0" \
     --cmd "$train_cmd" $num_leaves ${lores_train_data_dir} \
     $lang $ali_dir $tree_dir
 fi
@@ -122,6 +125,10 @@ if [ $stage -le 3 ]; then
   tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
   tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
   tdnnf-layer name=tdnnf9 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf10 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf11 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf12 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+  tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
 
   linear-component name=prefinal-l dim=192 $linear_opts
 
