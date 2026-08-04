@@ -45,7 +45,7 @@ The shared building blocks live in [`shared/`](shared/) (SSL extraction, PCA, in
 | Recipe | Task | SSL model | Headline result |
 |--------|------|-----------|-----------------|
 | [mini_librispeech](egs/mini_librispeech/s5/README.md) | English ASR | HuBERT | **4.15% WER** (dev-clean, chain TDNN) |
-| [iqraeval](egs/iqraeval/README.md) | Arabic phone recognition | mHuBERT | **11.27% PER** (TDNN-F) |
+| [iqraeval](egs/iqraeval/s5/README.md) | Arabic phone recognition | mHuBERT | **11.27% PER** (TDNN-F) |
 | [grid](egs/grid/s5/README.md) | Visual speech recognition (lipreading) | AV-HuBERT | **6.36% WER** (unseen speakers) |
 | [swahili](egs/swahili/s5/README.md) | Swahili ASR | AfriHuBERT / mHuBERT | **19.76% WER** (E2E TDNN-F) |
 | [timit](egs/timit/s5/README.md) | English phone recognition | MMS / HuBERT | **10.19% PER** (core test, chain TDNN) |

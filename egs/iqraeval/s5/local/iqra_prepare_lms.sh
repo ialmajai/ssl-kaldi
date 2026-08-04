@@ -9,28 +9,37 @@
 echo "Preparing train, dev and test data"
 lmdir=data/local/kenlm
 lexicon=data/local/dict/lexicon.txt
-KENLM=/data/git/kenlm/build
 mkdir -p  $lmdir
 
 
-# Check for KenLM (used for faster/better ARPA LM training and querying in some recipes)
-if [ ! -x $KENLM/bin/lmplz ] ; then
+# KenLM's lmplz builds the phone LMs. Set KENLM to the build directory (the one
+# containing bin/lmplz) to use a build the search below does not find.
+if [ -z "${KENLM:-}" ]; then
+  for d in kenlm/build "$KALDI_ROOT/tools/kenlm/build" /data/git/kenlm/build ; do
+    if [ -x "$d/bin/lmplz" ] ; then KENLM=$d ; break ; fi
+  done
+fi
+[ -n "${KENLM:-}" ] && export PATH=${PATH}:$KENLM/bin
+
+# lmplz may also already be on PATH, e.g. from a conda kenlm package.
+if ! command -v lmplz >/dev/null ; then
   echo "===================================================================="
-  echo "WARNING: KenLM not found or not built in $KENLM"
+  echo "ERROR: KenLM's lmplz not found."
+  echo "Searched: \$KENLM, ./kenlm/build, \$KALDI_ROOT/tools/kenlm/build,"
+  echo "          /data/git/kenlm/build, and \$PATH."
   echo "To install KenLM:"
   echo "  git clone https://github.com/kpu/kenlm.git kenlm"
   echo "  cd kenlm"
   echo "  mkdir -p build"
   echo "  cd build"
   echo "  cmake .."
-  echo "  make -j $(nproc)"
-  echo "If successful update the above KENLM path accordingly"
+  echo "  make -j \$(nproc)"
+  echo "Then rerun, or set KENLM=/path/to/kenlm/build if you built it elsewhere."
   exit 1
 fi
 
 
 # Create phone bigram and trigram LMs
-export PATH=${PATH}:$KENLM/bin
 
 cut -d' ' -f2- data/train/text | sort | uniq  > $lmdir/lm_train.text
 
