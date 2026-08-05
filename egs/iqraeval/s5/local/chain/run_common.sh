@@ -45,18 +45,24 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
-  pca_model="pca-${pca_dim}d-sp.pt"    
+  # Reuse the PCA model that run.sh stage 2 fitted, rather than fitting a
+  # second one on the speed-perturbed data. $gmm was trained under that model
+  # and is about to align the features projected below, and eigenvector sign is
+  # arbitrary, so a separately fitted basis hands it a negated low-variance
+  # dimension, differently on each run.
+  #
+  # Refitting also measures as a no-op, at least on timit: an sp-fitted basis
+  # retained 0.024 percentage points more variance of the perturbed data, with
+  # the two subspaces overlapping at 0.9998. Speed perturbation rescales time
+  # and barely moves the distribution of frame-wise embeddings. Not re-measured
+  # on this corpus. See egs/timit/s5/NOTES.md.
+  pca_model="pca-${pca_dim}d.pt"
   pca_dir="pca"
-  mkdir -p $pca_dir
-  if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
-          -ot data/${clean_data_dir}/feats.scp ]] ; then
-    echo "Training PCA model"
-    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
-      --feats_scp=data/${clean_data_dir}/feats.scp \
-      --pca_model=$pca_dir/$pca_model \
-      --max_utts=20000 $pca_dir/$pca_model
+  if [ ! -f $pca_dir/$pca_model ]; then
+    echo "$0: expected $pca_dir/$pca_model from run.sh stage 2" && exit 1
   fi
-  
+
+
   echo "preparing pca features"    
   utils/copy_data_dir.sh data/$clean_data_dir data/${train_set}_sp_pca
   rm -rf data/${train_set}_sp_pca/feats.scp data/${train_set}_sp_pca/data 

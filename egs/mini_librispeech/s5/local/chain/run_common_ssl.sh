@@ -48,17 +48,17 @@ if [ $stage -le 12 ]; then
 fi
 
 if [ $stage -le 13 ]; then
-  pca_model="pca-${pca_dim}d-sp.pt"    
+  # Reuse the PCA model that run.sh stage 4 fitted on the unperturbed data,
+  # rather than fitting a second one on the speed-perturbed set. Refitting
+  # measures as a no-op (0.024 percentage points more variance retained on the
+  # perturbed data, subspaces overlapping at 0.9998) and a separately fitted
+  # basis hands the GMM a sign-flipped low-variance dimension, differently on
+  # each run, because eigenvector sign is arbitrary. The GMM that aligns these
+  # features was trained under this model. See egs/timit/s5/NOTES.md.
+  pca_model="pca-${pca_dim}d.pt"
   pca_dir="pca"
-  mkdir -p $pca_dir
-  if [[ ! -f $pca_dir/$pca_model  ||  $pca_dir/$pca_model \
-       -ot data/${train_set}_sp_raw/feats.scp ]] ; then
-    echo "Training PCA model"
-    mkdir -p $pca_dir
-    python shared/pca.py  --pca_dim=$pca_dim --mode=train \
-      --feats_scp=data/${train_set}_sp_raw/feats.scp \
-      --pca_model=$pca_dir/$pca_model \
-      --max_utts=1500 $pca_dir/$pca_model
+  if [ ! -f $pca_dir/$pca_model ]; then
+    echo "$0: expected $pca_dir/$pca_model from run.sh stage 4" && exit 1
   fi
   for part in train_clean_5_sp; do
     echo "preparing pca features"    

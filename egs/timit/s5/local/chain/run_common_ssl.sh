@@ -18,6 +18,10 @@ encoder_layer=
 feats_nj=4
 pca_dim=30
 align_nj=30
+# PCA basis for the GMM-stage features. Must be the one $gmm was trained under,
+# since it aligns the features projected here. Defaults to what run.sh stage 2
+# fits; override when running a model whose GMM used a different basis.
+pca_model=
 
 . ./cmd.sh
 . ./path.sh
@@ -53,23 +57,36 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
-  pca_model="pca-${pca_dim}d-sp.pt"
-  pca_dir="pca"
-  mkdir -p $pca_dir
-  if [[ ! -f $pca_dir/$pca_model || $pca_dir/$pca_model \
-          -ot data/${train_set}_sp_raw/feats.scp ]] ; then
-    echo "Training PCA model"
-    python shared/pca.py --pca_dim=$pca_dim --mode=train \
-      --feats_scp=data/${train_set}_sp_raw/feats.scp \
-      --pca_model=$pca_dir/$pca_model \
-      --max_utts=1500 $pca_dir/$pca_model
+  # Reuse the PCA model that run.sh stage 2 fitted on the unperturbed data,
+  # rather than fitting a second one on the speed-perturbed set.
+  #
+  # Refitting looks reasonable (the sp set is 3x larger) but measures as a
+  # no-op: on the perturbed data an sp-fitted basis retains 50.817% of the
+  # variance in 30 components against 50.792% for this one, a difference of
+  # 0.024 percentage points, and the two subspaces overlap at 0.9998. Speed
+  # perturbation rescales the time axis and barely moves the distribution of
+  # frame-wise embeddings, which is all PCA sees.
+  #
+  # Reuse is also the only way to keep the basis consistent: $gmm_dir was
+  # trained on features from this model and is about to align features
+  # projected below, and eigenvector sign is arbitrary, so a separately fitted
+  # basis handed the GMM a negated low-variance dimension, differently on each
+  # run. See NOTES.md.
+  if [ -n "$pca_model" ]; then
+    pca_path=$pca_model
+  else
+    pca_path="pca/pca-${pca_dim}d.pt"
   fi
+  if [ ! -f $pca_path ]; then
+    echo "$0: no such PCA model: $pca_path (run.sh stage 2 fits the default)" && exit 1
+  fi
+  echo "$0: projecting with $pca_path"
 
   echo "preparing pca features"
   utils/copy_data_dir.sh data/${train_set}_sp_raw data/${train_set}_sp_pca
   rm -rf data/${train_set}_sp_pca/feats.scp data/${train_set}_sp_pca/data
   shared/make_pca_features.sh --cmd "$decode_cmd" --nj $feats_nj \
-    --pca-dim $pca_dim --pca-model $pca_dir/$pca_model \
+    --pca-dim $pca_dim --pca-model $pca_path \
     data/${train_set}_sp_raw data/${train_set}_sp_pca || exit 1;
   steps/compute_cmvn_stats.sh data/${train_set}_sp_pca || exit 1;
   utils/fix_data_dir.sh data/${train_set}_sp_pca
