@@ -100,8 +100,7 @@ studies.
 
 Extracted from [ssl-kaldi](https://github.com/ialmajai/ssl-kaldi), a set of
 Kaldi recipes that put frozen self-supervised features in front of a classic
-HMM-GMM and LF-MMI back end. Measured results, including which choices turned
-out not to matter, are in that repo's
-[FINDINGS.md](https://github.com/ialmajai/ssl-kaldi/blob/main/FINDINGS.md).
+HMM-GMM and LF-MMI back end. The numbers quoted above come from its TIMIT
+recipe; per-recipe results are in the READMEs under `egs/`.
 
 Apache-2.0.

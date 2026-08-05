@@ -1,2 +1,0 @@
-[console_scripts]
-ssl-kaldi-feats = ssl_kaldi_feats.cli:main
