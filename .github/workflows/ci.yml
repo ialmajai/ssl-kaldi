@@ -64,4 +64,8 @@ jobs:
           pip install "numpy<2.0" "transformers>=4.46.0" kaldiio pytest
           pip install -e packages/ssl-kaldi-feats
       - name: Run tests
-        run: pytest -q tests/ packages/ssl-kaldi-feats/tests/
+        # importlib import mode: two test directories with no __init__.py are
+        # otherwise resolved by basename, which already mis-reported a failure
+        # as packages/ssl-kaldi-feats/test_shared.py and would collide outright
+        # if both dirs ever held a file of the same name.
+        run: pytest -q --import-mode=importlib tests/ packages/ssl-kaldi-feats/tests/
