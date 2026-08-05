@@ -1,0 +1,5 @@
+# The compatibility fixture must ship: it is what lets a user verify that their
+# transformers version still produces the same features. Without it,
+# `pytest -m needs_model` silently skips.
+include LICENSE
+recursive-include tests *.py *.npz *.npy *.json

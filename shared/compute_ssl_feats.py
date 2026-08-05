@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import numpy as np
-import torch
 import sys
+import contextlib
 import logging
 from kaldiio import ReadHelper, WriteHelper
 import argparse
-from transformers import AutoFeatureExtractor, AutoModel
+
+# The extractor lives in packages/ssl-kaldi-feats so that it is usable without
+# Kaldi and without this repo. It was duplicated here until 2026-08-05; the two
+# copies were bit-exact at the point of merging. Install with:
+#   pip install -e packages/ssl-kaldi-feats
+from ssl_kaldi_feats import (  # noqa: F401
+    EXPECTED_SAMPLE_RATE,
+    WHISPER_SAMPLES_PER_FRAME,
+    WHISPER_WINDOW_SECONDS,
+    SSLExtractor,
+    preprocess_waveform,
+)
 
 from kaldi_io_utils import write_utt2dur
 
@@ -16,13 +26,13 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-EXPECTED_SAMPLE_RATE = 16000
-# Whisper pads to a fixed 30 s window; its encoder emits one frame per 20 ms,
-# i.e. one per 320 samples at 16 kHz, the same rate as the wav2vec2 models.
-WHISPER_WINDOW_SECONDS = 30
-WHISPER_SAMPLES_PER_FRAME = 320
-
+# Set the level on our own logger, not just via basicConfig. Loading a model
+# with AutoModel.from_pretrained() resets the ROOT logger to WARNING, which
+# silently swallows every INFO we emit afterwards: progress counts, the
+# layer_norm mode, and the final "processed N utterances". Only ERROR and
+# WARNING survived, which is why extraction logs looked truncated at
+# "Initializing model". A logger with its own level is immune.
+logger.setLevel(logging.INFO)
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -46,6 +56,30 @@ def parse_args():
         help="SSL embedding layer to extract (e.g., 12)",
     )
     parser.add_argument(
+        "--layers",
+        type=str,
+        default=None,
+        help="comma-separated layers to extract in ONE forward pass, e.g. "
+             "'12,16,18'. A sweep done this way costs one pass to the deepest "
+             "layer instead of one pass per layer (18 layer-evaluations "
+             "instead of 46 for that example). Requires --out-template and "
+             "ignores the positional output argument",
+    )
+    parser.add_argument(
+        "--out-template",
+        type=str,
+        default=None,
+        help="wspecifier containing {layer}, used with --layers, e.g. "
+             "'ark,scp:d/L{layer}.ark,d/L{layer}.scp'",
+    )
+    parser.add_argument(
+        "--write-utt2num-frames",
+        type=str,
+        default=None,
+        help="path for utt2num_frames, multi-layer mode only (the frame count "
+             "is the same for every layer)",
+    )
+    parser.add_argument(
         "--write-utt2dur",
         "-wud",
         type=str,
@@ -67,86 +101,64 @@ def parse_args():
         default="facebook/hubert-base-ls960",
         help="Pretrained SSL model type from HuggingFace",
     )
+    parser.add_argument(
+        "--final-layer-norm",
+        choices=["keep", "strip"],
+        default="keep",
+        help="what to do with the encoder-final layer_norm on models that apply "
+             "it after the layer loop (do_stable_layer_norm=True, and Whisper). "
+             "Truncating the stack moves that norm onto the requested layer. "
+             "'keep' returns layer_norm(layer_k), so the features do NOT equal "
+             "hidden_states[k] on the full model and the layer index is not "
+             "comparable with the literature; 'strip' bypasses it, making "
+             "truncation exactly equivalent to indexing. keep is the default "
+             "because it measures better: on TIMIT mms-300m L14 it wins at "
+             "every GMM stage by 0.67 to 2.21 PER (p<=0.15%%), the layer_norm "
+             "acting as a free per-frame normalisation ahead of PCA. Use strip "
+             "when you need features comparable with published layer studies. "
+             "No effect on models that norm before the loop (hubert-base, "
+             "wavlm-base, mHuBERT-147)",
+    )
     return parser.parse_args()
 
 
-class SSLExtractor:
-    def __init__(self, model_id, layer):
-        """Loads the model and feature extractor exactly once into memory."""
-        logger.info(f"Initializing model: {model_id}...")
-        self.model_id = model_id
-        self.layer = layer
-        self.extractor = AutoFeatureExtractor.from_pretrained(model_id)
-        self.model = AutoModel.from_pretrained(model_id)
-        self.model.eval()
-        total_layers = len(self.model.encoder.layers)
-        if layer < 1 or layer > total_layers:
-            raise ValueError(
-                f"Layer {layer} out of bounds (model has {total_layers} layers)"
-            )
-        self.model.encoder.layers = self.model.encoder.layers[:layer]
-        # Whisper is an encoder-decoder over log-mel, not a waveform model. Keep
-        # only the encoder, which runs at the same 20 ms frame rate as the
-        # wav2vec2-style models, and drop the decoder so it is neither loaded
-        # onto the GPU nor called.
-        self.is_whisper = type(self.model).__name__.startswith("Whisper")
-        if self.is_whisper:
-            self.model = self.model.encoder
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = self.model.to(self.device)
-
-    def extract(self, waveform):
-        inputs = self.extractor(
-            waveform, sampling_rate=EXPECTED_SAMPLE_RATE, return_tensors="pt"
-        )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-        with torch.no_grad():
-            outputs = self.model(**inputs, output_hidden_states=True)
-
-        # hidden_states = embeddings + one entry per remaining encoder layer,
-        # so the last entry is the requested layer after truncation.
-        feats = outputs.hidden_states[-1].cpu().squeeze(0).numpy()
-
-        if self.is_whisper:
-            # Whisper's feature extractor pads every utterance to 30 s, so the
-            # encoder always returns 1500 frames. Keep only the frames that
-            # correspond to real audio, or a 3 s utterance would carry 1350
-            # frames of encoded padding.
-            n_samples = len(waveform)
-            if n_samples > WHISPER_WINDOW_SECONDS * EXPECTED_SAMPLE_RATE:
-                raise ValueError(
-                    f"utterance is {n_samples / EXPECTED_SAMPLE_RATE:.1f}s; "
-                    f"Whisper truncates above {WHISPER_WINDOW_SECONDS}s, which "
-                    "would silently discard audio. Split it first"
-                )
-            feats = feats[: n_samples // WHISPER_SAMPLES_PER_FRAME]
-
-        return feats
-
-
-def preprocess_waveform(waveform: np.ndarray) -> np.ndarray:
-    if np.issubdtype(waveform.dtype, np.integer):
-        return waveform.astype(np.float32) / np.iinfo(waveform.dtype).max
-    return waveform.astype(np.float32)
-
-
 def process_features(args):
+    multi = args.layers is not None
+    if multi and not args.out_template:
+        raise SystemExit("--layers requires --out-template")
+    layers = ([int(x) for x in args.layers.split(",")] if multi else args.layer)
+
     logger.info("=" * 70)
     logger.info(f"Input:        {args.input}")
-    logger.info(f"Output:       {args.output}")
-    logger.info(f"Layer:        {args.layer}")
+    logger.info(f"Output:       {args.out_template if multi else args.output}")
+    logger.info(f"Layer(s):     {layers}")
     logger.info("=" * 70)
 
-    ssl_extractor = SSLExtractor(args.ssl_model, args.layer)
+    ssl_extractor = SSLExtractor(args.ssl_model, layers, args.final_layer_norm)
 
     utt2dur_data = {}
+    utt2num_frames = {}
     processed = 0
     failed_utts = []
 
-    # kaldiio yields (utt_id, (sample_rate, waveform)) for wav input,
-    # whether read from an scp or from an ark on stdin.
-    with ReadHelper(args.input) as reader, WriteHelper(args.output) as writer:
+    # Single layer streams to one wspecifier, as before. Several layers cannot
+    # share one stdout, so each gets its own compressed archive.
+    with contextlib.ExitStack() as stack:
+        reader = stack.enter_context(ReadHelper(args.input))
+        if multi:
+            writers = {
+                L: stack.enter_context(
+                    WriteHelper(args.out_template.format(layer=L),
+                                compression_method=2)
+                )
+                for L in ssl_extractor.layers
+            }
+        else:
+            writers = {ssl_extractor.layers[0]:
+                       stack.enter_context(WriteHelper(args.output))}
+
+        # kaldiio yields (utt_id, (sample_rate, waveform)) for wav input,
+        # whether read from an scp or from an ark on stdin.
         for utt_id, (sample_rate, waveform) in reader:
             try:
                 if sample_rate != EXPECTED_SAMPLE_RATE:
@@ -157,7 +169,10 @@ def process_features(args):
                 dur = waveform.shape[0] / float(sample_rate)
                 waveform = preprocess_waveform(waveform)
                 feats = ssl_extractor.extract(waveform.squeeze())
-                writer(utt_id, feats)
+                for L, w in writers.items():
+                    w(utt_id, feats[L])
+                # Every layer has the same frame count, so one entry serves all.
+                utt2num_frames[utt_id] = len(feats[ssl_extractor.layers[0]])
                 utt2dur_data[utt_id] = dur
                 processed += 1
                 if processed % 100 == 0:
@@ -184,6 +199,17 @@ def process_features(args):
     if processed == 0:
         logger.error("No utterances were successfully processed")
         sys.exit(1)
+
+    if args.write_utt2num_frames:
+        path = args.write_utt2num_frames
+        for prefix in ("ark,t:", "ark:"):
+            if path.startswith(prefix):
+                path = path[len(prefix):]
+                break
+        with open(path, "w") as f:
+            for utt_id, n in sorted(utt2num_frames.items()):
+                f.write(f"{utt_id} {n}\n")
+        logger.info(f"Wrote {len(utt2num_frames)} frame counts to {path}")
 
     return utt2dur_data
 

@@ -4,7 +4,13 @@
 # For a reproducible install, use the pinned lock: pip install -r requirements.lock
 numpy>=1.22,<2.0
 torch>=2.4.0
-transformers>=4.46.0
+transformers>=4.46.0,<5   # see packages/ssl-kaldi-feats: 5.x untested
 torchdr>=0.3.0
 matplotlib>=3.5
 kaldiio>=2.18.0
+
+# The SSL feature extractor, which shared/compute_ssl_feats.py imports. It lives
+# in this repo so there is one implementation rather than two, and is packaged
+# separately because it is useful without Kaldi. Editable so recipe work and
+# package work stay in step.
+-e packages/ssl-kaldi-feats

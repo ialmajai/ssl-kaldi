@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ssl-kaldi-feats"
+version = "0.1.0"
+description = "Kaldi ark/scp features from any HuggingFace speech encoder, without a Kaldi install"
+readme = "README.md"
+# 3.8 because that is the interpreter the ssl-kaldi recipes run on.
+# The code uses no 3.9+ syntax. Bump to >=3.9 (and switch the CLI
+# boolean flags to argparse.BooleanOptionalAction) when that env moves
+# to the 3.11 the top-level README already recommends.
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+authors = [{name = "Ibrahim Almajai"}]
+keywords = ["speech", "kaldi", "self-supervised", "asr", "features", "wav2vec2", "hubert", "whisper"]
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "numpy>=1.22,<2.0",
+  "torch>=2.0",
+  # Upper bound is deliberate. This package truncates model.encoder.layers,
+  # reads config.do_stable_layer_norm and swaps encoder.layer_norm for
+  # Identity: internals, not public API. A major release can change any of
+  # them, and the failure mode is silently different features rather than an
+  # exception. 5.x is untested, not known broken. To lift the bound, run
+  #   pytest -m needs_model tests/
+  # against 5.x and relax it if the fixture still reproduces.
+  "transformers>=4.46.0,<5",
+  "kaldiio>=2.18.0",
+]
+
+[project.optional-dependencies]
+audio = ["soundfile>=0.12"]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/ialmajai/ssl-kaldi"
+Source = "https://github.com/ialmajai/ssl-kaldi/tree/main/packages/ssl-kaldi-feats"
+
+[project.scripts]
+ssl-kaldi-feats = "ssl_kaldi_feats.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+  "needs_model: downloads a model from HuggingFace; opt in with -m needs_model",
+]
+addopts = "-m 'not needs_model'"
