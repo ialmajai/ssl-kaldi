@@ -20,7 +20,48 @@ jobs:
         run: pip install flake8
       - name: Syntax errors & undefined names
         # Only the real-bug subset; no style nitpicking. Vendored/upstream
-        # trees and Kaldi symlinks are excluded.
+        # trees and Kaldi symlinks are excluded. F821 catches the "used but
+        # never imported" case that a plain syntax check misses.
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics \
+          flake8 . --count --select=E9,F63,F7,F82,F821 --show-source --statistics \
             --exclude=.git,*/kenlm/*,*/steps/*,*/utils/*,*/av_hubert/*,*/corpus/*,*/asr_swahili/*
+
+  shellcheck:
+    name: Lint shell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Check our own scripts
+        # --severity=error only: these are Kaldi-style scripts and the lower
+        # severities are almost all unquoted-variable warnings that would be
+        # noise. Only files we wrote; upstream and vendored trees are skipped.
+        #
+        # SC2145 is excluded: `echo "$0 $@"` is the Kaldi idiom for logging a
+        # command line and appears in every recipe script inherited from
+        # upstream. It is harmless for echo, which prints the same text either
+        # way, and rewriting a dozen inherited files to silence it is not worth
+        # the diff. New scripts here use "$*".
+        run: |
+          git ls-files 'shared/*.sh' 'egs/*/s5/run*.sh' 'egs/*/s5/local/**/*.sh' \
+            | xargs -r shellcheck --severity=error --exclude=SC2145 --external-sources
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Install
+        # CPU torch only: these tests never load a model or touch a GPU.
+        # The extractor package must be installed because shared/ imports it.
+        run: |
+          pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "numpy<2.0" "transformers>=4.46.0" kaldiio pytest
+          pip install -e packages/ssl-kaldi-feats
+      - name: Run tests
+        run: pytest -q tests/ packages/ssl-kaldi-feats/tests/
