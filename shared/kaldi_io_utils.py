@@ -30,4 +30,8 @@ def write_utt2dur(utt2dur: dict, out_spec: Optional[str]) -> None:
                 f.write(f"{utt_id} {dur:.3f}\n")
         logger.info(f"Wrote {len(utt2dur)} durations")
     except OSError as e:
-        logger.error(f"Failed to write utt2dur: {e}")
+        # Do not swallow this. Returning normally lets the caller report
+        # "extraction completed successfully" and exit 0, and the failure then
+        # resurfaces further down as a confusing "cat: utt2dur.1: No such file"
+        # from make_ssl.sh. Fail where the problem actually is.
+        raise SystemExit(f"failed to write utt2dur to {path}: {e}")

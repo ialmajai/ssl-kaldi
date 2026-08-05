@@ -10,6 +10,12 @@ write_utt2dur=true
 layer=9
 ssl_model="facebook/hubert-base-ls960"
 allow_missing=false  # if true, tolerate utterances that produced no features
+max_failures=0       # how many utterances may fail before a job aborts
+# keep|strip: see compute_ssl_feats.py. Only bites on models that apply the
+# encoder-final layer_norm after the layer loop (the large ones, and Whisper).
+# keep is the measured-better default; strip gives features that match
+# hidden_states[layer] on the full model, for comparability with the literature.
+final_layer_norm=keep
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -85,7 +91,8 @@ if [ -f $data/segments ]; then
   $cmd JOB=1:$nj $logdir/make_ssl_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
     python shared/compute_ssl_feats.py --layer $layer \
-         --ssl-model $ssl_model $write_utt2dur_opt ark:- ark:- \| \
+         --ssl-model $ssl_model --final-layer-norm $final_layer_norm \
+         --max-failures $max_failures $write_utt2dur_opt ark:- ark:- \| \
          copy-feats --compress=$compress $write_num_frames_opt ark:- \
          ark,scp:$ssldir/raw_ssl_$name.JOB.ark,$ssldir/raw_ssl_$name.JOB.scp \
          || exit 1;
@@ -100,7 +107,8 @@ else
 
   $cmd JOB=1:$nj $logdir/make_ssl_${name}.JOB.log \
     python shared/compute_ssl_feats.py --layer $layer \
-          --ssl-model $ssl_model $write_utt2dur_opt \
+          --ssl-model $ssl_model --final-layer-norm $final_layer_norm \
+          --max-failures $max_failures $write_utt2dur_opt \
 	   scp,p:$logdir/wav_${name}.JOB.scp ark:- \| \
            copy-feats $write_num_frames_opt --compress=$compress ark:- \
       ark,scp:$ssldir/raw_ssl_$name.JOB.ark,$ssldir/raw_ssl_$name.JOB.scp \
@@ -114,8 +122,8 @@ if grep -qi "^aborting after" $logdir/make_ssl_${name}.*.log 2>/dev/null; then
   grep -hiE "Failed to process|^aborting after" $logdir/make_ssl_${name}.*.log \
     | sed "s|^|$0:   |"
   echo "$0: If it is CUDA OOM, re-run with a smaller --nj (currently $nj)."
-  echo "$0: To tolerate failures instead, raise --max-failures in the"
-  echo "$0: compute_ssl_feats.py call and pass --allow-missing true here."
+  echo "$0: To tolerate failures instead, re-run with a larger --max-failures"
+  echo "$0: (currently $max_failures) and --allow-missing true."
   exit 1
 fi
 
@@ -155,13 +163,16 @@ if [ $nf -ne $nu ]; then
   echo "$0: To accept the loss instead, pass --allow-missing true and then run"
   echo "$0: utils/fix_data_dir.sh $data"
   $allow_missing || exit 1
-  echo "$0: --allow-missing was set; continuing with $nf utterances."
-fi
-
-if (( nf < nu - nu/20 )); then
-  echo "$0: Less than 95% the features were successfully generated."\
-       "Probably a serious error."
-  exit 1
+  # The 95% floor still applies even when losses are tolerated: --allow-missing
+  # is for a handful of transient OOMs, not for silently accepting a data
+  # directory that lost a twentieth of its utterances. Checked here rather than
+  # unconditionally below so that the message matches what actually happens.
+  if (( nf < nu - nu/20 )); then
+    echo "$0: ERROR: that is more than 5% of the data, which --allow-missing"
+    echo "$0: does not cover. Fix the cause instead."
+    exit 1
+  fi
+  echo "$0: --allow-missing was set; continuing with $nf of $nu utterances."
 fi
 
 echo "$0: Succeeded creating features for $name"
