@@ -6,6 +6,8 @@
 set -euo pipefail 
 
 stage=0
+stop_stage=100   # run stages [stage, stop_stage]; without this
+                 # --stage N ran to the end and could overwrite exp/
 encoder_layer=9
 pca_dim=30
 
@@ -33,7 +35,7 @@ echo "IqraEval Phone Recognition - GMM Pipeline"
 echo "Started: $(date)"
 echo "========================================="
 
-if [ $stage -le 0 ]; then 
+if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then 
 
   local/iqra_data_prep.sh  $IqraEvalData || exit 1
   # Verify data directories were created
@@ -48,7 +50,7 @@ if [ $stage -le 0 ]; then
   local/iqra_prepare_lms.sh || exit 1
 fi
 
-if [ $stage -le 1 ]; then
+if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
   # Feature Extration & CMVN
   compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
   if [ "$compute_mode" == "Exclusive_Process" ]; then
@@ -66,7 +68,7 @@ if [ $stage -le 1 ]; then
   done
 fi
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
   pca_model="pca-${pca_dim}d.pt"    
   pca_dir="pca"
   mkdir -p $pca_dir
@@ -89,7 +91,7 @@ if [ $stage -le 2 ]; then
 fi
 
 # mono: PCA features
-if [ $stage -le 3 ]; then
+if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
   utils/subset_data_dir.sh data/train_pca 5000 data/train_pca_5k
   steps/train_mono.sh  --nj "$train_nj" --cmd "$train_cmd" data/train_pca_5k data/lang exp/mono
 
@@ -99,7 +101,7 @@ if [ $stage -le 3 ]; then
 fi
 
 # tri1: Δ + ΔΔ
-if [ $stage -le 4 ]; then
+if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
   steps/align_si.sh --boost-silence 1.25 --nj "$train_nj" --cmd "$train_cmd" \
     data/train_pca_5k data/lang exp/mono exp/mono_ali
   steps/train_deltas.sh --cmd "$train_cmd" \
@@ -111,7 +113,7 @@ if [ $stage -le 4 ]; then
 fi
 
 # tri2: LDA + MLLT 
-if [ $stage -le 5 ]; then
+if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   steps/align_si.sh --nj "$train_nj" --cmd "$train_cmd" \
      data/train_pca_5k data/lang exp/tri1 exp/tri1_ali
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
@@ -124,14 +126,14 @@ if [ $stage -le 5 ]; then
 fi
 
 # DNN training and decoding
-if [ $stage -le 6 ]; then
+if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
   local/chain/run_common.sh --stage 0 --gmm tri2 --ssl-model $ssl_model \
 	  --layer $encoder_layer --pca-dim $pca_dim --num-data-reps 1
 
   local/chain/run_tdnn_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
 fi
 
-if [ $stage -le 7 ]; then
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
   echo "========================================="
   echo "IqraEval Phone Recognition - GMM Pipeline"
   echo "Completed: $(date)"

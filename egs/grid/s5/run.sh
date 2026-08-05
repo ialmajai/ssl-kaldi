@@ -5,6 +5,8 @@
 set -euo pipefail
 
 stage=0
+stop_stage=100   # run stages [stage, stop_stage]; without this
+                 # --stage N ran to the end and could overwrite exp/
 nj=8
 njtest=4
 
@@ -50,15 +52,15 @@ numGaussSAT=40000
 . path.sh
 . ./utils/parse_options.sh
 
-if [ $stage -le -1 ]; then
+if [ $stage -le -1 ] && [ $stop_stage -ge -1 ]; then
   python local/download_grid_corpus.py --dir $datasrc
 fi
 
-if [ $stage -le 0 ]; then 	
+if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then 	
   local/grid_data_prep.sh $datasrc
 fi
 
-if [ $stage -le 1 ]; then
+if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
   echo "preparing dictionary and lang"
   mkdir -p $langtmp $dict
   local/chime1_prepare_dict.sh $dict || exit 1
@@ -72,7 +74,7 @@ if [ $stage -le 1 ]; then
   local/grid_prepare_grammar.sh || exit 1
 fi
 
-if [ $stage -le 2 ]; then
+if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
 
   if [ ! -f "input/$avhubert_model" ]; then
     echo "Downloading AvHubert checkpoint"
@@ -95,7 +97,7 @@ if [ $stage -le 2 ]; then
   done
 fi
 
-if [ $stage -le 3 ]; then
+if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
   pca_model=pca-${pca_dim}d.pt    
   pca_dir=pca
   mkdir -p $pca_dir
@@ -119,7 +121,7 @@ if [ $stage -le 3 ]; then
   done
 fi
 
-if [ $stage -le 4 ]; then
+if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
 
   for x in train test; do
     echo "upsampling features"
@@ -135,18 +137,18 @@ if [ $stage -le 4 ]; then
   done
 fi
 
-if [ $stage -le 5 ]; then
+if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   steps/train_mono.sh --nj 8 --cmd "$train_cmd" --boost-silence 1.5 \
     data/train$data_affix data/lang exp/mono
 fi
 
-if [ $stage -le 6 ]; then
+if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
   utils/mkgraph.sh  data/lang  exp/mono exp/mono/graph
   steps/decode.sh  --nj $njtest --cmd "$decode_cmd" \
     exp/mono/graph data/test$data_affix exp/mono/decode  
 fi
 
-if [ $stage -le 7 ]; then
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
   # Get alignments from monophone system.
   steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train$data_affix data/lang exp/mono exp/mono_ali
@@ -164,7 +166,7 @@ if [ $stage -le 7 ]; then
     data/train$data_affix data/lang exp/tri1 exp/tri1_ali
 fi
 
-if [ $stage -le 8 ]; then
+if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
   # train and decode tri2b [LDA+MLLT]
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" $numLeavesMLLT \
@@ -175,13 +177,13 @@ if [ $stage -le 8 ]; then
     exp/tri2b/graph data/test$data_affix exp/tri2b/decode 
 fi
 
-if [ $stage -le 9 ]; then
+if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
 # Align all data with LDA+MLLT system (tri2b)
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
    data/train$data_affix data/lang exp/tri2b exp/tri2b_ali
 fi
 
-if [ $stage -le 10 ]; then
+if [ $stage -le 10 ] && [ $stop_stage -ge 10 ]; then
   # Do LDA+MLLT+SAT, and decode.
   steps/train_sat.sh --cmd "$train_cmd"  $numLeavesSAT  $numGaussSAT \
     data/train$data_affix data/lang exp/tri2b_ali exp/tri3b
@@ -191,7 +193,7 @@ if [ $stage -le 10 ]; then
       exp/tri3b/graph data/test$data_affix exp/tri3b/decode
 fi
 
-if [ $stage -le 11 ]; then
+if [ $stage -le 11 ] && [ $stop_stage -ge 11 ]; then
   # Align all data with LDA+MLLT+SAT
   steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
       data/train$data_affix data/lang exp/tri3b exp/tri3b_ali
@@ -199,7 +201,7 @@ fi
 
 data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
-if [ $stage -le 12 ]; then
+if [ $stage -le 12 ] && [ $stop_stage -ge 12 ]; then
 
   dirc=${data_fmllr}/test
   mkdir -p $dirc
