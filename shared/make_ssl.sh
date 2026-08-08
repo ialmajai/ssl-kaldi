@@ -11,10 +11,8 @@ layer=9
 ssl_model="facebook/hubert-base-ls960"
 allow_missing=false  # if true, tolerate utterances that produced no features
 max_failures=0       # how many utterances may fail before a job aborts
-# keep|strip: see compute_ssl_feats.py. Only bites on models that apply the
-# encoder-final layer_norm after the layer loop (the large ones, and Whisper).
-# keep is the measured-better default; strip gives features that match
-# hidden_states[layer] on the full model, for comparability with the literature.
+# keep|strip: see compute_ssl_feats.py. Only bites on models that norm after the
+# layer loop. keep measures better; strip matches hidden_states[layer].
 final_layer_norm=keep
 
 echo "$0 $@"  # Print the command line for logging.
@@ -153,20 +151,16 @@ rm $logdir/wav_${name}.*.scp  $logdir/segments.* \
 nf=$(wc -l < $data/feats.scp)
 nu=$(wc -l < $data/utt2spk)
 if [ $nf -ne $nu ]; then
-  # Unlike MFCCs, where a dropped utterance means a corrupt wav, here it is
-  # usually a transient CUDA OOM: the utterance is fine and would succeed on a
-  # quieter GPU. Tolerating it silently shrinks the data directory, and a test
-  # set that lost utterances cannot be compared against a run that kept them.
+  # Expect transient CUDA OOM here, not a corrupt wav as with MFCCs. Tolerating
+  # it shrinks the data dir, and a shrunken test set is not comparable.
   echo "$0: ERROR: only $nf of $nu utterances produced features."
   echo "$0: grep -i 'failed to process' $logdir/make_ssl_${name}.*.log"
   echo "$0: If it is CUDA OOM, re-run with a smaller --nj (currently $nj)."
   echo "$0: To accept the loss instead, pass --allow-missing true and then run"
   echo "$0: utils/fix_data_dir.sh $data"
   $allow_missing || exit 1
-  # The 95% floor still applies even when losses are tolerated: --allow-missing
-  # is for a handful of transient OOMs, not for silently accepting a data
-  # directory that lost a twentieth of its utterances. Checked here rather than
-  # unconditionally below so that the message matches what actually happens.
+  # Apply the 95% floor even when losses are tolerated: --allow-missing covers a
+  # few transient OOMs, not a directory that lost a twentieth of its utterances.
   if (( nf < nu - nu/20 )); then
     echo "$0: ERROR: that is more than 5% of the data, which --allow-missing"
     echo "$0: does not cover. Fix the cause instead."

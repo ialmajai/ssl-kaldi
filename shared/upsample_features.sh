@@ -5,7 +5,6 @@
 nj=2
 cmd=run.pl
 
-#interpolation
 interp_mode=linear
 upsample_factor=2
 

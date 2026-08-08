@@ -18,10 +18,8 @@ logger = logging.getLogger("IPCA")
 
 def _flush_batch(batch, ipca):
     batch_tensor = torch.from_numpy(np.vstack(batch)).float().to(ipca.device)
-    # partial_fit cannot estimate n_components from fewer frames than that.
-    # Only reachable when the trailing batch is tiny, i.e. with a very small
-    # --max_utts on short utterances, where it would fail deep inside torchdr
-    # rather than say what is wrong.
+    # Skip a trailing batch smaller than n_components; partial_fit cannot
+    # estimate components from it and fails deep inside torchdr.
     n_frames = batch_tensor.shape[0]
     if n_frames < ipca.n_components:
         logger.warning(

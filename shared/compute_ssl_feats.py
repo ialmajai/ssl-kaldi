@@ -6,9 +6,7 @@ import logging
 from kaldiio import ReadHelper, WriteHelper
 import argparse
 
-# The extractor lives in packages/ssl-kaldi-feats so that it is usable without
-# Kaldi and without this repo. It was duplicated here until 2026-08-05; the two
-# copies were bit-exact at the point of merging. Install with:
+# Import the extractor from packages/ssl-kaldi-feats, which works without Kaldi.
 #   pip install -e packages/ssl-kaldi-feats
 from ssl_kaldi_feats import (  # noqa: F401
     EXPECTED_SAMPLE_RATE,
@@ -26,12 +24,8 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-# Set the level on our own logger, not just via basicConfig. Loading a model
-# with AutoModel.from_pretrained() resets the ROOT logger to WARNING, which
-# silently swallows every INFO we emit afterwards: progress counts, the
-# layer_norm mode, and the final "processed N utterances". Only ERROR and
-# WARNING survived, which is why extraction logs looked truncated at
-# "Initializing model". A logger with its own level is immune.
+# Set the level here, not just via basicConfig: AutoModel.from_pretrained()
+# resets the ROOT logger to WARNING and silently swallows every INFO after it.
 logger.setLevel(logging.INFO)
 
 def parse_args():

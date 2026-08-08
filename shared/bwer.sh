@@ -8,13 +8,8 @@
 # The optional argument is a substring matched against the decode directory
 # path, so "tri3", "chain" or "dev" all work as filters.
 #
-# Recipes nest their experiment directories differently: exp/tri3b/decode in
-# most, exp/chain/tdnn1a_sp/decode for chain models, and exp/<x>/<y>/decode in
-# swahili. Both depths are globbed here, which is why this file replaces the
-# per-recipe copies that each handled only their own layout.
-#
-# Scoring itself is Kaldi's utils/best_wer.sh. The recipes used to carry a
-# byte-identical copy at local/best_wer.sh; those were removed as redundant.
+# Globs two depths, covering exp/tri3b/decode and exp/chain/tdnn1a_sp/decode.
+# Scoring itself is Kaldi's utils/best_wer.sh.
 
 (
   for x in exp*/*/decode*; do
