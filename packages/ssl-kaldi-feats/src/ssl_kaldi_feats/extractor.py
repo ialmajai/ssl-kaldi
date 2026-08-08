@@ -116,9 +116,8 @@ class SSLExtractor:
         norms_after_loop = self.is_whisper or getattr(
             self.model.config, "do_stable_layer_norm", False
         )
-        # Take the norm out of the graph either way and re-apply per layer when
-        # keeping. A single pass would otherwise norm ONLY the deepest layer,
-        # silently mixing keep and strip features inside one sweep.
+        # Take the norm out of the graph and re-apply per captured layer; one
+        # pass would otherwise norm ONLY the deepest, silently mixing modes.
         self._final_ln = None
         if norms_after_loop:
             if final_layer_norm == "keep":
@@ -141,10 +140,8 @@ class SSLExtractor:
         self.frame_shift = (frame_shift if frame_shift is not None
                             else self._measure_frame_shift())
 
-    # Rates a Kaldi pipeline is likely to expect. A measured value within
-    # tolerance of one of these is snapped to it, so a model that emits
-    # 199 frames for 4 s (one short, from input stacking) still reports a
-    # clean 0.02 rather than 0.0201.
+    # Snap a measured rate within tolerance to one of these, so a model emitting
+    # 199 frames for 4 s (one short, from input stacking) reports 0.02 not 0.0201.
     _KNOWN_FRAME_SHIFTS = (0.01, 0.02, 0.04)
     _SNAP_TOLERANCE = 0.05  # 5 per cent
 

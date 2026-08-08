@@ -41,9 +41,8 @@ def build_parser():
                         "mean. Only affects models that norm after the layer "
                         "loop (the large ones, and Whisper)")
     p.add_argument("--device", default=None, help="torch device (default: cuda if available)")
-    # argparse.BooleanOptionalAction would be tidier but is 3.9+, and this
-    # package supports 3.8. Both halves carry help text so neither reads as an
-    # accident.
+    # Use paired flags, not argparse.BooleanOptionalAction, which is 3.9+ while
+    # this package supports 3.8.
     p.add_argument("--compress", dest="compress", action="store_true",
                    default=True,
                    help="write compressed archives, Kaldi kSpeechFeature, the "
