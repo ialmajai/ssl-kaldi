@@ -48,13 +48,9 @@ if [ $stage -le 12 ]; then
 fi
 
 if [ $stage -le 13 ]; then
-  # Reuse the PCA model that run.sh stage 4 fitted on the unperturbed data,
-  # rather than fitting a second one on the speed-perturbed set. Refitting
-  # measures as a no-op (0.024 percentage points more variance retained on the
-  # perturbed data, subspaces overlapping at 0.9998) and a separately fitted
-  # basis hands the GMM a sign-flipped low-variance dimension, differently on
-  # each run, because eigenvector sign is arbitrary. The GMM that aligns these
-  # features was trained under this model. See egs/timit/s5/NOTES.md.
+  # Reuse run.sh stage 4's PCA rather than refitting on the perturbed set: the
+  # GMM that aligns these features was trained under this basis, and eigenvector
+  # sign is arbitrary. Measured on timit only. See egs/timit/s5/NOTES.md.
   pca_model="pca-${pca_dim}d.pt"
   pca_dir="pca"
   if [ ! -f $pca_dir/$pca_model ]; then

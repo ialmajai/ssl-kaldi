@@ -19,9 +19,8 @@ train_stage=-10
 get_egs_stage=-10
 
 num_leaves=2000
-# Job schedule for chain training. 1/1 measured better than the upstream 2/4 on
-# all five frozen systems (0.33 to 0.95 PER): Kaldi scales the effective
-# learning rate by job count and 3.7 h does not support the larger step.
+# Use 1/1 jobs, not the upstream 2/4: measured 0.33 to 0.95 PER better on all
+# five frozen systems, since Kaldi scales the learning rate by job count.
 num_jobs_initial=1
 num_jobs_final=1
 # SSL features are already at a 20 ms frame shift, so a subsampling factor of 2
@@ -65,10 +64,8 @@ for f in $gmm_dir/final.mdl $train_data_dir/feats.scp \
 done
 
 if [ $stage -le 0 ]; then
-  # $lang is a copy of data/lang with a chain topology, so it is cheap and safe
-  # to rebuild whenever it is older than its source. Anything that re-runs
-  # prepare_lang (run-mfcc.sh, for instance) restamps data/lang and would
-  # otherwise leave this stage permanently stuck.
+  # Rebuild whenever older than data/lang: anything re-running prepare_lang
+  # (run-mfcc.sh) restamps it and would otherwise wedge this stage permanently.
   if [ -d $lang ] && [ $lang/L.fst -nt data/lang/L.fst ]; then
     echo "$0: $lang is newer than data/lang; keeping it"
   else

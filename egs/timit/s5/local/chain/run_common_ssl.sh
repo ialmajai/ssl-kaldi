@@ -42,9 +42,8 @@ done
 
 if [ $stage -le 0 ]; then
   echo "$0: preparing directory for speed-perturbed data"
-  # This stage owns data/${train_set}_sp_raw and regenerates it from scratch.
-  # Removing it first lets the recipe be re-run with a different SSL model:
-  # perturb_data_dir_speed_3way.sh refuses to run if feats.scp is already there.
+  # Remove first so the recipe can re-run with a different SSL model;
+  # perturb_data_dir_speed_3way.sh refuses to run if feats.scp already exists.
   rm -rf data/${train_set}_sp_raw
   utils/data/perturb_data_dir_speed_3way.sh data/${train_set}_raw data/${train_set}_sp_raw
   utils/data/perturb_data_dir_volume.sh data/${train_set}_sp_raw || exit 1;
@@ -57,21 +56,9 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
-  # Reuse the PCA model that run.sh stage 2 fitted on the unperturbed data,
-  # rather than fitting a second one on the speed-perturbed set.
-  #
-  # Refitting looks reasonable (the sp set is 3x larger) but measures as a
-  # no-op: on the perturbed data an sp-fitted basis retains 50.817% of the
-  # variance in 30 components against 50.792% for this one, a difference of
-  # 0.024 percentage points, and the two subspaces overlap at 0.9998. Speed
-  # perturbation rescales the time axis and barely moves the distribution of
-  # frame-wise embeddings, which is all PCA sees.
-  #
-  # Reuse is also the only way to keep the basis consistent: $gmm_dir was
-  # trained on features from this model and is about to align features
-  # projected below, and eigenvector sign is arbitrary, so a separately fitted
-  # basis handed the GMM a negated low-variance dimension, differently on each
-  # run. See NOTES.md.
+  # Reuse run.sh stage 2's PCA rather than refitting on the perturbed set:
+  # $gmm_dir was trained under this basis and eigenvector sign is arbitrary.
+  # Refitting measures as a no-op. See NOTES.md.
   if [ -n "$pca_model" ]; then
     pca_path=$pca_model
   else
