@@ -2,17 +2,16 @@
 
 This recipe demonstrates how to use self-supervised speech representations as acoustic features in Kaldi. Pretrained HuBERT models are evaluated with both hybrid chain and traditional GMM-HMM systems on Mini LibriSpeech.
 
-## Results (WER % on dev-clean)
+## Results (WER % on dev-clean, tglarge LM)
 
-| Features | Acoustic Model | LM | WER (%) |
-|-----------|---------------|----|---------|
-| **HuBERT Large (LL60K, layer 14)** | **Chain TDNN** | **tglarge** | **4.15** |
-| HuBERT Base (LS960) | Chain TDNN | tglarge | 4.28 |
-| HuBERT Large (LL60K, layer 12) | Chain TDNN | tglarge | 4.70 |
-| HuBERT Large (LL60K, layer 14) | E2E TDNN-F | tglarge | 4.90 |
-| HuBERT Large (LL60K, layer 14) | Tri3b | tglarge | 10.92 |
-| HuBERT Large (LL60K, layer 14) | Mono | tglarge | 27.31 |
-| Kaldi MFCC/filterbank baseline | CNN-TDNN | tglarge | 6.79 |
+| Features | Acoustic Model | WER (%) |
+|-----------|---------------|---------|
+| **HuBERT Large (LL60K, layer 14)** | **Chain TDNN** | **4.15** |
+| HuBERT Base (LS960) | Chain TDNN | 4.28 |
+| HuBERT Large (LL60K, layer 12) | Chain TDNN | 4.70 |
+| HuBERT Large (LL60K, layer 14) | E2E TDNN-F | 4.90 |
+| HuBERT Large (LL60K, layer 14) | Tri3b | 10.92 |
+| Kaldi MFCC/filterbank baseline | CNN-TDNN | 6.79 |
 
 ## Key Findings
 
@@ -20,7 +19,7 @@ This recipe demonstrates how to use self-supervised speech representations as ac
 - The best result is **4.15% WER** using `facebook/hubert-large-ll60k` layer 14 with a chain TDNN model.
 - This corresponds to a **39% relative WER reduction** compared to the Kaldi baseline (6.79% → 4.15%).
 - Intermediate HuBERT layers perform best for ASR; layer 14 outperformed layer 12 in our experiments.
-- Traditional GMM-HMM systems (Tri3b and Mono) also benefit substantially from SSL representations, demonstrating that HuBERT embeddings contain strong phonetic information.
+- The Tri3b GMM-HMM system also benefits substantially from SSL representations, demonstrating that HuBERT embeddings contain strong phonetic information.
 - See [RESULTS](RESULTS) for the complete set of experimental results and analysis.
 
 ## Tested SSL Models
