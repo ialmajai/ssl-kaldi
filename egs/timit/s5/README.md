@@ -136,20 +136,3 @@ at the layer we use rather than past its peak. These are tri2 numbers, which
 rank layers within one model reliably enough but not models against each other,
 and the 12-to-14 spread is close to the noise floor.
 
-## Key findings
-
-- **10.19% PER on the core test set**, a 53% relative reduction over the MFCC
-  SAT baseline (21.95%) and better than any system in Kaldi's published TIMIT
-  results.
-- **Pretraining data beats parameter count.** mms-300m and HuBERT Large are the
-  same scale, but Large only ties Base (11.48 vs 11.43) while mms-300m reaches
-  10.19. What separates them is 491k hours across 1400+ languages against 60k
-  hours of English audiobooks.
-- **SAT buys nothing.** fMLLR gains 2.21 points with MFCCs and between 0.00 and
-  −0.33 with every SSL model, so SSL features are already speaker-normalised.
-  Use tri2 rather than tri3 if you only need alignments.
-- **The GMM stages do not rank models.** wav2vec2-large-lv60 is the worst of the
-  four by 2 to 3 points at tri2 and the second best at the chain stage. Treat
-  tri2 as a smoke test, not a model-selection criterion.
-- Chain training overfits mildly on 3.7 h; fewer epochs or stronger
-  regularisation is the obvious thing to try.
