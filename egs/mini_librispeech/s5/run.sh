@@ -18,7 +18,14 @@ feats_nj=4
 
 pca_dim=30
 pca_dir="pca"
-pca_model=""       # defaults to $pca_dir/pca-${pca_dim}d.pt
+pca_model=""       # defaults to $pca_dir/pca-${pca_dim}d${suffix}.pt
+
+# Writes features and GMM dirs under a suffix, so encoder arms can sit side by
+# side instead of overwriting each other: data/<set>${suffix}_{raw,pca} and
+# exp${suffix}/{mono,tri1,tri2b,tri3b}. Empty by default, which is the historical
+# layout exactly. Stage 10 is NOT suffixed: the lexicon it rebuilds is shared by
+# every arm, so a suffixed run either skips it or knowingly replaces it.
+suffix=""
 
 . ./cmd.sh
 . ./path.sh
@@ -27,6 +34,13 @@ pca_model=""       # defaults to $pca_dir/pca-${pca_dim}d.pt
 set -euo pipefail
 
 echo "Using model: $ssl_model and layer: $encoder_layer for feature extraction"
+
+if [ -n "$suffix" ] && [ $stage -le 13 ] && [ $stop_stage -ge 12 ]; then
+  echo "$0: suffix='$suffix' covers stages 3-11 only; the chain stages write the"
+  echo "$0: canonical exp/ dirs. Re-run with --stop-stage 11, or drive the chain"
+  echo "$0: through local/chain/run_tdnn_ssl.sh --feat-suffix directly."
+  exit 1
+fi
 
 mkdir -p data
 
@@ -71,57 +85,57 @@ if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
 
   for part in dev_clean_2 train_clean_5; do
     echo "preparing features"
-    utils/copy_data_dir.sh data/$part data/${part}_raw 
+    utils/copy_data_dir.sh data/$part data/${part}${suffix}_raw 
     shared/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $ssl_model \
-	    --layer $encoder_layer data/${part}_raw 
-    steps/compute_cmvn_stats.sh data/${part}_raw 
+	    --layer $encoder_layer data/${part}${suffix}_raw 
+    steps/compute_cmvn_stats.sh data/${part}${suffix}_raw 
   done  
 fi
 
 if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
-  [ -z "$pca_model" ] && pca_model="$pca_dir/pca-${pca_dim}d.pt"
+  [ -z "$pca_model" ] && pca_model="$pca_dir/pca-${pca_dim}d${suffix}.pt"
   mkdir -p $(dirname $pca_model)
   if [[ ! -f $pca_model  ||  $pca_model \
-          -ot data/train_clean_5_raw/feats.scp ]] ; then
+          -ot data/train_clean_5${suffix}_raw/feats.scp ]] ; then
     echo "Training PCA model"
     python shared/pca.py  --pca_dim=$pca_dim --mode=train \
-      --feats_scp=data/train_clean_5_raw/feats.scp \
+      --feats_scp=data/train_clean_5${suffix}_raw/feats.scp \
       --pca_model=$pca_model \
       --max_utts=1500 $pca_model
   fi
   for part in dev_clean_2 train_clean_5; do
     echo "preparing pca features"    
-    utils/copy_data_dir.sh data/$part data/${part}_pca
+    utils/copy_data_dir.sh data/$part data/${part}${suffix}_pca
     shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15 \
         --pca-model $pca_model \
-          data/${part}_raw data/${part}_pca   || exit 1;
-    steps/compute_cmvn_stats.sh data/${part}_pca  || exit 1;
-    utils/fix_data_dir.sh data/${part}_pca
+          data/${part}${suffix}_raw data/${part}${suffix}_pca   || exit 1;
+    steps/compute_cmvn_stats.sh data/${part}${suffix}_pca  || exit 1;
+    utils/fix_data_dir.sh data/${part}${suffix}_pca
   done 
 fi
 
 # train a monophone system
 if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
-  utils/subset_data_dir.sh --shortest data/train_clean_5_pca 500 data/train_500short
+  utils/subset_data_dir.sh --shortest data/train_clean_5${suffix}_pca 500 data/train_500short${suffix}
 
   steps/train_mono.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
-    data/train_500short data/lang_nosp exp/mono
+    data/train_500short${suffix} data/lang_nosp exp${suffix}/mono
 
   steps/align_si.sh --boost-silence 1.25 --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5_pca data/lang_nosp exp/mono exp/mono_ali_train_clean_5
+    data/train_clean_5${suffix}_pca data/lang_nosp exp${suffix}/mono exp${suffix}/mono_ali_train_clean_5
 fi
 
 if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
     utils/mkgraph.sh data/lang_nosp_test_tgsmall \
-                   exp/mono exp/mono/graph_tgsmall
-    for testset in dev_clean_2_pca; do
-      steps/decode.sh --nj 20 --cmd "$decode_cmd" exp/mono/graph_tgsmall \
-        data/$testset exp/mono/decode_tgsmall_$testset
+                   exp${suffix}/mono exp${suffix}/mono/graph_tgsmall
+    for testset in dev_clean_2${suffix}_pca; do
+      steps/decode.sh --nj 20 --cmd "$decode_cmd" exp${suffix}/mono/graph_tgsmall \
+        data/$testset exp${suffix}/mono/decode_tgsmall_$testset
       steps/lmrescore.sh --cmd "$decode_cmd" data/lang_nosp_test_{tgsmall,tgmed} \
-                       data/$testset exp/mono/decode_{tgsmall,tgmed}_$testset
+                       data/$testset exp${suffix}/mono/decode_{tgsmall,tgmed}_$testset
       steps/lmrescore_const_arpa.sh \
       --cmd "$decode_cmd" data/lang_nosp_test_{tgsmall,tglarge} \
-      data/$testset exp/mono/decode_{tgsmall,tglarge}_$testset
+      data/$testset exp${suffix}/mono/decode_{tgsmall,tglarge}_$testset
     done
 fi
 
@@ -129,37 +143,37 @@ fi
 #delta + delta-delta triphone
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
   steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
-    2000 10000 data/train_clean_5_pca data/lang_nosp exp/mono_ali_train_clean_5 exp/tri1
+    2000 10000 data/train_clean_5${suffix}_pca data/lang_nosp exp${suffix}/mono_ali_train_clean_5 exp${suffix}/tri1
 
   steps/align_si.sh --nj 5 --cmd "$train_cmd" \
-    data/train_clean_5_pca data/lang_nosp exp/tri1 exp/tri1_ali_train_clean_5
+    data/train_clean_5${suffix}_pca data/lang_nosp exp${suffix}/tri1 exp${suffix}/tri1_ali_train_clean_5
 fi
 
 # Train LDA+MLLT system
 if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" 2500 15000 \
-    data/train_clean_5_pca data/lang_nosp exp/tri1_ali_train_clean_5 exp/tri2b
+    data/train_clean_5${suffix}_pca data/lang_nosp exp${suffix}/tri1_ali_train_clean_5 exp${suffix}/tri2b
 
   steps/align_si.sh  --nj 5 --cmd "$train_cmd" --use-graphs true \
-    data/train_clean_5_pca data/lang_nosp exp/tri2b exp/tri2b_ali_train_clean_5
+    data/train_clean_5${suffix}_pca data/lang_nosp exp${suffix}/tri2b exp${suffix}/tri2b_ali_train_clean_5
 fi
 
 # Train LDA+MLLT+SAT
 if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
   steps/train_sat.sh --cmd "$train_cmd" 2500 15000 \
-    data/train_clean_5_pca data/lang_nosp exp/tri2b_ali_train_clean_5 exp/tri3b
+    data/train_clean_5${suffix}_pca data/lang_nosp exp${suffix}/tri2b_ali_train_clean_5 exp${suffix}/tri3b
 fi
 
 # Now we compute the pronunciation and silence probabilities from training data,
 # and re-create the lang directory.
 if [ $stage -le 10 ] && [ $stop_stage -ge 10 ]; then
   steps/get_prons.sh --cmd "$train_cmd" \
-    data/train_clean_5 data/lang_nosp exp/tri3b
+    data/train_clean_5 data/lang_nosp exp${suffix}/tri3b
   utils/dict_dir_add_pronprobs.sh --max-normalize true \
     data/local/dict_nosp \
-    exp/tri3b/pron_counts_nowb.txt exp/tri3b/sil_counts_nowb.txt \
-    exp/tri3b/pron_bigram_counts_nowb.txt data/local/dict
+    exp${suffix}/tri3b/pron_counts_nowb.txt exp${suffix}/tri3b/sil_counts_nowb.txt \
+    exp${suffix}/tri3b/pron_bigram_counts_nowb.txt data/local/dict
 
   utils/prepare_lang.sh data/local/dict \
     "<UNK>" data/local/lang_tmp data/lang
@@ -173,16 +187,16 @@ fi
 if [ $stage -le 11 ] && [ $stop_stage -ge 11 ]; then
   # decode using the tri3b model
   utils/mkgraph.sh data/lang_test_tgsmall \
-                   exp/tri3b exp/tri3b/graph_tgsmall
-  for test in  dev_clean_2_pca ; do
+                   exp${suffix}/tri3b exp${suffix}/tri3b/graph_tgsmall
+  for test in  dev_clean_2${suffix}_pca ; do
     steps/decode_fmllr.sh --nj 10  --cmd "$decode_cmd" \
-                          exp/tri3b/graph_tgsmall data/$test \
-                          exp/tri3b/decode_tgsmall_$test
+                          exp${suffix}/tri3b/graph_tgsmall data/$test \
+                          exp${suffix}/tri3b/decode_tgsmall_$test
     steps/lmrescore.sh --cmd "$decode_cmd" data/lang_test_{tgsmall,tgmed} \
-                       data/$test exp/tri3b/decode_{tgsmall,tgmed}_$test
+                       data/$test exp${suffix}/tri3b/decode_{tgsmall,tgmed}_$test
     steps/lmrescore_const_arpa.sh \
       --cmd "$decode_cmd" data/lang_test_{tgsmall,tglarge} \
-      data/$test exp/tri3b/decode_{tgsmall,tglarge}_$test
+      data/$test exp${suffix}/tri3b/decode_{tgsmall,tglarge}_$test
   done
 fi
 
