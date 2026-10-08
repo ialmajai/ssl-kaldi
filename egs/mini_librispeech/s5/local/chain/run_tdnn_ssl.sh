@@ -171,7 +171,7 @@ if [ $stage -le 19 ]; then
   # nnet3-chain-train processes reserve about 4.6 GB each and will not share a
   # single card in Default mode. One job is fine in either mode.
   compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
-  if [ "$num_jobs_final" -gt 1 ] && [ "$compute_mode" != "Exclusive_Process" ]; then
+  if { [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; } && [ "$compute_mode" != "Exclusive_Process" ]; then
     echo "$0: num_jobs_final=$num_jobs_final needs GPU compute mode Exclusive_Process"
     echo "$0: run 'sudo nvidia-smi -c 3', or pass --num-jobs-initial 1 --num-jobs-final 1"
     exit 1

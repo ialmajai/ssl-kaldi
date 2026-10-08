@@ -138,7 +138,7 @@ if [ $stage -le 3 ]; then
   echo "$0: training the neural net using the chain e2e framework"
   # With a single training job (num_jobs_final=1) one GPU process suffices, so
   # Default compute mode is fine; only warn if multiple jobs need exclusive access.
-  if [ "$num_jobs_final" -gt 1 ]; then
+  if [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; then
     compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
     if [ "$compute_mode" != "Exclusive_Process" ]; then
       echo "num_jobs_final>1 needs GPU compute mode Exclusive_Process (run: sudo nvidia-smi -c 3),"
