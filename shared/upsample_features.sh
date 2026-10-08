@@ -7,7 +7,7 @@ cmd=run.pl
 
 interp_mode=linear
 upsample_factor=2
-compress=true    # false keeps float32 (no Kaldi lossy compression)
+compress=false   # true writes Kaldi lossy-compressed features
 
 echo "$0 $@"  
 
