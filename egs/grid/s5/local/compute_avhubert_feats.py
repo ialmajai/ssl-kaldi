@@ -62,10 +62,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--crop-mode",
         choices=["centroid", "meanface"],
-        default="centroid",
-        help="ROI crop method. 'centroid': legacy lip-corner-centred 64->88 crop. "
-             "'meanface': canonical AV-HuBERT similarity-warp to a mean face, 96->88 "
-             "centre crop (matches the training preprocessing; requires scikit-image).",
+        default="meanface",
+        help="ROI crop method. 'meanface' (default): canonical AV-HuBERT similarity-warp "
+             "to a mean face, 96->88 centre crop (requires scikit-image). 'centroid': "
+             "legacy lip-corner-centred crop, kept to reproduce the archived results; "
+             "about 0.5 WER worse but skips the warp (pair it with --crop-scale).",
     )
     parser.add_argument(
         "--mean-face",
@@ -90,7 +91,7 @@ def parse_args() -> argparse.Namespace:
         "--mouth-size",
         type=int,
         default=64,
-        help="centroid crop window (px) before resize to 88, when --crop-scale is 0. "
+        help="Legacy centroid crop window (px) before resize to 88, when --crop-scale is 0. "
              "The default 64 suits GRID (360x288); fixed sizes do not transfer across "
              "resolutions -- prefer --crop-scale for that.",
     )
@@ -98,7 +99,7 @@ def parse_args() -> argparse.Namespace:
         "--crop-scale",
         type=float,
         default=0.0,
-        help="If >0, size the centroid crop dynamically as round(crop_scale x median "
+        help="Legacy centroid only: if >0, size the crop as round(crop_scale x median "
              "interocular distance) per utterance -- resolution/head-size invariant, "
              "the way icefall normalises. 1.37 reproduces GRID's 64px (IOD ~47).",
     )

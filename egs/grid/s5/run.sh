@@ -21,7 +21,7 @@ datasrc=grid-corpus
 model_size=base
 crop_mode=meanface       # canonical AV-HuBERT mean-face alignment (main method);
                          # resolution-invariant, marginally best. Alternatives:
-                         # 'centroid' (fixed 64px) or centroid + --crop-scale (dynamic IOD).
+                         # legacy 'centroid' (fixed 64px) or centroid + --crop-scale (dynamic IOD).
 
 avhubert_model=base_vox_iter5.pt
 encoder_layer=9
