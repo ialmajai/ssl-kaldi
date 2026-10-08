@@ -13,6 +13,7 @@ import sys
 import os
 import argparse
 import logging
+import zlib
 from pathlib import Path
 from typing import Optional
 
@@ -78,6 +79,42 @@ def parse_args() -> argparse.Namespace:
         default=12,
         help="Temporal smoothing window for the mean-face transform (meanface mode).",
     )
+    parser.add_argument(
+        "--min-frames",
+        type=int,
+        default=74,
+        help="Skip utterances with fewer than this many mouth frames. Lower it for "
+             "shorter out-of-domain clips (e.g. Lombard GRID is ~60 frames).",
+    )
+    parser.add_argument(
+        "--mouth-size",
+        type=int,
+        default=64,
+        help="centroid crop window (px) before resize to 88, when --crop-scale is 0. "
+             "The default 64 suits GRID (360x288); fixed sizes do not transfer across "
+             "resolutions -- prefer --crop-scale for that.",
+    )
+    parser.add_argument(
+        "--crop-scale",
+        type=float,
+        default=0.0,
+        help="If >0, size the centroid crop dynamically as round(crop_scale x median "
+             "interocular distance) per utterance -- resolution/head-size invariant, "
+             "the way icefall normalises. 1.37 reproduces GRID's 64px (IOD ~47).",
+    )
+    parser.add_argument(
+        "--augment",
+        action="store_true",
+        help="Apply offline ROI augmentation (flip/rotate/crop-jitter/blur/noise, "
+             "see augment_roi_frames) before AV-HuBERT extraction -- for building "
+             "an augmented copy of a training set for multi-condition training, "
+             "not for normal feature extraction.",
+    )
+    parser.add_argument(
+        "--augment-seed", type=int, default=0,
+        help="Base seed for --augment; combined with each utt-id so the same "
+             "seed always reproduces the same augmentation for a given utterance.",
+    )
     return parser.parse_args()
 
 
@@ -92,16 +129,37 @@ def load_avhubert(args: argparse.Namespace, device: torch.device):
     from fairseq import checkpoint_utils
 
     logger.info("Loading AV-HuBERT checkpoint...")
-    models, cfg, task = checkpoint_utils.load_model_ensemble_and_task([args.ckpt])
+    state = checkpoint_utils.load_checkpoint_to_cpu(args.ckpt)
+    # Repoint a fine-tuned checkpoint's saved pretrained path (Docker-era
+    # /opt/ssl-kaldi) to the same file name next to the checkpoint.
+    model_cfg = state["cfg"]["model"]
+    w2v = model_cfg["w2v_path"] if "w2v_path" in model_cfg else None
+    if w2v and not os.path.exists(w2v):
+        state["cfg"]["model"]["w2v_path"] = os.path.join(
+            os.path.dirname(os.path.abspath(args.ckpt)), os.path.basename(w2v))
+    models, cfg, task = checkpoint_utils.load_model_ensemble_and_task([args.ckpt], state=state)
+    del state  # free the second copy of the weights (matters for large checkpoints)
     model = models[0]
     if hasattr(model, "encoder") and hasattr(model.encoder, "w2v_model"):
         # fine-tuned seq2seq checkpoint: unwrap the AV-HuBERT encoder
         logger.info("Fine-tuned checkpoint detected; extracting from encoder.w2v_model")
         model = model.encoder.w2v_model
-    model = model.to(device)
-    model.eval()
+    # Trim to the requested layer BEFORE moving to device: the discarded
+    # layers are still CPU tensors at this point (fresh off the checkpoint),
+    # so they're never allocated on the GPU at all, rather than being moved
+    # there and then discarded. Slicing a ModuleList and reassigning drops
+    # the last reference to the removed layers' parameters, so they're
+    # garbage-collected here on CPU. This used to run after model.to(device),
+    # which briefly moved the full 12-layer model to GPU every time -- for
+    # --layer 4 that meant 8 unused layers' worth of parameters (base:
+    # ~7M params/layer) touched the GPU and sat in PyTorch's caching
+    # allocator pool (visible in nvidia-smi, not torch.cuda.memory_allocated)
+    # for the rest of the process, never reclaimed since the allocator
+    # doesn't return freed blocks to the driver on its own.
     if args.layer is not None:
         model.encoder.layers = model.encoder.layers[: args.layer]
+    model = model.to(device)
+    model.eval()
     logger.info(f"Loaded checkpoint: {args.ckpt}  layer={args.layer}")
 
     transform = Compose([
@@ -237,6 +295,47 @@ def _roi_pass(
     return result, fps
 
 
+def centroid_tracking_dyn(video: str, detector, predictor, crop_scale: float,
+                          fallback_size: int = 64) -> tuple[np.ndarray, float]:
+    """Centroid mouth ROIs with a crop window sized to head scale: crop =
+    round(crop_scale x median interocular distance) over the utterance, so the
+    mouth-to-ROI ratio is constant across resolutions (no per-dataset tuning).
+    Single decode pass (no landmark cache); returns (T, 88, 88) uint8 + fps."""
+    cap = cv2.VideoCapture(video)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video}")
+    fps: float = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    grays: list = []
+    lms: list = []
+    last = np.zeros((68, 2), dtype=np.int16)
+    while True:
+        ok, image = cap.read()
+        if not ok:
+            break
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        faces = detector(gray)
+        if faces:
+            last = np.array([[p.x, p.y] for p in predictor(gray, faces[0]).parts()],
+                            dtype=np.int16)
+        grays.append(gray)
+        lms.append(last.copy())
+    cap.release()
+
+    iods = []
+    for lm in lms:
+        if np.any(lm):
+            re = lm[36:42].astype(np.float64).mean(0)
+            le = lm[42:48].astype(np.float64).mean(0)
+            iods.append(float(np.hypot(*(le - re))))
+    iod = float(np.median(iods)) if iods else 0.0
+    w = max(16, int(round(crop_scale * iod))) if iod > 0 else fallback_size
+    hw = w // 2
+
+    frames = [_crop_roi(g, lm, hw, hw, w, w) for g, lm in zip(grays, lms) if np.any(lm)]
+    result = np.stack(frames) if frames else np.empty((0, 88, 88), dtype=np.uint8)
+    return result, fps
+
+
 # --- Mean-face alignment (canonical AV-HuBERT preprocessing) --------------------
 # Ports av_hubert/avhubert/preparation/align_mouth.py: per-frame dlib landmarks ->
 # temporal smoothing -> similarity warp of stable points (eye corners + nose tip)
@@ -265,36 +364,81 @@ def load_meanface_aligner(args: argparse.Namespace):
     return am, mean_face
 
 
-def detect_landmarks_list(video: str, detector, predictor, detect_every: int = 1):
+def detect_landmarks_list(video: str, detector, predictor, detect_every: int = 1,
+                          fallback_landmarker=None):
     """Per-frame dlib 68-landmarks as a list (None where no face was found), in the
-    format align_mouth.landmarks_interpolate expects."""
+    format align_mouth.landmarks_interpolate expects.
+
+    detect_every: attempt detection every Nth frame while dlib keeps
+    succeeding (landmarks_interpolate linearly fills the skipped frames --
+    fine while tracking is easy, since a face barely moves frame-to-frame).
+    Adaptive, not a fixed stride: any frame where dlib finds no face forces
+    every following frame to be attempted again, until dlib succeeds once
+    more. This keeps the interpolation gap around an actual trouble spot
+    (occlusion, motion blur, pose change) as small as a plain detect_every=1
+    pass would give, instead of possibly widening it right when the
+    landmarks matter most. Default 1 (attempt every frame, no adaptation)
+    keeps every training-feature-extraction caller byte-for-byte unchanged.
+
+    fallback_landmarker: optional callable (BGR frame) -> (68,2) array or None,
+    tried only on frames where dlib's detector finds no face. Not used by any
+    training-feature-extraction caller (default None keeps them byte-for-byte
+    unchanged); wired up by the interactive demo, see kaldi_lipreader.py."""
     cap = cv2.VideoCapture(video)
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video}")
     fps: float = cap.get(cv2.CAP_PROP_FPS) or 25.0
     lms: list = []
     cur = None
-    idx = 0
+    frames_since_attempt = detect_every  # force an attempt on frame 0
     while True:
         ok, image = cap.read()
         if not ok:
             break
-        if idx % detect_every == 0:
+        if frames_since_attempt >= detect_every:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             faces = detector(gray)
-            cur = (np.array([[p.x, p.y] for p in predictor(gray, faces[0]).parts()],
-                            dtype=np.float64) if faces else None)
+            if faces:
+                cur = np.array([[p.x, p.y] for p in predictor(gray, faces[0]).parts()],
+                               dtype=np.float64)
+                frames_since_attempt = 0  # tracking is easy again; resume the stride
+            else:
+                # dlib lost the face: leave frames_since_attempt >= detect_every
+                # so the very next frame is attempted too, not skipped.
+                if fallback_landmarker is not None:
+                    fb = fallback_landmarker(image)
+                    cur = fb.astype(np.float64) if fb is not None else None
+                else:
+                    cur = None
+        else:
+            frames_since_attempt += 1
         lms.append(cur)
-        idx += 1
     cap.release()
     return lms, fps
 
 
 def meanface_tracking(video: str, detector, predictor, am, mean_face,
-                      window_margin: int = 12) -> tuple[np.ndarray, float]:
+                      window_margin: int = 12, fallback_landmarker=None,
+                      detect_every: int = 1) -> tuple[np.ndarray, float]:
     """Mean-face-aligned mouth ROIs. Returns (T, 88, 88) uint8 grayscale frames and
-    fps, or an empty array if no face was ever detected."""
-    landmarks, fps = detect_landmarks_list(video, detector, predictor)
+    fps, or an empty array if no face was ever detected.
+
+    The aligned ROI is cached as <video>.mfroi.npz and reused on later calls: it is
+    model- and layer-independent, so one cache serves every meanface extraction
+    (base, large, any layer) and skips the costly dlib detection + skimage warp.
+    A cache entry is only ever written on success, so a fallback_landmarker added
+    later still gets a fresh attempt on a video that previously failed outright.
+
+    detect_every: see detect_landmarks_list -- default 1 keeps every
+    training-feature-extraction caller unchanged."""
+    cache = os.path.splitext(video)[0] + ".mfroi.npz"
+    if Path(cache).exists():
+        d = np.load(cache)
+        return d["roi"], float(d["fps"])
+
+    landmarks, fps = detect_landmarks_list(video, detector, predictor,
+                                           detect_every=detect_every,
+                                           fallback_landmarker=fallback_landmarker)
     landmarks = am.landmarks_interpolate(landmarks)
     if landmarks is None:            # no face detected on any frame
         return np.empty((0, 88, 88), dtype=np.uint8), fps
@@ -307,6 +451,7 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
     for i, patch in enumerate(seq):
         gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY) if patch.ndim == 3 else patch
         out[i] = gray[_CENTER:_CENTER + 88, _CENTER:_CENTER + 88]
+    np.savez_compressed(cache, roi=out, fps=fps)   # reused by every later meanface run
     return out, fps
 
 
@@ -318,6 +463,73 @@ def extract_avhubert(roi_video: torch.Tensor, model, layer: Optional[int]) -> np
         output_layer=layer,
     )
     return feature_vid.squeeze(0).cpu().numpy()
+
+
+def utt_seed(base_seed: int, utt_id: str) -> int:
+    """Deterministic per-utterance seed: same base_seed + utt_id always
+    reproduces the same augmentation, independent of job/scp-split order."""
+    return (base_seed + zlib.crc32(utt_id.encode())) % (2**31)
+
+
+def augment_roi_frames(frames: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Independently-gated geometric/photometric augmentation for a mouth-ROI
+    clip (T, H, W) uint8, at moderate-to-severe severities -- a subset of
+    icefall's AVHubertAugment (conformer_ctc2/asr_datamodule.py), which
+    trains on noisy/blurred/rotated ROI on the fly and is measurably more
+    robust to noise/blur at test time as a result (see NOTES.md's
+    "Noise/blur robustness sweep" entry). Kaldi's nnet3/chain training
+    consumes fixed pre-extracted feature archives -- there is no per-epoch
+    training loop to hook an on-the-fly augmenter into -- so this runs
+    offline, once, to build a second (augmented) copy of the training set
+    that goes into the mix alongside the clean copy (multi-condition
+    training, the standard Kaldi equivalent of speed/volume perturbation).
+
+    Each transform is gated by its own coin flip; a given clip may get any
+    combination of these, from none to all five. The same spatial transform
+    (flip/rotate/crop) is applied to every frame in the clip for temporal
+    consistency, matching icefall's design; only the pixel noise is drawn
+    independently per pixel. Severities are wider than icefall's own
+    (moderate-to-severe was the explicit ask, not a mild-augmentation
+    match): rotation +/-10 deg (icefall: +/-3), blur sigma 0.5-3.0
+    (icefall: 0.3-0.6), noise sigma 10-40 in 0-255 pixel space (icefall:
+    0.12 in already-normalised float space, roughly sigma~30 on this
+    scale -- so comparable at the top of this range, milder at the bottom).
+    """
+    out = frames
+    T, H, W = out.shape
+
+    if rng.random() < 0.5:  # horizontal flip
+        out = out[:, :, ::-1]
+
+    if rng.random() < 0.5:  # rotation
+        angle = rng.uniform(-10.0, 10.0)
+        M = cv2.getRotationMatrix2D((W / 2, H / 2), angle, 1.0)
+        out = np.stack([
+            cv2.warpAffine(f, M, (W, H), flags=cv2.INTER_LINEAR,
+                           borderMode=cv2.BORDER_REPLICATE)
+            for f in out
+        ])
+
+    if rng.random() < 0.5:  # crop-resize jitter (scale/shift), up to ~25% zoom
+        crop = int(rng.integers(66, 84))
+        top = int(rng.integers(0, H - crop + 1))
+        left = int(rng.integers(0, W - crop + 1))
+        out = np.stack([
+            cv2.resize(f[top:top + crop, left:left + crop], (W, H),
+                      interpolation=cv2.INTER_LINEAR)
+            for f in out
+        ])
+
+    if rng.random() < 0.5:  # blur
+        sigma = rng.uniform(0.5, 3.0)
+        out = np.stack([cv2.GaussianBlur(f, (0, 0), sigma) for f in out])
+
+    if rng.random() < 0.5:  # noise
+        sigma = rng.uniform(10.0, 40.0)
+        noise = rng.normal(0.0, sigma, out.shape)
+        out = np.clip(out.astype(np.float32) + noise, 0, 255)
+
+    return out.astype(np.uint8)
 
 
 def process_features(
@@ -347,13 +559,23 @@ def process_features(
                         roi_frames, fps = meanface_tracking(
                             video_path, detector, predictor, aligner, mean_face,
                             args.window_margin)
+                    elif args.crop_scale > 0:
+                        roi_frames, fps = centroid_tracking_dyn(
+                            video_path, detector, predictor, args.crop_scale,
+                            fallback_size=args.mouth_size)
                     else:
-                        roi_frames, fps = mouth_tracking(video_path, detector, predictor)
+                        roi_frames, fps = mouth_tracking(video_path, detector, predictor,
+                                                         mouth_w=args.mouth_size,
+                                                         mouth_h=args.mouth_size)
 
-                    if len(roi_frames) < 74:
+                    if len(roi_frames) < args.min_frames:
                         logger.warning(f"{utt_id}: only {len(roi_frames)} mouth frames, skipping")
                         failed += 1
                         continue
+
+                    if args.augment:
+                        rng = np.random.default_rng(utt_seed(args.augment_seed, utt_id))
+                        roi_frames = augment_roi_frames(roi_frames, rng)
 
                     roi_frames = transform(roi_frames)
                     tensor = (

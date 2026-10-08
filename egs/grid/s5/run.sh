@@ -19,6 +19,9 @@ upsample_factor=2
 datasrc=grid-corpus
 
 model_size=base
+crop_mode=meanface       # canonical AV-HuBERT mean-face alignment (main method);
+                         # resolution-invariant, marginally best. Alternatives:
+                         # 'centroid' (fixed 64px) or centroid + --crop-scale (dynamic IOD).
 
 avhubert_model=base_vox_iter5.pt
 encoder_layer=9
@@ -90,7 +93,7 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
     local/copy_data_dir.sh data/$x data/${x}_raw
 	
     local/make_avhubert.sh --cmd "$feats_cmd"  --nj $njfeats  --ckpt input/$avhubert_model \
-     --avhubert-path $avhubert_path --layer $encoder_layer data/${x}_raw  || exit 1;
+     --avhubert-path $avhubert_path --layer $encoder_layer --crop-mode $crop_mode data/${x}_raw  || exit 1;
     
     steps/compute_cmvn_stats.sh data/${x}_raw   || exit 1;
     utils/fix_data_dir.sh data/${x}_raw

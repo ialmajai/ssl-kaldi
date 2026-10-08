@@ -8,6 +8,10 @@ write_utt2dur=true
 layer=9
 ckpt=input/base_vox_iter5.pt
 avhubert_path=av_hubert  # see README: cloned into this directory
+crop_mode=centroid       # centroid (legacy) | meanface (canonical AV-HuBERT alignment)
+min_frames=74            # skip clips shorter than this; lower for Lombard (~60 frames)
+mouth_size=64            # centroid crop px; scale up for higher-res clips (Lombard ~200)
+crop_scale=0.0          # if >0, dynamic IOD-based centroid crop (resolution-invariant)
 
 echo "$0 $@"  # Print the command line for logging.
 
@@ -100,7 +104,7 @@ done
 utils/split_scp.pl $scp $split_scps || exit 1;
 
 $cmd JOB=1:$nj $logdir/make_avhubert_${name}.JOB.log \
-  python local/compute_avhubert_feats.py --layer $layer  $write_utt2dur_opt \
+  python local/compute_avhubert_feats.py --layer $layer --crop-mode $crop_mode --min-frames $min_frames --mouth-size $mouth_size --crop-scale $crop_scale $write_utt2dur_opt \
     --ckpt $ckpt --path $avhubert_path scp,p:$logdir/video_${name}.JOB.scp ark:- \| \
     copy-feats $write_num_frames_opt --compress=$compress ark:- \
     ark,scp:$ssldir/raw_avhubert_$name.JOB.ark,$ssldir/raw_avhubert_$name.JOB.scp \
