@@ -7,6 +7,7 @@ cmd=run.pl
 
 interp_mode=linear
 upsample_factor=2
+compress=true    # false keeps float32 (no Kaldi lossy compression)
 
 echo "$0 $@"  
 
@@ -61,7 +62,7 @@ utils/split_scp.pl $scp $split_scps || exit 1;
 $cmd JOB=1:$nj $feats_dir/make_interpolate_${name}.JOB.log \
 python shared/interpolate.py  --feats_scp=$logdir/feats_${name}.JOB.scp \
     --interp_mode=$interp_mode --upsample_factor=$upsample_factor ark:- \| \
-    copy-feats ark:- \
+    copy-feats --compress=$compress ark:- \
     ark,scp:$feats_dir/feats_$name.JOB.ark,$feats_dir/feats_$name.JOB.scp \
     || exit 1;
 
