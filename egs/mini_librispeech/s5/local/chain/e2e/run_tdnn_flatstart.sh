@@ -26,9 +26,16 @@ common_egs_dir=
 l2_regularize=0.00005
 frames_per_iter=1000000
 cmvn_opts="--norm-means=false --norm-vars=false"
+# renorm-linear rescales each input frame to RMS 1.0 before the first affine
+# layer; wins or ties relu-batchnorm on 5 of 6 recipes (FINDINGS.md sec 11).
+input_style=renorm-linear
+# tdnnf2..tdnnf(1+N); stride prefix 1,1,1,0 then 2. 10 measured best here
+# and on grid/torgo; pass 12 to reproduce the old stack.
+num_tdnnf_layers=10
 train_set=train_clean_5_spe2e
 test_sets="dev_clean_2_raw"
 frame_subsampling_factor=2
+treedir=exp/chain/e2e_tree  # trivial tree; override for a train set with other utt ids
 
 # End configuration section.
 echo "$0 $@"  # Print the command line for logging
@@ -46,7 +53,6 @@ EOF
 fi
 
 lang=data/lang_nosp_e2e
-treedir=exp/chain/e2e_tree  # it's actually just a trivial tree (no tree building)
 dir=exp/chain/e2e_tdnnf_${affix}
 
 if [ $stage -le 0 ]; then
@@ -88,23 +94,30 @@ if [ $stage -le 2 ]; then
   output_opts="l2-regularize=0.005"
 
   mkdir -p $dir/configs
-  cat <<EOF > $dir/configs/network.xconfig
+  if [ "$input_style" = renorm-linear ]; then
+    cat <<EOF > $dir/configs/network.xconfig
+
+  input dim=$feats_dim name=input
+
+  renorm-component name=input-renorm input=input target-rms=1.0
+
+  linear-component name=tdnn1 input=Append(-1,0,1) dim=768 orthonormal-constraint=-1.0 l2-regularize=0.01
+EOF
+  else
+    cat <<EOF > $dir/configs/network.xconfig
 
   input dim=$feats_dim name=input
 
   relu-batchnorm-dropout-layer name=tdnn1 input=Append(-1,0,1) $tdnn_opts dim=768
-  tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=0
-  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf9 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf10 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf11 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf12 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+EOF
+  fi
+  stride_prefix=(1 1 1 0)
+  for i in $(seq 1 $num_tdnnf_layers); do
+    if [ $i -le 4 ]; then stride=${stride_prefix[$((i-1))]}; else stride=2; fi
+    echo "  tdnnf-layer name=tdnnf$((i+1)) $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=$stride" \
+      >> $dir/configs/network.xconfig
+  done
+  cat <<EOF >> $dir/configs/network.xconfig
   linear-component name=prefinal-l dim=192 $linear_opts
 
   prefinal-layer name=prefinal-chain input=prefinal-l $prefinal_opts big-dim=768 small-dim=192
@@ -116,9 +129,12 @@ fi
 
 if [ $stage -le 3 ]; then
   echo "$0: training the neural net using the chain e2e framework"
+  # Only multi-job training needs Exclusive_Process, to stop two jobs landing on
+  # the same card. One job runs fine in Default mode.
   compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
-  if [ "$compute_mode" != "Exclusive_Process" ]; then
-    echo "Training requires GPU compute mode to be set to Exclusive_Process"
+  if { [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; } && \
+     [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "Training with num-jobs > 1 requires GPU compute mode Exclusive_Process"
     echo "run: sudo nvidia-smi -c 3"
     exit 1
   fi

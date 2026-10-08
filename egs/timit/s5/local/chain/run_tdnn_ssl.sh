@@ -15,6 +15,13 @@ gmm=tri3
 nnet3_affix=
 affix=1a
 tree_affix=
+# renorm-linear rescales each input frame to RMS 1.0 and drops the first-layer
+# relu; won the controlled non-e2e A/B on mini_librispeech (3.88 vs 4.42
+# tglarge -- FINDINGS.md sec 11). Untested on timit's non-e2e chain.
+input_style=renorm-linear
+# tdnnf2..tdnnf(1+N). Stride prefix 1,1,1,0 then 2 for the rest, so 12 keeps
+# the historical stack exactly and 10 trims two stride-2 layers off the top.
+num_tdnnf_layers=12
 train_stage=-10
 get_egs_stage=-10
 
@@ -109,23 +116,35 @@ if [ $stage -le 3 ]; then
   output_opts="l2-regularize=0.015"
 
   mkdir -p $dir/configs
-  cat <<EOF > $dir/configs/network.xconfig
+  if [ "$input_style" = renorm-linear ]; then
+    # No relu on the first layer. HuBERT's own nonlinearity is GELU and its
+    # hidden states are roughly zero-centered, unlike log-energy features, so a
+    # hard relu here discards about half the signal by construction. Nonlinear
+    # processing still happens downstream in the unchanged TDNN-F stack.
+    cat <<EOF > $dir/configs/network.xconfig
+  input dim=$feats_dim name=input
+
+  renorm-component name=input-renorm input=input target-rms=1.0
+
+  linear-component name=tdnn1 input=Append(-1,0,1) dim=768 orthonormal-constraint=-1.0 $tdnn_opts
+EOF
+  else
+    cat <<EOF > $dir/configs/network.xconfig
   input dim=$feats_dim name=input
 
   relu-batchnorm-layer name=tdnn1 $tdnn_opts dim=768 input=Append(-1,0,1)
-
-  tdnnf-layer name=tdnnf2 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf3 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf4 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=1
-  tdnnf-layer name=tdnnf5 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=0
-  tdnnf-layer name=tdnnf6 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf7 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf8 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf9 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf10 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf11 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf12 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
-  tdnnf-layer name=tdnnf13 $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=2
+EOF
+  fi
+  echo "" >> $dir/configs/network.xconfig
+  # Stride prefix 1,1,1,0 then 2 for the rest. num_tdnnf_layers=12 reproduces
+  # the historical stack (tdnnf2..tdnnf13) exactly.
+  stride_prefix=(1 1 1 0)
+  for i in $(seq 1 $num_tdnnf_layers); do
+    if [ $i -le 4 ]; then stride=${stride_prefix[$((i-1))]}; else stride=2; fi
+    echo "  tdnnf-layer name=tdnnf$((i+1)) $tdnnf_opts dim=768 bottleneck-dim=96 time-stride=$stride" \
+      >> $dir/configs/network.xconfig
+  done
+  cat <<EOF >> $dir/configs/network.xconfig
 
   linear-component name=prefinal-l dim=192 $linear_opts
 
