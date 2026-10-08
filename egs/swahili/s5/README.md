@@ -25,7 +25,7 @@ wget https://openslr.trmal.net/resources/25/data_broadcastnews_sw.tar.bz2
 
 To switch SSL models, edit `ssl_model` near the top of `run_e2e.sh`
 (`ajesujoba/AfriHuBERT` or `utter-project/mHuBERT-147`); layer 9 is used for
-both.
+both. `facebook/wav2vec2-xls-r-300m` also works, tapped at layer 12.
 
 > **Note:** feature extraction requires the GPU compute mode to be *Default*,
 > not *Exclusive_Process*. If needed: `sudo nvidia-smi -c 0`.
@@ -34,19 +34,29 @@ both.
 
 Setup notes:
 
-- End-to-end LF-MMI TDNN-F (`e2e_tdnnf_1a`), no i-vectors, no GMM stage.
+- End-to-end LF-MMI TDNN-F, no i-vectors, no GMM stage.
 - Reduced frame-subsampling-factor (default 3 → 2).
-- SSL features extracted at layer 9.
+- SSL features extracted at layer 9, except XLS-R at layer 12.
+- The last two rows use the current script defaults (renorm-linear input,
+  10 TDNN-F layers); the first three use the older 12-layer relu-batchnorm
+  network. All rows share one tree and phone LM.
 
-| Features | Acoustic Model | WER (%) |
-|----------|----------------|---------|
-| **AfriHuBERT** (`ajesujoba/AfriHuBERT`) | E2E TDNN-F | **19.76** |
-| mHuBERT-147 (`utter-project/mHuBERT-147`) | E2E TDNN-F | 19.82 |
+| Features | Network | WER (%) |
+|----------|---------|---------|
+| AfriHuBERT (`ajesujoba/AfriHuBERT`) | 12L relu-batchnorm | 19.76 |
+| mHuBERT-147 (`utter-project/mHuBERT-147`) | 12L relu-batchnorm | 19.82 |
 | Kaldi MFCC baseline (SGMM2 + MMI) | SGMM2 | 26.62 |
+| **mHuBERT-147** | **10L renorm-linear** | **19.47** |
+| XLS-R-300m (`facebook/wav2vec2-xls-r-300m`, L12) | 10L renorm-linear | 19.59 |
 
-Both SSL models give a large improvement over the conventional MFCC/SGMM2
-baseline (a **26% relative WER reduction**, 26.62% → 19.76%), with AfriHuBERT
-edging out mHuBERT-147. See [RESULTS](RESULTS) for the raw decode lines.
+Every SSL model beats the conventional MFCC/SGMM2 baseline by a wide margin
+(26.62% → 19.47%, a 27% relative reduction). The three multilingual encoders
+land within 0.35 of each other, which is inside this test set's confidence
+interval of roughly ±0.8, so treat their ordering as unresolved rather than
+as a ranking. Changing the network from 12-layer relu-batchnorm to 10-layer
+renorm-linear is worth about as much as the choice of encoder. See
+[RESULTS](RESULTS) for the raw decode lines and
+[FINDINGS](../../../FINDINGS.md) for the input-layer analysis.
 
 ## Citation
 

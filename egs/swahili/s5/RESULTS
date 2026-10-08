@@ -6,6 +6,18 @@ local/bwer.sh
 # ssl_model :  utter-project/mHuBERT-147
 %WER 19.82 [ 3508 / 17700, 390 ins, 673 del, 2445 sub ] exp/chain/e2e_tdnnf_1a/decode_test/wer_10
 
+# mHuBERT-147, renorm-linear input and 10 TDNN-F layers (both now the script
+# defaults), single training job. The rb10 line is the matched-architecture
+# relu-batchnorm control that isolates the input layer; see FINDINGS.md sec 11.
+%WER 19.47 [ 3446 / 17700, 449 ins, 560 del, 2437 sub ] exp/chain/e2e_tdnnf_n10/decode_test/wer_9
+%WER 20.10 [ 3558 / 17700, 391 ins, 658 del, 2509 sub ] exp/chain/e2e_tdnnf_rb10/decode_test/wer_11
+
+# ssl_model : facebook/wav2vec2-xls-r-300m, layer 12
+# Same renorm n10 config and shared tree as the 19.47 line above, so this is a
+# features-only swap. Ties mHuBERT-147 (p(better)=0.29) -- unlike English
+# mini_librispeech, where XLS-R loses to mms-300m by 0.98 at p=1.00.
+%WER 19.59 [ 3467 / 17700, 402 ins, 630 del, 2435 sub ] exp/chain/e2e_tdnnf_xlsr_n10/decode_xlsr/wer_10
+
 
 # Best result reported in kaldi reprository using MFCCs:
 %WER 26.62 [ 4711 / 17700, 487 ins, 1076 del, 3148 sub ] exp/system1/sgmm2_5b2_mmi_b0.1/decode_test_it3.mbr/wer_9

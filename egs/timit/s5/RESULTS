@@ -18,11 +18,17 @@ Test Set       : 192 sentences Core Test Set (different from Full 1680 sent. set
 Language Model : Bigram phoneme language model extracted from the training set
 Phone mapping  : Training with 48 phonemes, for testing mapped to 39 phonemes
 Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
+GMM --nj       : 16 for every SSL block below, 30 for the MFCC baseline.
+                 Kaldi accumulates statistics per data split, so a different
+                 --nj gives a different model from identical features. Blocks
+                 with different --nj are not directly comparable, and run.sh
+                 now defaults to train_nj=30. See NOTES.md.
 
 # ---------------------------------------------------------------------------
 # SSL features (this recipe, run.sh), facebook/hubert-base-ls960 layer 9,
 # PCA-30 for the GMM stages, full 768-d features for the chain model.
 # %PER, 39 phone classes, compute-wer scoring (local/score.sh).
+# GMM --nj 16. Dir: exp_hubert_base_l9.
 # ---------------------------------------------------------------------------
 %WER 23.17 [ 3488 / 15057, 182 ins, 1837 del, 1469 sub ] exp/mono/decode_dev/wer_4
 %WER 24.63 [ 1777 / 7215, 81 ins, 929 del, 767 sub ] exp/mono/decode_test/wer_4
@@ -46,6 +52,7 @@ Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
 # ---------------------------------------------------------------------------
 # facebook/hubert-large-ll60k layer 14, same pipeline (2026-07-29). No gain
 # over Base layer 9 at the chain stage, for ~3x the extraction cost.
+# GMM --nj 16. Dir: exp_hubert_large_l14.
 # ---------------------------------------------------------------------------
 %WER 23.40 [ 3523 / 15057, 192 ins, 1746 del, 1585 sub ] exp/mono/decode_dev/wer_4
 %WER 24.85 [ 1793 / 7215, 97 ins, 914 del, 782 sub ] exp/mono/decode_test/wer_3
@@ -72,7 +79,7 @@ Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
 # above, tapped four layers deeper, so the two isolate layer choice within one
 # model. Layer 12 is not uniformly better or worse: it wins at mono and tri1,
 # loses at tri2 and at the chain stage.
-# Dir: exp_hubert_base_frozen_l12.
+# GMM --nj 16. Dir: exp_hubert_base_frozen_l12.
 # ---------------------------------------------------------------------------
 %WER 22.53 [ 3393 / 15057, 144 ins, 1925 del, 1324 sub ] exp/mono/decode_dev/wer_5
 %WER 24.59 [ 1774 / 7215, 80 ins, 988 del, 706 sub ] exp/mono/decode_test/wer_4
@@ -94,7 +101,7 @@ Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
 # ---------------------------------------------------------------------------
 # facebook/wav2vec2-large-lv60 layer 14, pretrained on the 60k-hour LibriVox
 # set. Worst of the four models at every GMM stage, second best at the chain
-# stage. Dir: exp_w2v2_large_lv60_l14.
+# stage. GMM --nj 16. Dir: exp_w2v2_large_lv60_l14.
 # ---------------------------------------------------------------------------
 %WER 25.58 [ 3851 / 15057, 163 ins, 1997 del, 1691 sub ] exp/mono/decode_dev/wer_3
 %WER 26.76 [ 1931 / 7215, 75 ins, 1005 del, 851 sub ] exp/mono/decode_test/wer_3
@@ -121,6 +128,7 @@ Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
 # ---------------------------------------------------------------------------
 # Layer sweep for hubert-large-ll60k, scored at tri2 (stages 1-5 only, so these
 # are PCA-30 numbers and only a proxy for what the chain model would do).
+# GMM --nj 16. Not comparable with the Base sweep in README.md, which used 30.
 # ---------------------------------------------------------------------------
 #   layer   tri2 dev   tri2 test
 #     10      16.04      17.20
@@ -132,8 +140,8 @@ Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
 # ---------------------------------------------------------------------------
 # facebook/mms-300m layer 14, same pipeline. BEST OVERALL: 10.19 test at the
 # chain stage, 90 fewer errors than HuBERT Base (~3.2 sigma), winning on
-# insertions, deletions and substitutions at once. Experiment dir:
-# exp_mms300m_l14.
+# insertions, deletions and substitutions at once. GMM --nj 16.
+# Experiment dir: exp_mms300m_l14.
 # ---------------------------------------------------------------------------
 %WER 23.43 [ 3528 / 15057, 156 ins, 1823 del, 1549 sub ] exp/mono/decode_dev/wer_4
 %WER 24.75 [ 1786 / 7215, 88 ins, 906 del, 792 sub ] exp/mono/decode_test/wer_2
@@ -170,6 +178,8 @@ Features       : frozen SSL embeddings (see run.sh), PCA-30 for the GMM stages
 # ---------------------------------------------------------------------------
 # MFCC baseline from run-mfcc.sh, run here with the same data prep, speaker
 # lists and scoring script as the SSL results above. Dir: exp_mfcc_baseline.
+# GMM --nj 30, unlike the SSL blocks above at 16, so the SSL-vs-MFCC gap
+# carries that confound as well.
 #
 #   system      dev    test
 #   mono       31.78  32.13

@@ -6,26 +6,33 @@ This recipe demonstrates how to use self-supervised speech representations as ac
 
 | Features | Acoustic Model | WER (%) |
 |-----------|---------------|---------|
-| **HuBERT Large (LL60K, layer 14)** | **Chain TDNN** | **4.15** |
-| HuBERT Base (LS960) | Chain TDNN | 4.28 |
+| **MMS-300m (layer 14)** | **Chain TDNN** | **3.88** |
+| WavLM Base+ (layer 9) | Chain TDNN | 3.97 |
+| HuBERT Large (LL60K, layer 14) | Chain TDNN | 4.15 |
+| HuBERT Base (LS960, layer 9) | Chain TDNN | 4.28 |
+| MMS-300m (layer 14) | E2E TDNN-F | 4.48 |
 | HuBERT Large (LL60K, layer 12) | Chain TDNN | 4.70 |
-| HuBERT Large (LL60K, layer 14) | E2E TDNN-F | 4.90 |
-| HuBERT Large (LL60K, layer 14) | Tri3b | 10.92 |
+| XLS-R-300m (layer 12) | Chain TDNN | 4.86 |
+| MMS-300m (layer 14) | Tri3b | 10.87 |
 | Kaldi MFCC/filterbank baseline | CNN-TDNN | 6.79 |
 
 ## Key Findings
 
-- SSL features significantly outperform conventional MFCC/filterbank features.
-- The best result is **4.15% WER** using `facebook/hubert-large-ll60k` layer 14 with a chain TDNN model.
-- This corresponds to a **39% relative WER reduction** compared to the Kaldi baseline (6.79% → 4.15%).
-- Intermediate HuBERT layers perform best for ASR; layer 14 outperformed layer 12 in our experiments.
-- The Tri3b GMM-HMM system also benefits substantially from SSL representations, demonstrating that HuBERT embeddings contain strong phonetic information.
-- See [RESULTS](RESULTS) for the complete set of experimental results and analysis.
+- SSL features outperform conventional MFCC/filterbank features by a wide margin.
+- The best result is **3.88% WER** using `facebook/mms-300m` layer 14 with a chain TDNN, a **43% relative reduction** against the Kaldi baseline (6.79% → 3.88%).
+- Encoder size does not decide the ranking: WavLM Base+ (95 M parameters) matches MMS-300m (315 M) to within 0.09, and XLS-R-300m trails both despite sharing MMS-300m's architecture. English is a thin slice of XLS-R's 128-language pretraining mixture, and the same encoder ties mHuBERT-147 on the Swahili recipe.
+- Intermediate layers work best; layer 14 beat layer 12 for HuBERT Large.
+- The Tri3b GMM-HMM system also benefits substantially from SSL representations, so the embeddings carry strong phonetic information on their own.
+- The three encoder rows measured most recently (MMS-300m, WavLM, XLS-R) share one tree, alignments and lattices, so they differ only in features.
+- See [RESULTS](RESULTS) for the raw decode lines and [FINDINGS](../../../FINDINGS.md) for cross-recipe analysis.
 
 ## Tested SSL Models
 
+- `facebook/mms-300m`
+- `microsoft/wavlm-base-plus`
 - `facebook/hubert-base-ls960`
 - `facebook/hubert-large-ll60k`
+- `facebook/wav2vec2-xls-r-300m`
 
 ## Alignment Accuracy
 

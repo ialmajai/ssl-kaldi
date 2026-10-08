@@ -116,7 +116,38 @@ Which layer you tap matters, and not in a single direction
 | chain TDNN-F | **11.43** | 11.74 |
 
 The deeper layer wins for the weakest models and loses for the strongest. Layer
-9 is the better choice for the chain system.
+9 is the better choice for the chain system. These two runs used `nj=16`, so
+their tri2 row does not line up with the full Base sweep below; the sweep
+supersedes it for layer choice, and this table is kept for the stages the sweep
+does not cover.
+
+### Layer sweep (HuBERT Base, all 12 layers)
+
+Every layer of Base, from one forward pass per data dir, scored at tri2
+(`shared/make_ssl_layers.sh --layers 3,4,...`, `nj=30`, PCA-30):
+
+| layer | tri2 dev | tri2 test |
+|-------|----------|-----------|
+| 3 | 20.94 | 21.87 |
+| 4 | 19.33 | 20.29 |
+| 5 | 17.51 | 18.67 |
+| 6 | 15.98 | 17.44 |
+| 7 | 15.28 | 16.47 |
+| 8 | 15.30 | 17.16 |
+| 9 | 15.09 | 16.58 |
+| 10 | **14.80** | **16.38** |
+| 11 | 15.01 | 16.83 |
+| 12 | 15.83 | 17.27 |
+
+A steep climb to layer 7, then a plateau. Layer 10 is nominally best, but a
+paired bootstrap cannot separate it from 9 (P=24.8%) or 7 (P=38.1%), so
+anywhere in 7 to 11 is equivalent and the recipe's layer 9 needs no change.
+Layers 6 and below and layer 12 are measurably worse (P=0.14% and P=0.58%).
+Layer 8 is a real dip rather than noise, worse than both its neighbours on test
+(P=1.1% against 7, P=3.7% against 9) while dev shows nothing; unexplained.
+
+These numbers are not comparable with the Large sweep below or with
+[RESULTS](RESULTS), which used different job counts. See [NOTES](NOTES.md).
 
 ### Layer sweep (HuBERT Large)
 

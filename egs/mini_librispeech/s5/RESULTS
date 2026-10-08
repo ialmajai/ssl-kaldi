@@ -22,9 +22,28 @@ local/bwer.sh
 
 #facebook/mms-300m, layer 14
 %WER 3.89 [ 783 / 20138, 100 ins, 69 del, 614 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tglarge_dev_clean_2/wer_9_1.0
+# renorm-linear input (now the default), single training job; controlled A/B
+# vs relu-batchnorm at the same settings gave 4.42 (FINDINGS.md sec 11)
+%WER 3.88 [ 782 / 20138, 88 ins, 94 del, 600 sub ] exp/chain_online_cmn/tdnn1a_rl_j1_sp/decode_tglarge_dev_clean_2/wer_10_1.0
 %WER 4.48 [ 902 / 20138, 123 ins, 85 del, 694 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_10_0.5
 %WER 10.87 [ 2190 / 20138, 246 ins, 433 del, 1511 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_26_0.0
 %WER 29.06 [ 5853 / 20138, 288 ins, 1528 del, 4037 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_19_0.0
+
+
+#microsoft/wavlm-base-plus, layer 9
+# Trained on the tri3b tree/alignments/lattices of the mms-300m rows above,
+# with only the features swapped, so encoder comparisons are not confounded
+# by alignment quality. Competitive with mms-300m at a third the parameters.
+%WER 3.97 [ 799 / 20138, 88 ins, 69 del, 642 sub ] exp/chain_online_cmn/tdnn1a_wvfz_j1_sp/decode_tglarge_dev_clean_2/wer_8_1.0
+%WER 4.98 [ 1002 / 20138, 104 ins, 78 del, 820 sub ] exp/chain_online_cmn/tdnn1a_wvfz_j1_sp/decode_tgsmall_dev_clean_2/wer_9_0.0
+
+
+#facebook/wav2vec2-xls-r-300m, layer 12
+# Same fixed supervision as the wavlm rows. Loses to mms-300m by 0.98 tglarge
+# (p=1.00), yet ties mHuBERT-147 on Swahili -- English is a thin slice of
+# XLS-R's 128-language mixture. Layer 12 was not swept.
+%WER 4.86 [ 978 / 20138, 121 ins, 81 del, 776 sub ] exp/chain_online_cmn/tdnn1a_xlsr_j1_sp/decode_tglarge_dev_clean_2/wer_8_0.0
+%WER 6.70 [ 1350 / 20138, 111 ins, 174 del, 1065 sub ] exp/chain_online_cmn/tdnn1a_xlsr_j1_sp/decode_tgsmall_dev_clean_2/wer_9_0.5
 
 
 #(mfcc/filterbank features
