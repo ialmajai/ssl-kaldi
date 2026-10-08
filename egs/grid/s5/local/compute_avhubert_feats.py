@@ -401,7 +401,7 @@ def detect_landmarks_list(video: str, detector, predictor, detect_every: int = 1
             if faces:
                 cur = np.array([[p.x, p.y] for p in predictor(gray, faces[0]).parts()],
                                dtype=np.float64)
-                frames_since_attempt = 0  # tracking is easy again; resume the stride
+                frames_since_attempt = 1  # count this frame, so the stride is detect_every
             else:
                 # dlib lost the face: leave frames_since_attempt >= detect_every
                 # so the very next frame is attempted too, not skipped.
@@ -431,10 +431,15 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
 
     detect_every: see detect_landmarks_list -- default 1 keeps every
     training-feature-extraction caller unchanged."""
-    cache = os.path.splitext(video)[0] + ".mfroi.npz"
+    # Key non-default crops apart so they never reuse the default cache.
+    tag = "" if (window_margin, detect_every) == (12, 1) else f".wm{window_margin}de{detect_every}"
+    cache = os.path.splitext(video)[0] + tag + ".mfroi.npz"
     if Path(cache).exists():
-        d = np.load(cache)
-        return d["roi"], float(d["fps"])
+        try:
+            with np.load(cache) as d:
+                return d["roi"], float(d["fps"])
+        except Exception:
+            logger.warning(f"Rebuilding unreadable ROI cache {cache}")
 
     landmarks, fps = detect_landmarks_list(video, detector, predictor,
                                            detect_every=detect_every,
@@ -451,7 +456,10 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
     for i, patch in enumerate(seq):
         gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY) if patch.ndim == 3 else patch
         out[i] = gray[_CENTER:_CENTER + 88, _CENTER:_CENTER + 88]
-    np.savez_compressed(cache, roi=out, fps=fps)   # reused by every later meanface run
+    # Write then rename, so a killed job never leaves a truncated cache.
+    tmp = f"{cache}.{os.getpid()}.tmp.npz"
+    np.savez_compressed(tmp, roi=out, fps=fps)
+    os.replace(tmp, cache)
     return out, fps
 
 
