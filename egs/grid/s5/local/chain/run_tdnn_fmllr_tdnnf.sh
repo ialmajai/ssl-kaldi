@@ -1,15 +1,9 @@
 #!/bin/bash
 set -e
 
-# TDNN-F variant of run_tdnn_fmllr.sh: same fMLLR features, same alignments,
-# same tree, same training options -- only the network architecture differs.
-# run_tdnn_fmllr.sh's "7o_uc" network hand-assembles a semi-orthogonal
-# bottleneck TDNN from relu-batchnorm-dropout-layer plus separate
-# linear-component skip layers; this script instead uses Kaldi's tdnnf-layer
-# macro (as run_tdnn_flatstart.sh's e2e chain does), which folds the
-# factorized bottleneck, semi-orthonormal constraint, bypass-scale residual,
-# and batchnorm into a single layer type. Same dim/bottleneck-dim as 7o_uc's
-# dim/small_dim so the comparison isolates the macro, not the capacity.
+# Train a TDNN-F chain on fMLLR features from the GMM-SAT system (run.sh stage 13).
+# Needs data/$train_set (the GMM's features), $data_fmllr/{$train_set,$test_set}
+# and ${gmm}_ali, all written by run.sh stages 4-12.
 
 # configs for 'chain'
 stage=9

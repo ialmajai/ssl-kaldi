@@ -26,8 +26,7 @@ cd ../..
 Then run the recipe. The 5.83% system uses large AV-HuBERT, layer 13:
 
 ```
-./run.sh --stage -1 --model-size large   # corpus + checkpoint download, features, GMM-SAT, fMLLR features
-local/chain/run_tdnn_fmllr_tdnnf.sh      # TDNN-F chain on the fMLLR features
+./run.sh --stage -1 --model-size large   # downloads, features, GMM-SAT, fMLLR TDNN-F chain
 ```
 
 ## Unseen-speaker performance

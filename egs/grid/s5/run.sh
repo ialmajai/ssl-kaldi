@@ -208,19 +208,25 @@ data_fmllr=data-fmllr-tri3b
 gmm=exp/tri3b
 if [ $stage -le 12 ] && [ $stop_stage -ge 12 ]; then
 
-  dirc=${data_fmllr}/test
+  dirc=${data_fmllr}/test$data_affix
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 4 --cmd "$train_cmd" \
      --transform-dir $gmm/decode \
      $dirc data/test$data_affix $gmm $dirc/log $dirc/data
   steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
 
-  dirc=${data_fmllr}/train
+  dirc=${data_fmllr}/train$data_affix
   mkdir -p $dirc
   steps/nnet/make_fmllr_feats.sh --nj 8 --cmd "$train_cmd" \
      --transform-dir ${gmm}_ali \
      $dirc data/train$data_affix $gmm $dirc/log $dirc/data
   steps/compute_cmvn_stats.sh $dirc  $dirc/log $dirc/data || exit 1;
+fi
+
+if [ $stage -le 13 ] && [ $stop_stage -ge 13 ]; then
+  # Train the TDNN-F chain on the fMLLR features (5.83% with --model-size large).
+  local/chain/run_tdnn_fmllr_tdnnf.sh --stage 9 --gmm $gmm --data-fmllr $data_fmllr \
+    --train-set train$data_affix --test-set test$data_affix
 fi
 
 exit 0;
