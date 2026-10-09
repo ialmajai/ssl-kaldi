@@ -78,18 +78,12 @@ docker run --gpus all -it ssl-kaldi
 
 The `docker/` directory also ships `Dockerfile.grid`, which adds the extra dependencies (dlib, AV-HuBERT) needed for the GRID lipreading recipe.
 
-### Create a conda environment
+### Python environment
 
-```
-git clone https://github.com/ialmajai/ssl-kaldi.git
-cd ssl-kaldi
-conda create -n ssl-kaldi python=3.11 -y
-conda activate ssl-kaldi
+The [Quick Start](#quick-start) creates the conda environment. For pinned, reproducible versions install
+`requirements.lock` instead of `requirements.txt`.
 
-pip install -r requirements.txt        # or: pip install -r requirements.lock  (pinned, reproducible)
-```
-
-Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) also needs AV-HuBERT, fairseq, and dlib (see its own [`requirements.txt`](egs/grid/s5/requirements.txt)).
+Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) also needs AV-HuBERT, fairseq, and dlib (see its own [`requirements.txt`](egs/grid/s5/requirements.txt)), and Python 3.8 to 3.10.
 
 ## Contributing
 

@@ -6,7 +6,9 @@ GMM-HMM and chain pipelines.
 
 ## Quick Start
 
-Install AV-HuBERT and dlib into the repo environment:
+Install AV-HuBERT and dlib into the repo environment. AV-HuBERT's fairseq is tested on
+Python 3.8 and 3.10 (the Docker image), not 3.11, so create the environment with
+`python=3.10` for this recipe.
 
 ```
 conda activate ssl-kaldi
