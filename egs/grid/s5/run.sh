@@ -97,6 +97,13 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
     bunzip2 -c input/sp68.bz2.tmp > input/sp68.dat.tmp \
       && mv input/sp68.dat.tmp input/shape_predictor_68_face_landmarks.dat && rm input/sp68.bz2.tmp
   fi
+  # Mean-face reference for --crop-mode meanface; not shipped with the av_hubert checkout.
+  mf=$avhubert_path/avhubert/20words_mean_face.npy
+  if [ "$crop_mode" = meanface ] && [ ! -f $mf ]; then
+    wget https://github.com/mpc001/Lipreading_using_Temporal_Convolutional_Networks/raw/master/preprocessing/20words_mean_face.npy \
+      -O $mf.tmp || { rm -f $mf.tmp; exit 1; }
+    mv $mf.tmp $mf
+  fi
 
   for x in train test; do
     echo "preparing features"

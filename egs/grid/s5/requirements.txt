@@ -5,3 +5,4 @@ zenodo_get
 opencv-python
 dlib
 python_speech_features
+scikit-image==0.21.0   # mean-face mouth alignment (av_hubert align_mouth.py)
