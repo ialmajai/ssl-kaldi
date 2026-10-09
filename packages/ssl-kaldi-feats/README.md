@@ -94,7 +94,7 @@ studies.
   output, which later looks like a smaller test set rather than an error. Raise
   `--max-failures` deliberately.
 - **`soundfile`** is only needed for non-wav or non-PCM16 audio:
-  `pip install ssl-kaldi-feats[audio]`.
+  `pip install 'ssl-kaldi-feats[audio]'`.
 
 ## Where this comes from
 
