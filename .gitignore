@@ -40,3 +40,6 @@ __pycache__/
 # Corpus download markers and cached landmarks
 .downloaded
 *.landmarks.npz
+
+# Run logs
+*.log
