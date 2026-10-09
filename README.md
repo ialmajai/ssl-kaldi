@@ -7,7 +7,7 @@
 [![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-This repository contains recipes and tools for integrating self-supervised learning (SSL) features, such as HuBERT, mHuBERT, and AV-HuBERT, into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. The approach uses frozen pretrained models and avoids fine-tuning them.
+This repository contains recipes and tools for integrating self-supervised learning (SSL) features, such as HuBERT, mHuBERT, and AV-HuBERT, into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. Pretrained models can be used frozen or adapted to the task before extraction.
 
 <p align="center">
   <img src="egs/grid/s5/demo/tracking-demo.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
@@ -17,7 +17,7 @@ This repository contains recipes and tools for integrating self-supervised learn
 
 ## Why ssl-kaldi?
 
-- **Frozen features, no fine-tuning.** Pretrained SSL models act as fixed feature extractors: cheap to run, no GPU-hungry fine-tuning loop.
+- **Frozen or adapted encoders.** Any pretrained or fine-tuned SSL checkpoint serves as the feature extractor. Frozen models need no training loop; LoRA or full fine-tuning plug in the same way.
 - **Straight into Kaldi.** Features are written as standard `ark/scp`, so Kaldi's hybrid and chain (TDNN-F) pipelines work unchanged.
 - **One toolkit, audio *and* video.** Shared extraction, PCA, and upsampling blocks drive HuBERT, mHuBERT, AfriHuBERT, and AV-HuBERT alike.
 - **Low-resource friendly.** Recipes span English, Arabic, Swahili, and visual speech, with strong results on small datasets.
