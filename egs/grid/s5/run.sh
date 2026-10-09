@@ -17,8 +17,8 @@ upsample_factor=2
 
 #path to grid corpus dataset
 datasrc=grid-corpus
-# Lombard GRID front-view videos (lombardgrid/front), for stages 14-15
-lombard_dir=
+# Lombard GRID front-view videos, for stages 14-15: unzip lombardgrid_front.zip into lombard-grid/
+lombard_dir=lombard-grid/lombardgrid/front
 
 model_size=base
 crop_mode=meanface       # canonical AV-HuBERT mean-face alignment (main method);
@@ -233,7 +233,7 @@ fi
 
 if [ $stage -le 14 ] && [ $stop_stage -ge 14 ]; then
   # Build Lombard features as the training data were, then GMM-SAT decode for fMLLR.
-  [ -d "$lombard_dir" ] || { echo "$0: stage 14 needs --lombard-dir <lombardgrid/front>"; exit 1; }
+  [ -d "$lombard_dir" ] || { echo "$0: no Lombard videos in $lombard_dir (unzip lombardgrid_front.zip into lombard-grid/)"; exit 1; }
   rm -rf data/lomb_raw data/lomb data/lomb$data_affix
   python local/lombard_data_prep.py --video-dir $lombard_dir --out data/lomb_raw
   # Lower --min-frames: Lombard clips run ~60 frames.

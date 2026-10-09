@@ -11,6 +11,7 @@ egs/*/s5/corpus/
 egs/*/s5/kenlm/
 egs/*/s5/ctm_per_utt/
 egs/*/s5/grid-corpus/
+egs/*/s5/lombard-grid
 egs/*/s5/asr_swahili/
 
 # Symlinks into a Kaldi checkout / shared dir
