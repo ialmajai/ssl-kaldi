@@ -90,6 +90,13 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
     wget $model_link -O input/$avhubert_model.tmp || { rm -f input/$avhubert_model.tmp; exit 1; }
     mv input/$avhubert_model.tmp input/$avhubert_model
   fi
+  if [ ! -f input/shape_predictor_68_face_landmarks.dat ]; then
+    echo "Downloading dlib 68-point landmark model"
+    wget https://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2 -O input/sp68.bz2.tmp \
+      || { rm -f input/sp68.bz2.tmp; exit 1; }
+    bunzip2 -c input/sp68.bz2.tmp > input/sp68.dat.tmp \
+      && mv input/sp68.dat.tmp input/shape_predictor_68_face_landmarks.dat && rm input/sp68.bz2.tmp
+  fi
 
   for x in train test; do
     echo "preparing features"
