@@ -125,15 +125,17 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     exp/tri2/graph data/dev_pca exp/tri2/decode_dev_tg
 fi
 
-# DNN training and decoding
+# Chain prep: extraction needs GPU Default mode, training (stage 7) Exclusive_Process.
 if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
   local/chain/run_common.sh --stage 0 --gmm tri2 --ssl-model $ssl_model \
 	  --layer $encoder_layer --pca-dim $pca_dim --num-data-reps 1
-
-  local/chain/run_tdnn_mhubert_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
 fi
 
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
+  local/chain/run_tdnn_mhubert_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
+fi
+
+if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
   echo "========================================="
   echo "IqraEval Phone Recognition - GMM Pipeline"
   echo "Completed: $(date)"
