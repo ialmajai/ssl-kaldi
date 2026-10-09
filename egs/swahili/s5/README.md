@@ -55,8 +55,7 @@ land within 0.35 of each other, which is inside this test set's confidence
 interval of roughly ±0.8, so treat their ordering as unresolved rather than
 as a ranking. Changing the network from 12-layer relu-batchnorm to 10-layer
 renorm-linear is worth about as much as the choice of encoder. See
-[RESULTS](RESULTS) for the raw decode lines and
-[FINDINGS](../../../FINDINGS.md) for the input-layer analysis.
+[RESULTS](RESULTS) for the raw decode lines.
 
 ## Citation
 

@@ -147,7 +147,7 @@ Layer 8 is a real dip rather than noise, worse than both its neighbours on test
 (P=1.1% against 7, P=3.7% against 9) while dev shows nothing; unexplained.
 
 These numbers are not comparable with the Large sweep below or with
-[RESULTS](RESULTS), which used different job counts. See [NOTES](NOTES.md).
+[RESULTS](RESULTS), which used different job counts.
 
 ### Layer sweep (HuBERT Large)
 

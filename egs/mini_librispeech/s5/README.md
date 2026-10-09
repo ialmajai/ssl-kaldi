@@ -24,7 +24,7 @@ This recipe demonstrates how to use self-supervised speech representations as ac
 - Intermediate layers work best; layer 14 beat layer 12 for HuBERT Large.
 - The Tri3b GMM-HMM system also benefits substantially from SSL representations, so the embeddings carry strong phonetic information on their own.
 - The three encoder rows measured most recently (MMS-300m, WavLM, XLS-R) share one tree, alignments and lattices, so they differ only in features.
-- See [RESULTS](RESULTS) for the raw decode lines and [FINDINGS](../../../FINDINGS.md) for cross-recipe analysis.
+- See [RESULTS](RESULTS) for the raw decode lines.
 
 ## Tested SSL Models
 
