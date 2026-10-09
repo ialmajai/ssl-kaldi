@@ -27,6 +27,7 @@ Then run the recipe. The 5.83% system uses large AV-HuBERT, layer 13:
 
 ```
 ./run.sh --stage -1 --model-size large   # downloads, features, GMM-SAT, fMLLR TDNN-F chain
+./run.sh --stage 14 --model-size large --lombard-dir /path/to/lombardgrid/front   # Lombard decode
 ```
 
 ## Unseen-speaker performance
