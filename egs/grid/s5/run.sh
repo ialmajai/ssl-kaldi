@@ -23,16 +23,11 @@ crop_mode=meanface       # canonical AV-HuBERT mean-face alignment (main method)
                          # resolution-invariant, marginally best. Alternatives:
                          # legacy 'centroid' (fixed 64px) or centroid + --crop-scale (dynamic IOD).
 
-avhubert_model=base_vox_iter5.pt
-encoder_layer=9
-njfeats=8
-
-if [ $model_size == "large" ]; then
-  avhubert_model=large_vox_iter5.pt
-  encoder_layer=14
-  njfeats=4
- 
-fi
+# Empty values take the model_size defaults below: the re-validated best layers
+# (base 4, large 13; see README layer sweeps).
+avhubert_model=
+encoder_layer=
+njfeats=
 
 #path to avhubert codebase (see README: cloned into this directory)
 avhubert_path=$PWD/av_hubert
@@ -54,6 +49,13 @@ numGaussSAT=40000
 . cmd.sh
 . path.sh
 . ./utils/parse_options.sh
+
+# Resolve model_size defaults after parsing so --model-size takes effect.
+case $model_size in
+  base)  : ${avhubert_model:=base_vox_iter5.pt}  ${encoder_layer:=4}  ${njfeats:=8} ;;
+  large) : ${avhubert_model:=large_vox_iter5.pt} ${encoder_layer:=13} ${njfeats:=4} ;;
+  *) echo "$0: --model-size must be base or large, got '$model_size'"; exit 1 ;;
+esac
 
 if [ $stage -le -1 ] && [ $stop_stage -ge -1 ]; then
   python local/download_grid_corpus.py --dir $datasrc
