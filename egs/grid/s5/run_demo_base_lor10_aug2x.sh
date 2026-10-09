@@ -5,7 +5,7 @@
 #   ./run_demo_base_lor10_aug2x.sh extract   # local GPU: augmented L10 copy, combined set
 #   ./run_demo_base_lor10_aug2x.sh train     # fierce: tree, chain, GRID + Lombard decode
 set -uo pipefail
-cd /data/learn/ssl-kaldi/egs/grid/s5 || exit 1
+cd "$(dirname "$0")" || exit 1
 export PATH=/data/miniconda3/envs/ssl-kaldi/bin:$PATH
 . ./cmd.sh; . ./path.sh
 ckpt=input/avhubert_base_ctc_lora.pt

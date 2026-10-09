@@ -3,7 +3,7 @@
 # calibration on the GRID test lattices (as the aug2x demo model), then the
 # TruCLeS CEM and its late fusion with MBR on the same splits as exp/trucles/aug2x.
 set -euo pipefail
-cd /data/learn/ssl-kaldi/egs/grid/s5
+cd "$(dirname "$0")"
 export PATH=/data/miniconda3/envs/ssl-kaldi/bin:$PATH
 . ./cmd.sh; . ./path.sh
 chain=exp/chain/e2e_tdnnf_lor10norelu_cmvn_aug2x; out=exp/trucles/base_lor10_aug2x
