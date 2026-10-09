@@ -4,7 +4,20 @@ Arabic phone recognition on the [IqraEval Challenge](https://huggingface.co/Iqra
 data, using self-supervised speech representations in place of MFCCs. The
 pipeline is a standard Kaldi GMM ladder followed by an LF-MMI chain model, with
 the feature stage swapped for frozen [mHuBERT-147](https://huggingface.co/utter-project/mHuBERT-147)
-embeddings:
+embeddings.
+
+## Quick Start
+
+After downloading the data and building KenLM (see [Requirements](#requirements)):
+
+```
+conda activate ssl-kaldi
+cd egs/iqraeval/s5
+./run.sh          # set IqraEvalData at the top of run.sh first
+./run_e2e.sh      # optional: flat-start e2e chain, no GMM stages
+```
+
+## Feature layout
 
 | Data directory | Features | Used by |
 |----------------|----------|---------|
@@ -64,15 +77,7 @@ make -j$(nproc)
 KENLM=/path/to/kenlm/build ./run.sh
 ```
 
-## Running
-
-```
-conda activate ssl-kaldi
-cd egs/iqraeval/s5
-./run.sh
-```
-
-Stages:
+## Stages
 
 | Stage | What it does |
 |-------|--------------|
@@ -91,12 +96,6 @@ from there.
 Pick the model and layer with `ssl_model` / `encoder_layer` at the top of
 `run.sh`, or as options. Feature extraction needs the GPU in default compute
 mode (`sudo nvidia-smi -c 0`); stage 1 refuses to start otherwise.
-
-The flat-start end-to-end system is separate and needs no GMM stages at all:
-
-```
-./run_e2e.sh
-```
 
 `run-mfcc.sh` reproduces the MFCC baseline in the comparison table below.
 

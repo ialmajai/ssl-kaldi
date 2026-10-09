@@ -4,10 +4,13 @@ Visual speech recognition (lipreading) on the [GRID corpus](https://spandh.dcs.s
 using frozen [AV-HuBERT](https://github.com/facebookresearch/av_hubert) visual features in Kaldi
 GMM-HMM and chain pipelines.
 
-## AV-HuBERT Setup
+## Quick Start
+
+Install AV-HuBERT and dlib into the repo environment:
 
 ```
 conda activate ssl-kaldi
+cd egs/grid/s5
 pip install pip==24.0
 pip install -r requirements.txt
 git clone https://github.com/facebookresearch/av_hubert.git --depth=1
@@ -17,6 +20,14 @@ git submodule update
 cd fairseq
 pip install --editable ./
 conda install -c conda-forge dlib==19.18.0
+cd ../..
+```
+
+Then run the recipe. The 5.83% system uses large AV-HuBERT, layer 13:
+
+```
+./run.sh --stage -1 --model-size large   # corpus + checkpoint download, features, GMM-SAT, fMLLR features
+local/chain/run_tdnn_fmllr_tdnnf.sh      # TDNN-F chain on the fMLLR features
 ```
 
 ## Unseen-speaker performance

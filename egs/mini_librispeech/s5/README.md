@@ -2,6 +2,19 @@
 
 This recipe demonstrates how to use self-supervised speech representations as acoustic features in Kaldi. Pretrained HuBERT models are evaluated with both hybrid chain and traditional GMM-HMM systems on Mini LibriSpeech.
 
+## Quick Start
+
+```
+conda activate ssl-kaldi
+cd egs/mini_librispeech/s5
+./run.sh --stop-stage 12           # corpus + LM download, MMS-300m L14 features, GMM ladder
+sudo nvidia-smi -c 3               # chain training runs 2-5 GPU jobs
+./run.sh --stage 13                # chain TDNN, decoded with tglarge
+```
+
+Feature extraction needs the GPU in Default mode (`sudo nvidia-smi -c 0`).
+Pick another encoder with `--ssl-model` and `--encoder-layer`.
+
 ## Results (WER % on dev-clean, tglarge LM)
 
 | Features | Acoustic Model | WER (%) |

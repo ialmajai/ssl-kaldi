@@ -6,7 +6,7 @@ Swahili automatic speech recognition using frozen SSL features
 end-to-end LF-MMI (chain TDNN-F) system in Kaldi. The corpus is the
 [OpenSLR 25](https://www.openslr.org/25/) Swahili broadcast-news dataset.
 
-## Setup
+## Quick Start
 
 The recipe is fully end-to-end; `run_e2e.sh` downloads the corpus, prepares the
 data, extracts SSL features, and trains/decodes the chain model.

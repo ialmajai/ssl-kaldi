@@ -3,7 +3,21 @@
 Phone recognition on TIMIT with self-supervised speech representations in place
 of MFCCs. The pipeline is Kaldi's classic `egs/timit/s5` recipe (48-phone
 training, bigram phone LM, scoring mapped to the standard 39 phone classes)
-with the feature stage swapped for frozen SSL embeddings:
+with the feature stage swapped for frozen SSL embeddings.
+
+## Quick Start
+
+```
+conda activate ssl-kaldi
+cd egs/timit/s5
+./run.sh --timit /path/to/TIMIT --stop-stage 7   # features, GMM ladder, chain prep
+sudo nvidia-smi -c 3                             # chain training wants exclusive mode
+./run.sh --timit /path/to/TIMIT --stage 8        # chain TDNN-F
+```
+
+Needs IRSTLM and sph2pipe in the Kaldi build (see [Requirements](#requirements)).
+
+## Feature layout
 
 | Data directory | Features | Used by |
 |----------------|----------|---------|
@@ -22,15 +36,7 @@ fixed feature extractor and writes ordinary Kaldi `ark/scp` archives.
   (`tools/extras/install_sph2pipe.sh`) for sphere audio.
 - The repo's Python environment (see the [top-level README](../../../README.md)).
 
-## Running
-
-```
-conda activate ssl-kaldi
-cd egs/timit/s5
-./run.sh --timit /path/to/TIMIT
-```
-
-Stages:
+## Stages
 
 | Stage | What it does |
 |-------|--------------|
