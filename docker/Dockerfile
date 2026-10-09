@@ -42,8 +42,10 @@ RUN sed -i '/--no-text"/a [ ! -f $srcdir/wav.scp ] && validate_opts="$validate_o
 
 # SSL requirements (pinned lock for reproducible, README-matching results).
 # Install from the repo root: pip resolves the lock's -e packages/... from the cwd.
+# Upgrade pip first: Ubuntu's pip 22.0.2 cannot install pyproject-only packages editable.
 RUN git clone --depth 1 https://github.com/ialmajai/ssl-kaldi.git /opt/ssl-kaldi \
     && cd /opt/ssl-kaldi \
+    && pip3 install --no-cache-dir pip==24.0 \
     && pip3 install --no-cache-dir -r requirements.lock
 
 ENV KALDI_ROOT=/opt/kaldi
