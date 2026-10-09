@@ -32,7 +32,7 @@ frame_subsampling_factor=2
 num_tdnnf_layers=12  # tdnnf2..tdnnf(1+N); stride pattern is the fixed
                       # 1,1,1,0 prefix (truncated if N<4) then stride=2 for
                       # the rest, matching the existing 12-layer scheme
-feat_dim=768
+feat_dim=  # empty reads it from data/$train_set (768 base, 1024 large)
 treedir=exp/chain/e2e_tree  # shared by every e2e model in this recipe --
                              # only override for a train_set with a
                              # different utt-id set (e.g. an augmented
@@ -47,6 +47,8 @@ echo "$0 $@"  # Print the command line for logging
 . ./cmd.sh
 . ./path.sh
 . ./utils/parse_options.sh
+
+[ -z "$feat_dim" ] && feat_dim=$(feat-to-dim scp:data/$train_set/feats.scp -)
 
 if ! cuda-compiled; then
   cat <<EOF && exit 1
@@ -137,12 +139,12 @@ if [ $stage -le 3 ]; then
 
   echo "$0: training the neural net using the chain e2e framework"
   # With a single training job (num_jobs_final=1) one GPU process suffices, so
-  # Default compute mode is fine; only warn if multiple jobs need exclusive access.
+  # Default compute mode is fine; only require exclusive access when multiple jobs need it.
   if [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; then
     compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
     if [ "$compute_mode" != "Exclusive_Process" ]; then
-      echo "num_jobs_final>1 needs GPU compute mode Exclusive_Process (run: sudo nvidia-smi -c 3),"
-      echo "or set --num-jobs-final 1 to train with a single GPU job in Default mode."
+      echo "$0: more than one training job needs GPU compute mode Exclusive_Process"
+      echo "$0: run 'sudo nvidia-smi -c 3', or pass --num-jobs-initial 1 --num-jobs-final 1"
       exit 1
     fi
   fi
