@@ -44,10 +44,10 @@ The shared building blocks live in [`shared/`](shared/) (SSL extraction, PCA, in
 
 | Recipe | Task | SSL model | Headline result |
 |--------|------|-----------|-----------------|
-| [mini_librispeech](egs/mini_librispeech/s5/README.md) | English ASR | HuBERT | **4.15% WER** (dev-clean, chain TDNN) |
+| [mini_librispeech](egs/mini_librispeech/s5/README.md) | English ASR | MMS / HuBERT | **3.88% WER** (dev-clean, chain TDNN, MMS-300m) |
 | [iqraeval](egs/iqraeval/s5/README.md) | Arabic phone recognition | mHuBERT | **11.27% PER** (TDNN-F) |
-| [grid](egs/grid/s5/README.md) | Visual speech recognition (lipreading) | AV-HuBERT | **6.36% WER** (unseen speakers) |
-| [swahili](egs/swahili/s5/README.md) | Swahili ASR | AfriHuBERT / mHuBERT | **19.76% WER** (E2E TDNN-F) |
+| [grid](egs/grid/s5/README.md) | Visual speech recognition (lipreading) | AV-HuBERT | **5.83% WER** (unseen speakers, TDNN-F chain) |
+| [swahili](egs/swahili/s5/README.md) | Swahili ASR | AfriHuBERT / mHuBERT | **19.47% WER** (E2E TDNN-F, mHuBERT-147) |
 | [timit](egs/timit/s5/README.md) | English phone recognition | MMS / HuBERT | **10.19% PER** (core test, chain TDNN) |
 
 ## Getting Started
