@@ -54,7 +54,7 @@ class FusedConfidence:
     def __call__(self, lat_ark, utt_id, feats, cmvn_feats):
         """feats: the upsampled input features; cmvn_feats: what the decoder saw.
         Returns [(word, confidence)] in sentence order, or None when the MBR and
-        1-best word sequences differ (the fusion is fitted on matching words)."""
+        1-best word sequences differ (the fusion pairs MBR and 1-best words by position)."""
         with tempfile.TemporaryDirectory() as tmp:
             Path(tmp, "utt.list").write_text(utt_id + "\n")
             kaldiio.save_ark(f"{tmp}/feats.ark", {utt_id: cmvn_feats.astype(np.float32)})

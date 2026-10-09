@@ -6,17 +6,16 @@ Interactive lipreading (VSR) demo, Kaldi decode pipeline.
 
 Reuses this recipe's own feature-extraction code (local/compute_avhubert_feats.py)
 so the demo sees exactly the same mean-face ROI + AV-HuBERT features training did
--- rather than icefall's Conformer-CTC / k2 decode, this shells out to the
-recipe's own best base-layer-4 system: GMM-SAT (for a per-utterance fMLLR
-transform) -> fMLLR TDNN-F chain (local/demo/kaldi_decode.sh), see NOTES.md
-for why that beats the flat-start e2e chain and the GMM alone.
+-- rather than icefall's Conformer-CTC / k2 decode, this shells out to a
+Kaldi chain model trained on this recipe's features (run_demo_base_lor10_aug2x.sh).
 
     video -> dlib 68-landmarks + mean-face alignment  (compute_avhubert_feats)
           -> mouth ROI crop, 88x88 grey
-          -> AV-HuBERT feature extract (base model, layer 4)
+          -> AV-HuBERT feature extract (LoRA-32 base model, layer 10)
           -> write to a scratch Kaldi data dir
-          -> local/demo/kaldi_decode.sh (PCA-30 -> upsample x2 -> GMM-SAT
-             decode for fMLLR -> fMLLR chain decode -> MBR word confidences)
+          -> local/demo/kaldi_decode_e2e.sh (upsample x2 -> flat-start e2e
+             chain decode -> MBR word confidences)
+          -> fused MBR + TruCLeS word confidence (local/demo/trucles/score.py)
 """
 
 from __future__ import annotations
@@ -147,7 +146,7 @@ def _run_with_peak_rss(cmd, cwd):
     t.join()
     return proc.returncode, stdout, stderr, peak_kb[0] / 1024
 
-MIN_FRAMES = 30  # matches --min-frames used when building the training features
+MIN_FRAMES = 30  # below training's 74 (make_avhubert.sh) so short webcam clips still decode
 LAYER = 10
 CKPT = RECIPE_ROOT / "input/avhubert_base_ctc_lora.pt"  # LoRA-32 base, see NOTES.md
 # Fused MBR + TruCLeS CEM word confidence (local/demo/trucles/score.py).
@@ -157,12 +156,11 @@ MEAN_FACE = RECIPE_ROOT / "av_hubert/avhubert/20words_mean_face.npy"
 AVHUBERT_PATH = RECIPE_ROOT / "av_hubert"
 DECODE_SCRIPTS = {
     # fmllr: GMM-SAT decode_fmllr (per-utterance transform) -> fMLLR feature
-    #   build -> TDNN-F chain decode. Best accuracy (6.72% WER) but the GMM
-    #   decode pass dominates latency (see NOTES.md's profiling section).
+    #   build -> TDNN-F chain decode. 6.72% WER on frozen base layer 4 only;
+    #   the GMM decode pass dominates latency (see NOTES.md's profiling section).
     "fmllr": RECIPE_ROOT / "local/demo/kaldi_decode.sh",
     # e2e: straight nnet3 chain decode on raw (PCA-free) upsampled features,
-    #   no GMM/fMLLR pass at all. Slightly worse accuracy (7.11% WER) for
-    #   substantially lower latency.
+    #   no GMM/fMLLR pass at all. 6.33% WER with this demo's encoder.
     "e2e": RECIPE_ROOT / "local/demo/kaldi_decode_e2e.sh",
 }
 PCA_MODEL = RECIPE_ROOT / "layer_sweep_mf/pca-30d-l4.pt"
@@ -421,12 +419,11 @@ class KaldiLipReader:
         word_confs a list of (word, confidence in [0, 1]) pairs from Kaldi's
         lattice posteriors (MBR-decoded), in sentence order.
 
-        method: "e2e" (default -- 7.11% WER, no GMM/fMLLR pass, the
+        method: "e2e" (default -- 6.33% WER, no GMM/fMLLR pass, the
         flat-start chain decoding raw upsampled features directly, roughly
-        2-3x faster) or "fmllr" (6.72% WER -- GMM-SAT decode_fmllr for a
-        per-utterance transform, then the fMLLR TDNN-F chain; more accurate
-        but slower). Demo default favors latency: see NOTES.md's profiling
-        section for the full comparison."""
+        2-3x faster) or "fmllr" (GMM-SAT decode_fmllr for a per-utterance
+        transform, then the fMLLR TDNN-F chain; needs frozen base layer 4
+        features, so it raises with this demo's encoder)."""
         if method not in DECODE_SCRIPTS:
             raise ValueError(f"method must be one of {list(DECODE_SCRIPTS)}, got {method!r}")
         if method == "fmllr" and (LAYER, CKPT.name) != (4, "base_vox_iter5.pt"):
@@ -573,8 +570,8 @@ def _cli():
                              "already-loaded model -- useful for comparing cold "
                              "(first-clip, includes model load) vs warm latency.")
     parser.add_argument("--method", choices=list(DECODE_SCRIPTS), default="e2e",
-                        help="e2e (default, 7.11%% WER, no GMM/fMLLR pass, "
-                             "faster) or fmllr (6.72%% WER, slower).")
+                        help="e2e (default, 6.33%% WER, no GMM/fMLLR pass, "
+                             "faster) or fmllr (frozen layer-4 encoder only).")
     parser.add_argument("--fp16", action="store_true",
                         help="run AV-HuBERT in half precision (experimental).")
     parser.add_argument("--idle-offload-seconds", type=int, default=300,

@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Decode one already-extracted, already-upsampled raw AV-HuBERT utterance
-# (base model, layer 4, meanface, 768-dim, 50fps -- upsampled in-process by
+# (LoRA-32 base model, layer 10, meanface, 768-dim, 50fps -- upsampled in-process by
 # kaldi_lipreader.py, see _pca_and_upsample's sibling _upsample_only; NOT
 # PCA'd, unlike kaldi_decode.sh's fMLLR route) through the e2e flat-start
-# chain (renorm + no-relu + full CMVN, 8-layer TDNN-F stack, trained on
+# chain (renorm + no-relu + full CMVN, 12-layer TDNN-F stack, trained on
 # clean + one offline-augmented copy of the training set -- flip/rotate/
 # crop-jitter/blur/noise on ROI pixels, see augment_roi_frames in
-# compute_avhubert_feats.py and NOTES.md's augmentation entries: 6.81%
-# in-domain WER, *better* than the clean-only 8-layer model's 6.90%, and
-# meaningfully more robust to noise/blur at test time): no GMM, no fMLLR --
+# compute_avhubert_feats.py and run_demo_base_lor10_aug2x.sh: 6.33%
+# in-domain WER, 5.42% on the Lombard eval speakers): no GMM, no fMLLR --
 # straight nnet3 chain decode. Prints the 1-best transcript to stdout as
 # "word conf" lines (raw MBR posterior confidence -- fast, but see
 # kaldi_calibrate_conf.sh's docstring for why the number itself is not
@@ -17,7 +16,7 @@
 #
 # Usage: local/demo/kaldi_decode_e2e.sh <utt-id> <feats-dir>
 #   <feats-dir> must contain feats.scp/utt2spk/spk2utt for exactly one
-#   utterance (768-dim, 50fps, meanface-cropped base-layer-4 raw features).
+#   utterance (768-dim, 50fps, meanface-cropped LoRA base layer-10 raw features).
 set -euo pipefail
 cd "$(dirname "$0")/../.."  # egs/grid/s5
 . ./cmd.sh
