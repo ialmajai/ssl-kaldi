@@ -41,11 +41,10 @@ RUN sed -i '/--no-text"/a [ ! -f $srcdir/wav.scp ] && validate_opts="$validate_o
     /opt/kaldi/egs/wsj/s5/utils/copy_data_dir.sh
 
 # SSL requirements (pinned lock for reproducible, README-matching results).
-# The lock does not carry the in-repo extractor package, so install it after;
-# shared/compute_ssl_feats.py imports it.
+# Install from the repo root: pip resolves the lock's -e packages/... from the cwd.
 RUN git clone --depth 1 https://github.com/ialmajai/ssl-kaldi.git /opt/ssl-kaldi \
-    && pip3 install --no-cache-dir -r /opt/ssl-kaldi/requirements.lock \
-    && pip3 install --no-cache-dir -e /opt/ssl-kaldi/packages/ssl-kaldi-feats
+    && cd /opt/ssl-kaldi \
+    && pip3 install --no-cache-dir -r requirements.lock
 
 ENV KALDI_ROOT=/opt/kaldi
 WORKDIR /opt/ssl-kaldi
