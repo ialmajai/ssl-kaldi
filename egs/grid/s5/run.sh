@@ -281,7 +281,8 @@ if [ $stage -le 15 ] && [ $stop_stage -ge 15 ]; then
   steps/nnet3/decode.sh --acwt 1.0 --post-decode-acwt 10.0 --nj $njtest --cmd "$decode_cmd" \
     $chain/graph ${data_fmllr}/lomb$data_affix $chain/decode_lombard || exit 1;
   for d in $gmm/decode_lombard $chain/decode_lombard; do
-    echo "$d: $(local/score_lombard_split.sh $d data/lang/words.txt data/lomb_raw)"
+    split=$(local/score_lombard_split.sh $d data/lang/words.txt data/lomb_raw)
+    echo "$d: $split"
   done
 fi
 
