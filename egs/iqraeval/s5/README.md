@@ -135,6 +135,8 @@ Comparison with MFCCs, and with the challenge baseline:
 
 Frozen mHuBERT features halve the phone error rate of MFCCs at every GMM stage,
 and the chain model reaches 11.27 against the challenge baseline's 16.42.
+The SSL GMM columns come from the layer sweep. `RESULTS` lists a separate full run
+(26.98 / 20.53 / 18.77); reruns of the GMM ladder differ by up to 0.5.
 
 ![Sample phone alignment for one of the decoded dev utterances](images/alignment.png)
 
