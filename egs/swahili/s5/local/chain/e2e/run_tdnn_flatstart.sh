@@ -34,6 +34,7 @@ frame_subsampling_factor=2
 input_style=renorm-linear
 num_tdnnf_layers=10  # tdnnf2..tdnnf(1+N); fixed 1,1,1,0 stride prefix then 2s;
                      # pass 12 to reproduce the published 1a baseline stack
+treedir=exp/chain/e2e_tree  # trivial tree; override for a train set with other utt ids
 
 # End configuration section.
 echo "$0 $@"  # Print the command line for logging
@@ -41,6 +42,11 @@ echo "$0 $@"  # Print the command line for logging
 . ./cmd.sh
 . ./path.sh
 . ./utils/parse_options.sh
+
+case $input_style in
+  renorm-linear|relu-batchnorm) ;;
+  *) echo "$0: --input-style must be renorm-linear or relu-batchnorm, got '$input_style'"; exit 1 ;;
+esac
 
 if ! cuda-compiled; then
   cat <<EOF && exit 1
@@ -51,7 +57,6 @@ EOF
 fi
 
 lang=data/lang_e2e
-treedir=exp/chain/e2e_tree  # it's actually just a trivial tree (no tree building)
 dir=exp/chain/e2e_tdnnf_${affix}
 
 if [ $stage -le 0 ]; then
@@ -133,8 +138,8 @@ if [ $stage -le 3 ]; then
   if [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; then
     compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
     if [ "$compute_mode" != "Exclusive_Process" ]; then
-      echo "num_jobs_final>1 needs GPU compute mode Exclusive_Process (run: sudo nvidia-smi -c 3),"
-      echo "or set --num-jobs-final 1 to train with a single GPU job in Default mode."
+      echo "$0: more than one training job needs GPU compute mode Exclusive_Process"
+      echo "$0: run 'sudo nvidia-smi -c 3', or pass --num-jobs-initial 1 --num-jobs-final 1"
       exit 1
     fi
   fi

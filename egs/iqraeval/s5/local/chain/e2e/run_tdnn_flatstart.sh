@@ -19,6 +19,7 @@ dropout_schedule='0,0@0.20,0.5@0.50,0'
 num_epochs=5
 num_jobs_initial=2
 num_jobs_final=5
+treedir=exp/chain/e2e_tree  # trivial tree; override for a train set with other utt ids
 #Suggested:
 minibatch_size=150=256,128/200=128,64
 common_egs_dir=
@@ -45,7 +46,6 @@ EOF
 fi
 
 lang=data/lang_e2e
-treedir=exp/chain/e2e_tree  # it's actually just a trivial tree (no tree building)
 dir=exp/chain/e2e_tdnnf_${affix}
 
 if [ $stage -le 0 ]; then
@@ -110,6 +110,13 @@ EOF
 fi
 
 if [ $stage -le 3 ]; then
+  compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
+  if { [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; } && [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "$0: more than one training job needs GPU compute mode Exclusive_Process"
+    echo "$0: run 'sudo nvidia-smi -c 3', or pass --num-jobs-initial 1 --num-jobs-final 1"
+    exit 1
+  fi
+
   steps/nnet3/chain/e2e/train_e2e.py --stage $train_stage \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "$cmvn_opts" \

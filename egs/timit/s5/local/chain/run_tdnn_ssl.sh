@@ -46,6 +46,11 @@ echo "$0 $@"  # Print the command line for logging
 . ./path.sh
 . ./utils/parse_options.sh
 
+case $input_style in
+  renorm-linear|relu-batchnorm) ;;
+  *) echo "$0: --input-style must be renorm-linear or relu-batchnorm, got '$input_style'"; exit 1 ;;
+esac
+
 if ! cuda-compiled; then
   cat <<EOF && exit 1
 This script is intended to be used with GPUs but you have not compiled Kaldi with CUDA
@@ -160,6 +165,13 @@ EOF
 fi
 
 if [ $stage -le 4 ]; then
+  compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
+  if { [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; } && [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "$0: more than one training job needs GPU compute mode Exclusive_Process"
+    echo "$0: run 'sudo nvidia-smi -c 3', or pass --num-jobs-initial 1 --num-jobs-final 1"
+    exit 1
+  fi
+
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
     --feat.cmvn-opts "--norm-means=false --norm-vars=false" \

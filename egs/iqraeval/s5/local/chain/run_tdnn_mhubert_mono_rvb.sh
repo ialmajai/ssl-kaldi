@@ -24,6 +24,8 @@ common_egs_dir=
 xent_regularize=0.1
 srand=0
 remove_egs=true
+num_jobs_initial=2
+num_jobs_final=5
 reporting_email=
 
 echo "$0 $@"  # Print command line
@@ -172,6 +174,13 @@ EOF
 fi
 
 if [ $stage -le 4 ]; then
+  compute_mode=$(command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=compute_mode --format=csv,noheader | head -n1 || true)
+  if { [ "$num_jobs_final" -gt 1 ] || [ "$num_jobs_initial" -gt 1 ]; } && [ "$compute_mode" != "Exclusive_Process" ]; then
+    echo "$0: more than one training job needs GPU compute mode Exclusive_Process"
+    echo "$0: run 'sudo nvidia-smi -c 3', or pass --num-jobs-initial 1 --num-jobs-final 1"
+    exit 1
+  fi
+
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
     --feat.cmvn-opts "--norm-means=false --norm-vars=false" \
@@ -185,8 +194,8 @@ if [ $stage -le 4 ]; then
     --trainer.max-param-change=2.0 \
     --trainer.num-epochs=5 \
     --trainer.frames-per-iter=1000000 \
-    --trainer.optimization.num-jobs-initial=2 \
-    --trainer.optimization.num-jobs-final=5 \
+    --trainer.optimization.num-jobs-initial=$num_jobs_initial \
+    --trainer.optimization.num-jobs-final=$num_jobs_final \
     --trainer.optimization.initial-effective-lrate=0.005 \
     --trainer.optimization.final-effective-lrate=0.0005 \
     --trainer.num-chunk-per-minibatch=256,128,64 \
