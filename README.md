@@ -7,7 +7,21 @@
 [![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-This repository contains recipes and tools for integrating self-supervised learning (SSL) features, such as HuBERT, mHuBERT, and AV-HuBERT, into Kaldi ASR systems. It bridges modern SSL models with Kaldi's robust pipelines, enabling efficient feature extraction, dimensionality reduction, and end-to-end training for low-resource and standard datasets. Pretrained models can be used frozen or adapted to the task before extraction.
+Kaldi recipes that replace MFCCs with self-supervised (SSL) encoder features such as HuBERT, mHuBERT, MMS and AV-HuBERT. Shared scripts extract the features, reduce them with PCA for the GMM stages, and feed them to Kaldi's GMM-HMM and chain (TDNN-F) training. Pretrained models can be used frozen or adapted to the task before extraction.
+
+## Quick Start
+
+```
+git clone https://github.com/ialmajai/ssl-kaldi.git
+cd ssl-kaldi
+conda create -n ssl-kaldi python=3.11 -y
+conda activate ssl-kaldi
+pip install -r requirements.txt
+cd egs/mini_librispeech/s5
+./run.sh --stop-stage 12      # needs a Kaldi build; see Getting Started
+```
+
+This downloads Mini LibriSpeech, extracts MMS-300m layer 14 features and trains the GMM ladder. The [recipe README](egs/mini_librispeech/s5/README.md) covers the chain stage.
 
 <p align="center">
   <img src="egs/grid/s5/demo/tracking-demo.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
@@ -15,12 +29,12 @@ This repository contains recipes and tools for integrating self-supervised learn
   <em>Lip-region tracking from the <a href="egs/grid/s5/README.md">GRID lipreading recipe</a> (AV-HuBERT visual features).</em>
 </p>
 
-## Why ssl-kaldi?
+## Design
 
 - **Frozen or adapted encoders.** Any pretrained or fine-tuned SSL checkpoint serves as the feature extractor. Frozen models need no training loop; LoRA or full fine-tuning plug in the same way.
 - **Straight into Kaldi.** Features are written as standard `ark/scp`, so Kaldi's hybrid and chain (TDNN-F) pipelines work unchanged.
 - **One toolkit, audio *and* video.** Shared extraction, PCA, and upsampling blocks drive HuBERT, mHuBERT, AfriHuBERT, and AV-HuBERT alike.
-- **Low-resource friendly.** Recipes span English, Arabic, Swahili, and visual speech, with strong results on small datasets.
+- **Small datasets.** Recipes span English, Arabic, Swahili and visual speech; mini_librispeech trains on 5 hours of audio.
 
 ## Pipeline Overview
 
@@ -76,22 +90,6 @@ pip install -r requirements.txt        # or: pip install -r requirements.lock  (
 ```
 
 Some recipes have additional requirements; see the per-recipe README. In particular, the [GRID lipreading recipe](egs/grid/s5/README.md) also needs AV-HuBERT, fairseq, and dlib (see its own [`requirements.txt`](egs/grid/s5/requirements.txt)).
-
-### Run your first recipe
-
-[Mini LibriSpeech](egs/mini_librispeech/s5/README.md) is the lightest end-to-end
-path: one command downloads the corpus and language model, extracts SSL
-features, and trains through to a decoded WER:
-
-```
-conda activate ssl-kaldi
-cd egs/mini_librispeech/s5
-./run.sh
-```
-
-Pick the SSL model and layer by editing `ssl_model` / `encoder_layer` at the top
-of `run.sh`. See the [recipe README](egs/mini_librispeech/s5/README.md) for the
-full model/result matrix.
 
 ## Contributing
 
