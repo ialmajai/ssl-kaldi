@@ -56,7 +56,7 @@ if [ $stage -le 13 ]; then
   if [ ! -f $pca_dir/$pca_model ]; then
     echo "$0: expected $pca_dir/$pca_model from run.sh stage 4" && exit 1
   fi
-  for part in train_clean_5_sp; do
+  for part in ${train_set}_sp; do
     echo "preparing pca features"    
     utils/copy_data_dir.sh data/${part}_raw data/${part}_pca
     shared/make_pca_features.sh --cmd "$decode_cmd"  --nj 15  --pca-model $pca_dir/$pca_model \

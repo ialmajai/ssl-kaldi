@@ -204,6 +204,7 @@ if [ $stage -le 19 ]; then
     --chain.alignment-subsampling-factor ${frame_subsampling_factor} \
     --egs.chunk-width=$chunk_width \
     --egs.dir="$common_egs_dir" \
+    --egs.stage=$get_egs_stage \
     --egs.opts="--frames-overlap-per-eg 0  --online-cmvn $online_cmvn" \
     --cleanup.remove-egs=$remove_egs \
     --use-gpu=wait \
