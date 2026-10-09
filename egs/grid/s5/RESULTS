@@ -1,4 +1,4 @@
-# base avhubert model, layers 9, dimension 678 
+# base avhubert model, layers 9, dimension 768
 ## 25fps features
 %WER 7.15 [ 1709 / 23904, 0 ins, 0 del, 1709 sub ] exp/chain/e2e_tdnnf_1a/decode/wer_10_0.0
 %WER 13.78 [ 3294 / 23904, 0 ins, 10 del, 3284 sub ] exp/tri3b/decode/wer_45_0.0

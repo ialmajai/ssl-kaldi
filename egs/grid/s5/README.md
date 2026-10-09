@@ -2,7 +2,7 @@
 
 Visual speech recognition (lipreading) on the [GRID corpus](https://spandh.dcs.shef.ac.uk/gridcorpus)
 using frozen [AV-HuBERT](https://github.com/facebookresearch/av_hubert) visual features in Kaldi
-GMM-HMM pipelines.
+GMM-HMM and chain pipelines.
 
 ## AV-HuBERT Setup
 
@@ -33,22 +33,18 @@ effortful, clearer speech -- but the size of that gap depends heavily on speaker
 
 | System | base, layer 4 (in-domain → Lombard) | large, layer 13 (in-domain → Lombard) |
 | ------ | ------------------------------------ | --------------------------------------- |
-| GMM-SAT               | 7.30% → 5.39% | 6.03% → **4.73%** |
+| GMM-SAT               | 7.30% → 5.39% | 6.03% → 4.73% |
+| TDNN-F chain on fMLLR features | 6.72% → 5.32% | 5.83% → **4.66%** |
 | Flat-start e2e chain, renorm + no-relu | 7.51% → 7.16% | 6.43% → 5.41% |
 | Flat-start e2e chain, + full CMVN | 7.11% → 7.35% | 6.41% → 5.76% |
 
-(TDNN-F chain Lombard numbers not yet measured.)
-
 The flat-start e2e chain barely benefits from Lombard's clearer speech (base-l4: only 0.35% abs without
-CMVN), while the GMM-SAT system, which estimates a per-speaker fMLLR transform, gains roughly 1.3% abs.
+CMVN). The two systems that use a per-speaker fMLLR transform, GMM-SAT and the TDNN-F chain built on
+it, gain 1.2-1.9% abs.
 
-**Full CMVN trades in-domain accuracy for OOD robustness, consistently, at both encoder sizes**: it
-improves the in-domain e2e result but makes the *same* model worse on Lombard, reversing which e2e
-variant is best depending on whether the target domain matches training. Not just noise -- the sign
-flips the same way for both base-l4 and large-L13. Since full CMVN normalizes mean and variance
-per-utterance rather than per-corpus, this isn't ordinary train/test feature mismatch; more likely the
-network leans on some GRID-specific artifact of the normalized per-utterance distribution that doesn't
-hold under Lombard's different loudness/effort profile.
+Full CMVN gives the e2e chain a small in-domain gain and a small Lombard loss, at both encoder sizes.
+Both effects are within run-to-run noise: retraining the base-l4 CMVN chain moves its in-domain WER by
+about 0.4 abs (RESULTS, 2026-10 rows).
 
 ## More Results (WER)
 
@@ -78,11 +74,10 @@ Two chain architectures were tried on top of the layer-sweep features:
 | Chain architecture | base, layer 4 | large, layer 13 |
 | ------------------- | ------------- | ---------------- |
 | Flat-start e2e (raw features, renorm + no-relu input layer + full CMVN) | 7.11% | 6.41% |
-| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `run_tdnn_fmllr_tdnnf.sh`) | **6.72%** | **5.83%** |
+| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `local/chain/run_tdnn_fmllr_tdnnf.sh`) | **6.72%** | **5.83%** |
 
-Adding full CMVN to the renorm+no-relu e2e chain helps base-layer-4 substantially (7.51% → 7.11%) but
-barely moves large-layer-13 (6.43% → 6.41%) -- the larger encoder's deeper features may already be
-better-normalized by the renorm-component alone, leaving less for CMVN to correct.
+Adding full CMVN to the renorm+no-relu e2e chain moves base-layer-4 from 7.51% to 7.11% and
+large-layer-13 from 6.43% to 6.41%. The base gain is about the size of run-to-run noise.
 
 The fMLLR-feature TDNN-F chain beats both the flat-start e2e chain and the GMM-SAT system it is
 built on, for both encoder sizes -- the large-layer-13 result (5.83%) is the best result in this
@@ -110,8 +105,11 @@ at both edges; layer 13 is best, beating the previously-used layer 12 by 0.11 ab
 
 ### Interactive Lipreading Demo
 
-Runs this recipe's best base-model system end to end on your own clip: base AV-HuBERT (layer 4)
--> PCA-30 -> Kaldi GMM-SAT (per-utterance fMLLR transform) -> fMLLR TDNN-F chain.
+Runs a fine-tuned variant of this recipe end to end on your own clip: base AV-HuBERT with a rank-32
+LoRA adapter (`input/avhubert_base_ctc_lora.pt`, layer 10) -> flat-start e2e TDNN-F chain trained on
+clean plus one augmented copy (`run_demo_base_lor10_aug2x.sh`). It scores 6.33% WER on the
+unseen-speaker test set and 5.42% on the Lombard eval speakers. Word confidences fuse lattice MBR
+with a TruCLeS confidence model (`run_demo_base_lor10_conf.sh`).
 
 ```
 # CLI -- print the recognised text for one video
