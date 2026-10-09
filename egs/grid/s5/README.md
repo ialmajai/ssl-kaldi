@@ -27,7 +27,15 @@ Then run the recipe. The 5.83% system uses large AV-HuBERT, layer 13:
 
 ```
 ./run.sh --stage -1 --model-size large   # downloads, features, GMM-SAT, fMLLR TDNN-F chain
-./run.sh --stage 14 --model-size large   # Lombard decode; unzip lombardgrid_front.zip into lombard-grid/ first
+```
+
+For the Lombard GRID results, fetch the front-view videos and decode them:
+
+```
+mkdir -p lombard-grid
+wget -O lombard-grid/lombardgrid_front.zip "https://zenodo.org/records/3736465/files/lombardgrid_front.zip?download=1"
+unzip -q lombard-grid/lombardgrid_front.zip -d lombard-grid   # -> lombard-grid/lombardgrid/front
+./run.sh --stage 14 --model-size large
 ```
 
 ## Unseen-speaker performance
@@ -38,7 +46,7 @@ Then run the recipe. The 5.83% system uses large AV-HuBERT, layer 13:
 | SSL-Kaldi GMM-HMM (SAT) | unseen speakers | Fixed GRID grammar | None                                | 6.03% |
 | SSL-Kaldi TDNN-F chain (fMLLR) | unseen speakers | Fixed GRID grammar | None                          | **5.83%** |
 
-On [Lombard GRID](https://spandh.dcs.shef.ac.uk/gridcorpus) (out-of-domain, unseen during training), every
+On [Lombard GRID](https://spandh.dcs.shef.ac.uk/avlombard/) (out-of-domain, unseen during training), every
 system scores better than its own in-domain result, consistent with the Lombard effect producing more
 effortful, clearer speech -- but the size of that gap depends heavily on speaker adaptation:
 
@@ -136,7 +144,7 @@ single frontal face.
 
 ## Citation
 
-If you use this recipe, please cite **ssl-kaldi**, [AV-HuBERT](https://github.com/facebookresearch/av_hubert), and the [GRID corpus](https://spandh.dcs.shef.ac.uk/gridcorpus).
+If you use this recipe, please cite **ssl-kaldi**, [AV-HuBERT](https://github.com/facebookresearch/av_hubert), the [GRID corpus](https://spandh.dcs.shef.ac.uk/gridcorpus) and, for the Lombard results, the [Lombard GRID corpus](https://spandh.dcs.shef.ac.uk/avlombard/).
 
 ```
 @misc{ssl_kaldi,
@@ -152,6 +160,16 @@ If you use this recipe, please cite **ssl-kaldi**, [AV-HuBERT](https://github.co
   title   = {Learning Audio-Visual Speech Representation by Masked Multimodal Cluster Prediction},
   journal = {arXiv preprint arXiv:2201.02184},
   year    = {2022}
+}
+
+@article{alghamdi2018lombard,
+  title   = {A corpus of audio-visual {Lombard} speech with frontal and profile views},
+  author  = {Alghamdi, Najwa and Maddock, Steve and Marxer, Ricard and Barker, Jon and Brown, Guy J.},
+  journal = {The Journal of the Acoustical Society of America},
+  volume  = {143},
+  number  = {6},
+  pages   = {EL523--EL529},
+  year    = {2018}
 }
 
 @article{cooke2006audio,
