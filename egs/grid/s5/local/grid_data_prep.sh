@@ -5,7 +5,7 @@
 
 
 if [ $# != 1 ]; then
-  echo "Usage: local/data_prep.sh /path/to/dataset "
+  echo "Usage: local/grid_data_prep.sh /path/to/dataset "
   exit 1; 
 fi 
 
