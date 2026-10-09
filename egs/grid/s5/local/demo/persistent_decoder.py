@@ -251,8 +251,11 @@ class PersistentE2EDecoder:
         decode_dir.mkdir(parents=True, exist_ok=True)
         with self._lock:
             ark_path = self.ark_path
+        # Apply decode.sh's post-decode scale, so apply_calibration.sh's
+        # --inv-acoustic-scale=lmwt sees the lattices it was trained on.
         subprocess.run(
-            f"gzip -c {ark_path} > {decode_dir}/lat.1.gz",
+            f"{LATTICE_SCALE} --acoustic-scale={POST_DECODE_ACWT} ark:{ark_path} ark:- 2>/dev/null"
+            f" | gzip -c > {decode_dir}/lat.1.gz",
             shell=True, check=True,
         )
         (decode_dir / "num_jobs").write_text("1\n")
