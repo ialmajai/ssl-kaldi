@@ -130,7 +130,7 @@ if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
   local/chain/run_common.sh --stage 0 --gmm tri2 --ssl-model $ssl_model \
 	  --layer $encoder_layer --pca-dim $pca_dim --num-data-reps 1
 
-  local/chain/run_tdnn_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
+  local/chain/run_tdnn_mhubert_mono_rvb.sh --stage 0 --gmm tri2 --num-data-reps 1
 fi
 
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then

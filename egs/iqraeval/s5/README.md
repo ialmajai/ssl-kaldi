@@ -82,7 +82,7 @@ Stages:
 | 3 | mono, on a 5 k-utterance subset |
 | 4 | tri1 (Δ+ΔΔ) |
 | 5 | tri2 (LDA+MLLT) |
-| 6 | Speed perturbation, tri2 alignments and reverberation (`local/chain/run_common.sh`), then the chain TDNN-F (`local/chain/run_tdnn_mono_rvb.sh`) |
+| 6 | Speed perturbation, tri2 alignments and reverberation (`local/chain/run_common.sh`), then the chain TDNN-F (`local/chain/run_tdnn_mhubert_mono_rvb.sh`) |
 
 There is no SAT/fMLLR stage. fMLLR measures as a no-op on SSL features across
 this repo, so the ladder stops at tri2 and the chain model takes its alignments
