@@ -58,3 +58,6 @@ transformers==4.46.3
 triton==3.0.0
 typing_extensions==4.13.2
 urllib3==2.2.3
+
+# Install the in-repo extractor package (not on PyPI), as requirements.txt does.
+-e packages/ssl-kaldi-feats

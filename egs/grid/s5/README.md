@@ -106,7 +106,7 @@ at both edges; layer 13 is best, beating the previously-used layer 12 by 0.11 ab
 
 ### Tracking & Word Alignment Demo
 
-[![Watch Demo](https://github.com/ialmajai/ssl-kaldi/blob/main/egs/grid/s5/demo/thumbnail.png)](https://github.com/ialmajai/ssl-kaldi/blob/main/egs/grid/s5/demo/tracking-demo.gif)
+[![Watch Demo](demo/thumbnail.png)](demo/tracking-demo.gif)
 
 ### Interactive Lipreading Demo
 

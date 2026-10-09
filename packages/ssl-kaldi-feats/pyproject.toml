@@ -46,7 +46,7 @@ dev = ["pytest>=7"]
 
 [project.urls]
 Homepage = "https://github.com/ialmajai/ssl-kaldi"
-Source = "https://github.com/ialmajai/ssl-kaldi/tree/main/packages/ssl-kaldi-feats"
+Source = "https://github.com/ialmajai/ssl-kaldi/tree/master/packages/ssl-kaldi-feats"
 
 [project.scripts]
 ssl-kaldi-feats = "ssl_kaldi_feats.cli:main"
