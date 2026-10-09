@@ -68,7 +68,7 @@ The shared building blocks live in [`shared/`](shared/) (SSL extraction, PCA, in
 
 ### Prerequisites
 
-A working [Kaldi](https://github.com/kaldi-asr/kaldi) installation is required. Either follow the official Kaldi setup or use the provided Docker images:
+A working [Kaldi](https://github.com/kaldi-asr/kaldi) installation is required. Outside Docker, point the recipes at it with `export KALDI_ROOT=/path/to/kaldi`. Either follow the official Kaldi setup or use the provided Docker images:
 
 ```
 # CUDA + Kaldi + SSL feature-extraction dependencies
