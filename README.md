@@ -7,7 +7,7 @@
 [![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-Kaldi recipes that replace MFCCs with self-supervised (SSL) encoder features such as HuBERT, mHuBERT, MMS and AV-HuBERT. Shared scripts extract the features, reduce them with PCA for the GMM stages, and feed them to Kaldi's GMM-HMM and chain (TDNN-F) training. Pretrained models can be used frozen or adapted to the task before extraction.
+Kaldi recipes that replace MFCCs with self-supervised (SSL) encoder features such as HuBERT, mHuBERT, MMS and AV-HuBERT. Shared scripts extract the features, reduce them with PCA for the GMM stages, and feed them to Kaldi's GMM-HMM and chain (TDNN-F) training. You can use each pretrained model frozen, or adapt it to the task before extraction.
 
 ## Quick Start
 
@@ -31,7 +31,7 @@ This downloads Mini LibriSpeech, extracts MMS-300m layer 14 features and trains 
 
 ## Design
 
-- **Frozen or adapted encoders.** Any pretrained or fine-tuned SSL checkpoint serves as the feature extractor. Frozen models need no training loop; LoRA or full fine-tuning plug in the same way.
+- **Frozen or adapted encoders.** The extractor loads a pretrained or a fine-tuned SSL checkpoint the same way. A frozen model needs no training; a LoRA or full fine-tune checkpoint comes from your own training run.
 - **Straight into Kaldi.** Features are written as standard `ark/scp`, so Kaldi's hybrid and chain (TDNN-F) pipelines work unchanged.
 - **One toolkit, audio *and* video.** Shared extraction, PCA, and upsampling blocks drive HuBERT, mHuBERT, AfriHuBERT, and AV-HuBERT alike.
 - **Small datasets.** Recipes span English, Arabic, Swahili and visual speech; mini_librispeech trains on 5 hours of audio.

@@ -15,7 +15,7 @@ sudo nvidia-smi -c 3                             # chain training wants exclusiv
 ./run.sh --timit /path/to/TIMIT --stage 8        # chain TDNN-F
 ```
 
-Needs IRSTLM and sph2pipe in the Kaldi build (see [Requirements](#requirements)).
+The recipe needs IRSTLM and sph2pipe in the Kaldi build (see [Requirements](#requirements)).
 
 ## Feature layout
 

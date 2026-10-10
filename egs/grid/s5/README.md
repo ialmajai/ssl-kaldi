@@ -6,8 +6,8 @@ GMM-HMM and chain pipelines.
 
 ## Quick Start
 
-Install AV-HuBERT and dlib into the repo environment. AV-HuBERT's fairseq is tested on
-Python 3.8 and 3.10 (the Docker image), not 3.11, so create the environment with
+Install AV-HuBERT and dlib into the repo environment. We have run AV-HuBERT's fairseq on
+Python 3.8 and 3.10 (the Docker image), never on 3.11, so create the environment with
 `python=3.10` for this recipe.
 
 ```
@@ -126,11 +126,11 @@ at both edges; layer 13 is best, beating the previously-used layer 12 by 0.11 ab
 
 ### Interactive Lipreading Demo
 
-Runs a fine-tuned variant of this recipe end to end on your own clip: base AV-HuBERT with a rank-32
+The demo runs a fine-tuned variant of this recipe on your own clip: base AV-HuBERT with a rank-32
 LoRA adapter (`input/avhubert_base_ctc_lora.pt`, layer 10) -> flat-start e2e TDNN-F chain trained on
 clean plus one augmented copy (`run_demo_base_lor10_aug2x.sh`). It scores 6.33% WER on the
-unseen-speaker test set and 5.42% on the Lombard eval speakers. Word confidences fuse lattice MBR
-with a TruCLeS confidence model (`run_demo_base_lor10_conf.sh`).
+unseen-speaker test set and 5.42% on the Lombard eval speakers. It scores each word by fusing the
+lattice MBR posterior with a TruCLeS confidence model (`run_demo_base_lor10_conf.sh`).
 
 ```
 # CLI -- print the recognised text for one video
