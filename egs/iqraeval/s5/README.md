@@ -1,10 +1,9 @@
 # IqraEval
 
 Arabic phone recognition on the [IqraEval Challenge](https://huggingface.co/IqraEval)
-data, using self-supervised speech representations in place of MFCCs. The
-pipeline is a standard Kaldi GMM ladder followed by an LF-MMI chain model, with
-the feature stage swapped for frozen [mHuBERT-147](https://huggingface.co/utter-project/mHuBERT-147)
-embeddings.
+data. The recipe runs a Kaldi GMM ladder and then an LF-MMI chain model on frozen
+[mHuBERT-147](https://huggingface.co/utter-project/mHuBERT-147) embeddings instead
+of MFCCs.
 
 ## Quick Start
 
@@ -26,8 +25,8 @@ sudo nvidia-smi -c 3      # chain training runs 2-5 GPU jobs
 | `data/<set>_raw` | mHuBERT encoder output, 768-d, 20 ms frame shift | chain TDNN-F |
 | `data/<set>_pca` | PCA-reduced SSL features (30-d by default) | mono / tri1 / tri2 |
 
-The SSL model's weights are never updated; `shared/make_ssl.sh` runs it as a
-fixed feature extractor and writes ordinary Kaldi `ark/scp` archives.
+`shared/make_ssl.sh` runs the SSL model as a frozen feature extractor and writes
+ordinary Kaldi `ark/scp` archives.
 
 This is the largest recipe in the repo: 71,376 training utterances and 2.34 M
 words of text, against 3,696 utterances for timit.
@@ -39,8 +38,7 @@ words of text, against 3,696 utterances for timit.
 - [KenLM](https://github.com/kpu/kenlm), which builds the phone bigram and
   trigram LMs used for decoding.
 - The repo's Python environment (see the [top-level README](../../../README.md)).
-- Room for the simulated RIR package, downloaded automatically at the chain
-  stage.
+- Disk space for the simulated RIR package, which stage 6 downloads.
 
 ### Downloading the data
 
@@ -59,7 +57,7 @@ directory.
 
 ### Building KenLM
 
-Cloning it into the recipe directory needs no further configuration:
+Clone it into the recipe directory and the scripts find it:
 
 ```
 cd egs/iqraeval/s5
@@ -71,9 +69,8 @@ make -j$(nproc)
 ```
 
 `local/iqra_prepare_lms.sh` looks for `bin/lmplz` under `./kenlm/build`, then
-`$KALDI_ROOT/tools/kenlm/build`, and finally falls back to whatever is on
-`PATH` (a conda `kenlm` package works). For a build somewhere else, point
-`KENLM` at its build directory:
+`$KALDI_ROOT/tools/kenlm/build`, then for `lmplz` on `PATH` (a conda `kenlm`
+package works). For a build somewhere else, point `KENLM` at its build directory:
 
 ```
 KENLM=/path/to/kenlm/build ./run.sh
@@ -92,13 +89,12 @@ KENLM=/path/to/kenlm/build ./run.sh
 | 6 | Speed perturbation, tri2 alignments and reverberation (`local/chain/run_common.sh`) |
 | 7 | Chain TDNN-F (`local/chain/run_tdnn_mhubert_mono_rvb.sh`) |
 
-There is no SAT/fMLLR stage. fMLLR measures as a no-op on SSL features across
-this repo, so the ladder stops at tri2 and the chain model takes its alignments
-from there.
+The ladder stops at tri2, with no SAT/fMLLR stage: fMLLR gave no gain on the audio
+SSL features in this repo. The chain model takes its alignments from tri2.
 
 Pick the model and layer with `ssl_model` / `encoder_layer` at the top of
 `run.sh`, or as options. Feature extraction needs the GPU in default compute
-mode (`sudo nvidia-smi -c 0`); stage 1 refuses to start otherwise.
+mode (`sudo nvidia-smi -c 0`), and stage 1 exits if it isn't.
 
 `run-mfcc.sh` reproduces the MFCC baseline in the comparison table below.
 
@@ -107,9 +103,9 @@ mode (`sudo nvidia-smi -c 0`); stage 1 refuses to start otherwise.
 Setup notes:
 
 - 30-dimensional PCA for the HMM-GMM systems, full 768-d features for the chain.
-- SSL features are extracted at 50 fps (100 fps for MFCCs), so the chain model
-  uses `--frame-subsampling-factor 2` rather than the usual 3.
-- A trigram phone LM trained with KenLM is used for decoding.
+- The SSL encoder emits 50 fps (MFCCs run at 100 fps), so the chain model uses
+  `--frame-subsampling-factor 2` instead of the usual 3.
+- Decoding uses a KenLM trigram phone LM.
 - The chain model uses a monophone tree
   (`--context-width=1 --central-position=0`), no i-vectors, and one reverberated
   copy of the training data.
@@ -135,8 +131,8 @@ Comparison with MFCCs, and with the challenge baseline:
 | SSL (9th layer) | **26.59** | **20.48** | **18.82** | **11.27** | 11.88     |
 | IqraEval baseline | -   | -     | -        | 16.42     | -         |
 
-Frozen mHuBERT features halve the phone error rate of MFCCs at every GMM stage,
-and the chain model reaches 11.27 against the challenge baseline's 16.42.
+Frozen mHuBERT features cut the MFCC phone error rate by more than half at each
+GMM stage. The chain model reaches 11.27 against the challenge baseline's 16.42.
 The SSL GMM columns come from the layer sweep. `RESULTS` lists a separate full run
 (26.98 / 20.53 / 18.77); reruns of the GMM ladder differ by up to 0.5.
 
@@ -144,8 +140,8 @@ The SSL GMM columns come from the layer sweep. `RESULTS` lists a separate full r
 
 ## Scoring
 
-`local/score.sh` sweeps LM weights 1 to 35, wider than Kaldi's default 1 to 10,
-because the phone LM wants a high weight here. `local/bwer.sh` prints the best
+`local/score.sh` sweeps LM weights 1 to 35 instead of Kaldi's default 1 to 10,
+since the best phone-LM weights here run high. `local/bwer.sh` prints the best
 WER for every decode directory:
 
 ```
