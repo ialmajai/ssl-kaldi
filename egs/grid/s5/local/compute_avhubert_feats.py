@@ -420,7 +420,7 @@ def detect_landmarks_list(video: str, detector, predictor, detect_every: int = 1
 
 def meanface_tracking(video: str, detector, predictor, am, mean_face,
                       window_margin: int = 12, fallback_landmarker=None,
-                      detect_every: int = 1) -> tuple[np.ndarray, float]:
+                      detect_every: int = 1, cache: bool = True) -> tuple[np.ndarray, float]:
     """Mean-face-aligned mouth ROIs. Returns (T, 88, 88) uint8 grayscale frames and
     fps, or an empty array if no face was ever detected.
 
@@ -431,16 +431,17 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
     later still gets a fresh attempt on a video that previously failed outright.
 
     detect_every: see detect_landmarks_list -- default 1 keeps every
-    training-feature-extraction caller unchanged."""
+    training-feature-extraction caller unchanged. cache=False neither reads nor
+    writes the .mfroi.npz (the demo passes it for user uploads)."""
     # Key non-default crops apart so they never reuse the default cache.
     tag = "" if (window_margin, detect_every) == (12, 1) else f".wm{window_margin}de{detect_every}"
-    cache = os.path.splitext(video)[0] + tag + ".mfroi.npz"
-    if Path(cache).exists():
+    cache_path = os.path.splitext(video)[0] + tag + ".mfroi.npz" if cache else None
+    if cache_path and Path(cache_path).exists():
         try:
-            with np.load(cache) as d:
+            with np.load(cache_path) as d:
                 return d["roi"], float(d["fps"])
         except Exception:
-            logger.warning(f"Rebuilding unreadable ROI cache {cache}")
+            logger.warning(f"Rebuilding unreadable ROI cache {cache_path}")
 
     landmarks, fps = detect_landmarks_list(video, detector, predictor,
                                            detect_every=detect_every,
@@ -457,10 +458,11 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
     for i, patch in enumerate(seq):
         gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY) if patch.ndim == 3 else patch
         out[i] = gray[_CENTER:_CENTER + 88, _CENTER:_CENTER + 88]
-    # Write then rename, so a killed job never leaves a truncated cache.
-    tmp = f"{cache}.{os.getpid()}.tmp.npz"
-    np.savez_compressed(tmp, roi=out, fps=fps)
-    os.replace(tmp, cache)
+    if cache_path:
+        # Write then rename, so a killed job never leaves a truncated cache.
+        tmp = f"{cache_path}.{os.getpid()}.tmp.npz"
+        np.savez_compressed(tmp, roi=out, fps=fps)
+        os.replace(tmp, cache_path)
     return out, fps
 
 

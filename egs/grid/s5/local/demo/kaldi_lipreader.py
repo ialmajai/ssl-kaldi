@@ -361,9 +361,14 @@ class KaldiLipReader:
     def _extract_roi_and_features(self, video_path: str, noise_sigma: float = 0.0,
                                   blur_sigma: float = 0.0):
         """(roi frames (T,88,88) uint8, AV-HuBERT features (T,768) float32)."""
+        # Cache ROIs only for clips outside the temp dir: user uploads and
+        # webcam recordings live there and must not leave mouth crops behind.
+        tmp_root = Path(tempfile.gettempdir()).resolve()
+        user_clip = tmp_root in Path(video_path).resolve().parents
         roi_frames, fps = meanface_tracking(
             video_path, self.detector, self.predictor, self.aligner, self.mean_face,
             fallback_landmarker=self.fallback_landmarker, detect_every=DETECT_EVERY,
+            cache=not user_clip,
         )
         if len(roi_frames) < MIN_FRAMES:
             raise RuntimeError(
