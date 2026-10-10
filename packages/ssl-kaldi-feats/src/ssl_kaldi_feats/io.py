@@ -77,14 +77,23 @@ def read_audio(path):
 
 
 def _decode_wav_bytes(raw):
+    """Decode piped wav bytes. Only 16-bit PCM is read as int16; anything else
+    (24/32-bit, float) goes through soundfile, as read_audio does for files."""
     import io as _io
 
     with wave.open(_io.BytesIO(raw), "rb") as w:
-        sr = w.getframerate()
-        data = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
-        if w.getnchannels() > 1:
-            data = data.reshape(-1, w.getnchannels())
-        return data, sr
+        if w.getsampwidth() == 2:
+            sr = w.getframerate()
+            data = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+            if w.getnchannels() > 1:
+                data = data.reshape(-1, w.getnchannels())
+            return data, sr
+    try:
+        import soundfile as sf
+    except ImportError as e:
+        raise RuntimeError("piped audio is not 16-bit PCM: install soundfile to read it") from e
+    data, sr = sf.read(_io.BytesIO(raw), dtype="float32", always_2d=False)
+    return data, sr
 
 
 def write_side_files(out_dir, utt2num_frames, utt2dur, frame_shift):
