@@ -7,8 +7,8 @@ GMM-HMM and chain pipelines.
 ## Quick Start
 
 Install AV-HuBERT and dlib into the repo environment. We have run AV-HuBERT's fairseq on
-Python 3.8 and 3.10 (the Docker image), never on 3.11, so create the environment with
-`python=3.10` for this recipe.
+Python 3.8 and 3.10 (the Docker image) but not on 3.11, so create the environment with
+`python=3.10`.
 
 ```
 conda activate ssl-kaldi
@@ -48,9 +48,9 @@ unzip -q lombard-grid/lombardgrid_front.zip -d lombard-grid   # -> lombard-grid/
 | SSL-Kaldi GMM-HMM (SAT) | unseen speakers | Fixed GRID grammar | None                                | 6.03% |
 | SSL-Kaldi TDNN-F chain (fMLLR) | unseen speakers | Fixed GRID grammar | None                          | **5.83%** |
 
-On [Lombard GRID](https://spandh.dcs.shef.ac.uk/avlombard/) (out-of-domain, unseen during training), every
-system scores better than its own in-domain result, consistent with the Lombard effect producing more
-effortful, clearer speech -- but the size of that gap depends heavily on speaker adaptation:
+On [Lombard GRID](https://spandh.dcs.shef.ac.uk/avlombard/) (out-of-domain, unseen in training), all
+but one system score better than in-domain. Lombard speakers talk with more effort and clearer
+articulation. Speaker adaptation decides how much of that gain a system keeps:
 
 | System | base, layer 4 (in-domain → Lombard) | large, layer 13 (in-domain → Lombard) |
 | ------ | ------------------------------------ | --------------------------------------- |
@@ -59,38 +59,36 @@ effortful, clearer speech -- but the size of that gap depends heavily on speaker
 | Flat-start e2e chain, renorm + no-relu | 7.51% → 7.16% | 6.43% → 5.41% |
 | Flat-start e2e chain, + full CMVN | 7.11% → 7.35% | 6.41% → 5.76% |
 
-The flat-start e2e chain barely benefits from Lombard's clearer speech (base-l4: only 0.35% abs without
-CMVN). The two systems that use a per-speaker fMLLR transform, GMM-SAT and the TDNN-F chain built on
-it, gain 1.2-1.9% abs.
+Without CMVN, the flat-start e2e chain gains 0.35 abs on base L4 and 1.02 on large L13. GMM-SAT and
+the TDNN-F chain built on it apply a per-speaker fMLLR transform and gain 1.2-1.9 abs.
 
-Full CMVN gives the e2e chain a small in-domain gain and a small Lombard loss, at both encoder sizes.
-Both effects are within run-to-run noise: retraining the base-l4 CMVN chain moves its in-domain WER by
+Full CMVN gives the e2e chain a small in-domain gain and a small Lombard loss at both encoder sizes.
+Both effects sit within run-to-run noise: retraining the base-l4 CMVN chain moved its in-domain WER by
 about 0.4 abs (RESULTS, 2026-10 rows).
 
 ## More Results (WER)
 
 - 30-dimensional PCA for the HMM-GMM systems.
-- Features upsampled to 50 fps give better results.
-- Mean-face-aligned features (see below), not the earlier centroid crop.
-- A layer sweep (below) shows layer 4 is best for base AV-HuBERT (not layer 9) and layer 13
-  is best for large AV-HuBERT (not layer 12) -- both re-validated with a full mono→SAT ladder.
-- Speaker adaptation (MLLT+SAT) outperforms TDNN systems trained on raw features. The power of such
-  adaptation for visual speech features has already been demonstrated in this
-  [paper](https://ueaeprints.uea.ac.uk/id/eprint/63479/1/Accepted_manuscript.pdf).
+- Features upsampled from 25 to 50 fps.
+- Mouth crops aligned to a mean face instead of the earlier centroid crop.
+- Layer 4 for base AV-HuBERT and layer 13 for large, picked by a layer sweep over the old
+  defaults of 9 and 12. A full mono→SAT ladder confirms both.
+- Speaker adaptation (LDA+MLLT+SAT) beats TDNN systems trained on raw features, as this
+  [paper](https://ueaeprints.uea.ac.uk/id/eprint/63479/1/Accepted_manuscript.pdf) found for visual
+  speech features.
 
 | AV-HuBERT           | Monophone | Triphone (Δ+ΔΔ) | Triphone + LDA+MLLT | Triphone + LDA+MLLT+SAT |
 | -------------------- | --------- | --------------- | ------------------- | ----------------------- |
 | base, layer 4 (50fps)  | 19.00     | 9.81            | 8.90                 | 7.30 |
 | large, layer 13 (50fps) | 19.31     | 8.55            | 7.08                 | **6.03** |
 
-25fps rows are omitted here: they were only ever measured at the old default layers
-(9 base / 12 large) under the earlier centroid crop and are not comparable to the numbers
-above. Standard Kaldi HMM topologies handle 40ms frames poorly, which is why every row
-here uses 50fps.
+We left out 25 fps rows. We measured them at the old default layers (9 base, 12 large) with the
+earlier centroid crop, so they don't compare with the numbers above. Standard Kaldi HMM topologies
+lose accuracy on 40 ms frames, and the table uses 50 fps throughout.
 
 ### Chain results
 
-Two chain architectures were tried on top of the layer-sweep features:
+We trained two chain architectures on these features:
 
 | Chain architecture | base, layer 4 | large, layer 13 |
 | ------------------- | ------------- | ---------------- |
@@ -100,25 +98,8 @@ Two chain architectures were tried on top of the layer-sweep features:
 Adding full CMVN to the renorm+no-relu e2e chain moves base-layer-4 from 7.51% to 7.11% and
 large-layer-13 from 6.43% to 6.41%. The base gain is about the size of run-to-run noise.
 
-The fMLLR-feature TDNN-F chain beats both the flat-start e2e chain and the GMM-SAT system it is
-built on, for both encoder sizes -- the large-layer-13 result (5.83%) is the best result in this
-recipe.
-
-### Base AV-HuBERT layer sweep
-
-WER against encoder layer for base AV-HuBERT (50fps, mean-face-aligned features), at every
-stage of the GMM ladder. Layer 4 is a clear local minimum, beating the previously-used
-layer 9 by 0.73 abs (~9% relative) at the LDA+MLLT+SAT stage.
-
-![Layer sweep: WER vs AV-HuBERT base encoder layer](fig_layer_sweep.png)
-
-### Large AV-HuBERT layer sweep
-
-Same sweep for large AV-HuBERT (50fps, mean-face-aligned features), layers 8-14. The
-minimum is shallow and noisy across 9-13 (spread of only 0.18 abs) with clear degradation
-at both edges; layer 13 is best, beating the previously-used layer 12 by 0.11 abs.
-
-![Layer sweep: WER vs AV-HuBERT large encoder layer](fig_layer_sweep_large.png)
+At both encoder sizes, the TDNN-F chain on fMLLR features beats the flat-start e2e chain and the
+GMM-SAT system under it. Large layer 13 gives the recipe's best WER, 5.83%.
 
 ### Tracking & Word Alignment Demo
 
@@ -128,21 +109,21 @@ at both edges; layer 13 is best, beating the previously-used layer 12 by 0.11 ab
 
 The demo runs a fine-tuned variant of this recipe on your own clip: base AV-HuBERT with a rank-32
 LoRA adapter (`input/avhubert_base_ctc_lora.pt`, layer 10) -> flat-start e2e TDNN-F chain trained on
-clean plus one augmented copy (`run_demo_base_lor10_aug2x.sh`). It scores 6.33% WER on the
-unseen-speaker test set and 5.42% on the Lombard eval speakers. It scores each word by fusing the
+clean plus one augmented copy (`run_demo_base_lor10_aug2x.sh`). It gets 6.33% WER on the
+unseen-speaker test set and 5.42% on the Lombard eval speakers. Each word's confidence fuses the
 lattice MBR posterior with a TruCLeS confidence model (`run_demo_base_lor10_conf.sh`).
 
 ```
-# CLI -- print the recognised text for one video
+# CLI: print the recognised text for one video
 local/demo/demo.py grid-corpus/s1/bbaf2n.mpg
 
-# Gradio web UI -- upload or record a clip, see the mouth ROI + prediction
+# Gradio web UI: upload or record a clip, see the mouth ROI + prediction
 local/demo/demo.py --ui
 ```
 
-Only understands GRID's fixed 6-word grammar (command · colour · preposition · letter · digit ·
-adverb, e.g. "place green with h eight now"); clips must be 2-15s (up to 20s from a webcam) with a
-single frontal face.
+The demo knows GRID's fixed 6-word grammar and nothing else (command · colour · preposition ·
+letter · digit · adverb, e.g. "place green with h eight now"). Clips must run 2-15 s (up to 20 s
+from a webcam) and show one frontal face.
 
 ## Citation
 
