@@ -31,13 +31,14 @@ not assumed from Kaldi documentation):
   utterance N arrives ~0.1-0.2s after writing it, every time, across
   several sequential requests to the same process. Used here as the
   completion signal in place of the (deferred) scp index.
-- CMVN (`apply-cmvn --norm-means=true --norm-vars=true`) for this
-  per-utterance-as-its-own-speaker setup is exactly
-  `(feats - feats.mean(axis=0)) / feats.std(axis=0)` (population
-  variance) -- verified bit-exact (max abs diff ~5e-7, float32 rounding)
-  against a real `compute-cmvn-stats` + `apply-cmvn` run before trusting
-  it. Needed because the persistent process can't run a live shell pipe
-  the way a fresh `steps/nnet3/decode.sh` invocation does.
+- CMVN here is per utterance: `(feats - feats.mean(axis=0)) /
+  feats.std(axis=0)` (population variance), bit-exact against
+  `compute-cmvn-stats` + `apply-cmvn --norm-means=true --norm-vars=true`
+  on a one-utterance speaker. Training and the recipe's scoring use
+  per-speaker CMVN (utt2spk maps to real GRID speakers), which a single
+  clip cannot have. The mismatch costs about 0.2 WER abs, measured with
+  this decoder: 6.50 vs 6.27 on 1,000 GRID test clips, 5.85 vs 5.63 on
+  Lombard. Retraining with per-utterance CMVN would remove it.
 
 What did NOT change: the actual decode flags below are copied verbatim
 from `steps/nnet3/decode.sh` (defaults: beam=15.0, max-active=7000,
