@@ -234,7 +234,9 @@ def _ffprobe_duration(video: str) -> float:
 
 def _duration_error(video: str, max_duration: float = MAX_DURATION_S):
     duration = _video_duration(video)
-    if duration and not (
+    if not duration:
+        return "Could not read this clip's length. Please try another clip (MP4 or WebM)."
+    if not (
         MIN_DURATION_S - DURATION_TOL_S <= duration <= max_duration + DURATION_TOL_S
     ):
         return (
@@ -244,17 +246,20 @@ def _duration_error(video: str, max_duration: float = MAX_DURATION_S):
     return None
 
 
-def _resample_to_target_fps(src: str):
+def _resample_to_target_fps(src: str, max_seconds: float = None):
+    """Re-encode at 25 fps. max_seconds truncates the output whatever the
+    container header claims, which bounds the frames the tracker reads."""
     if shutil.which("ffmpeg") is None:
         return None
     out = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+    cap = ["-t", f"{max_seconds:g}"] if max_seconds else []
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-i", src, "-vf", f"fps={TARGET_FPS:g}",
+            ["ffmpeg", "-y", "-i", src, *cap, "-vf", f"fps={TARGET_FPS:g}",
              "-an", "-c:v", "mpeg4", "-q:v", "2", out],
-            check=True, capture_output=True,
+            check=True, capture_output=True, timeout=120,
         )
-    except (subprocess.CalledProcessError, OSError):
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
         Path(out).unlink(missing_ok=True)
         return None
     return out
@@ -304,12 +309,20 @@ def _frames_to_mp4(frames: np.ndarray, fps: int = 25, scale: int = 3, out_dir=No
     return out
 
 
-def _prepare_clip(video: str, max_duration: float):
+def _prepare_clip(video: str, max_duration: float, source: str = "upload"):
     """Resample to 25fps if needed. Returns the path to process (caller
-    deletes it if different from `video`), or raises ValueError."""
+    deletes it if different from `video`), or raises ValueError.
+
+    Uploads and webcam clips are always re-encoded with a length cap, since
+    their headers are untrusted; bundled examples are used as they are."""
     err = _duration_error(video, max_duration)
     if err:
         raise ValueError(err)
+    if source != "example":
+        capped = _resample_to_target_fps(video, max_seconds=max_duration + DURATION_TOL_S)
+        if capped is None:
+            raise ValueError("Could not read this clip. Please try another clip (MP4 or WebM).")
+        return capped
     fps = _video_fps(video)
     if fps and abs(fps - TARGET_FPS) > 0.1:
         resampled = _resample_to_target_fps(video)
@@ -363,7 +376,7 @@ def launch_ui(reader: KaldiLipReader, example_paths=None):
         print(f"[usage] source={source} backend={backend}", file=sys.stderr, flush=True)
         try:
             max_dur = MAX_DURATION_WEBCAM_S if source == "webcam" else MAX_DURATION_S
-            clip = _prepare_clip(video, max_dur)
+            clip = _prepare_clip(video, max_dur, source)
             ood = ""
             try:
                 if backend == "icefall":
@@ -377,6 +390,12 @@ def launch_ui(reader: KaldiLipReader, example_paths=None):
             yield "", None, None, None, gr.update(), None, str(e)
             return
         except RuntimeError:
+            if backend != "icefall":
+                logger.exception(f"Recognition failed for {video}")
+                yield ("", None, None, None, gr.update(), None,
+                       "Recognition failed. Please try a different clip -- a "
+                       "frontal talking face, whole face visible, 2-15s long.")
+                return
             logger.exception("icefall back-end failed")
             yield ("", None, None, None, gr.update(), None,
                    "The icefall model is unavailable right now. Please try "
@@ -546,9 +565,10 @@ def launch_ui(reader: KaldiLipReader, example_paths=None):
                     'color:var(--color-accent)"></div>'
                 )
                 gr.Markdown(
-                    "🔒 *Your video is processed in memory and never "
-                    "stored. No recording, image, or transcript of what you "
-                    "submit is kept.*",
+                    "🔒 *Your clip and the mouth crops shown here stay in "
+                    "temporary memory-backed storage and are deleted "
+                    "automatically within 30 minutes. Transcripts are never "
+                    "logged.*",
                     elem_classes=["privacy-note"],
                 )
                 gr.Markdown(
