@@ -71,6 +71,16 @@ for n in $(seq $nj); do
   cat $feats_dir/feats_$name.$n.scp || exit 1
 done > $dst_data/feats.scp || exit 1
 
+# run.pl gives copy-feats' status, which is 0 even when interpolate.py died
+# partway, so compare counts rather than trust the exit code.
+n_in=$(wc -l < $scp); n_out=$(wc -l < $dst_data/feats.scp)
+if [ "$n_in" -ne "$n_out" ]; then
+  echo "$0: ERROR: upsampled $n_out of $n_in utterances; see $feats_dir/make_interpolate_${name}.*.log"
+  exit 1
+fi
+# Frame counts copied from the source are now half the real length.
+rm -f $dst_data/utt2num_frames
+
 if [ -f $src_data/frame_shift ]; then
   src_frame_shift=$(cat $src_data/frame_shift)
 else
