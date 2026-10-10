@@ -98,7 +98,8 @@ POST_DECODE_ACWT = 10.0  # applied as a separate lattice-scale step, matching
 ROTATE_AFTER = 200
 
 _COMPLETION_RE = re.compile(r"Log-like per frame for utterance (\S+) is")
-_FAILED_RE = re.compile(r"Did not successfully decode utterance (\S+)")
+# nnet3-latgen-faster's wording; the GMM decoders say "Did not successfully".
+_FAILED_RE = re.compile(r"(?:Failed to decode utterance with id|Did not successfully decode utterance) (\S+)")
 
 
 def default_decode_dir() -> Path:
@@ -175,13 +176,24 @@ class PersistentE2EDecoder:
         proc = self.proc  # capture: self.proc may be replaced by a rotation
         for line in proc.stderr:
             text = line.decode(errors="replace")
-            m = _COMPLETION_RE.search(text) or _FAILED_RE.search(text)
+            failed = _FAILED_RE.search(text)
+            m = failed or _COMPLETION_RE.search(text)
             if m:
                 utt = m.group(1)
                 with self._lock:
                     q = self._pending.pop(utt, None)
                 if q is not None:
-                    q.put(text.strip())
+                    q.put(None if failed else text.strip())
+        # EOF: the process exited. Wake its waiting requests now rather than
+        # let each one sit out its timeout; decode() restarts on the next call.
+        with self._lock:
+            if self.proc is proc:
+                stranded = list(self._pending.values())
+                self._pending.clear()
+            else:
+                stranded = []
+        for q in stranded:
+            q.put(None)
 
     def decode(self, feats: np.ndarray, timeout: float = 20.0) -> str:
         """feats: (T, 768) float32, already CMVN-normalised and upsampled
@@ -227,7 +239,8 @@ class PersistentE2EDecoder:
         self.proc.stdin.flush()
 
         try:
-            q.get(timeout=timeout)
+            if q.get(timeout=timeout) is None:
+                raise RuntimeError(f"persistent decoder failed on {utt_id}")
         except queue.Empty:
             with self._lock:
                 self._pending.pop(utt_id, None)
@@ -255,9 +268,9 @@ class PersistentE2EDecoder:
         # Apply decode.sh's post-decode scale, so apply_calibration.sh's
         # --inv-acoustic-scale=lmwt sees the lattices it was trained on.
         subprocess.run(
-            f"{LATTICE_SCALE} --acoustic-scale={POST_DECODE_ACWT} ark:{ark_path} ark:- 2>/dev/null"
+            f"set -o pipefail; {LATTICE_SCALE} --acoustic-scale={POST_DECODE_ACWT} ark:{ark_path} ark:- 2>/dev/null"
             f" | gzip -c > {decode_dir}/lat.1.gz",
-            shell=True, check=True,
+            shell=True, check=True, executable="/bin/bash",
         )
         (decode_dir / "num_jobs").write_text("1\n")
 
@@ -272,12 +285,13 @@ class PersistentE2EDecoder:
         # user input, but shlex.quote it anyway rather than rely on that.
         quoted_utt = shlex.quote(utt_id)
         cmd = (
+            "set -o pipefail; "
             f"{LATTICE_SCALE} --acoustic-scale={POST_DECODE_ACWT} ark:{ark_path} ark:- 2>/dev/null | "
             f"{LATTICE_TO_CTM_CONF} --acoustic-scale=0.1 --decode-mbr=true ark:- - 2>/dev/null | "
             f"utils/int2sym.pl -f 5 data/lang/words.txt | "
             f"awk -v utt={quoted_utt} '$1==utt {{print $5, $6}}'"
         )
-        out = subprocess.run(cmd, shell=True, cwd=str(RECIPE_ROOT),
+        out = subprocess.run(cmd, shell=True, executable="/bin/bash", cwd=str(RECIPE_ROOT),
                              capture_output=True, text=True, check=True).stdout
         word_confs = []
         for line in out.strip().splitlines():
