@@ -101,29 +101,9 @@ large-layer-13 from 6.43% to 6.41%. The base gain is about the size of run-to-ru
 At both encoder sizes, the TDNN-F chain on fMLLR features beats the flat-start e2e chain and the
 GMM-SAT system under it. Large layer 13 gives the recipe's best WER, 5.83%.
 
-### Tracking & Word Alignment Demo
+### Mouth tracking and word alignment
 
-[![Watch Demo](demo/thumbnail.png)](demo/tracking-demo.gif)
-
-### Interactive Lipreading Demo
-
-The demo runs a fine-tuned variant of this recipe on your own clip: base AV-HuBERT with a rank-32
-LoRA adapter (`input/avhubert_base_ctc_lora.pt`, layer 10) -> flat-start e2e TDNN-F chain trained on
-clean plus one augmented copy (`run_demo_base_lor10_aug2x.sh`). It gets 6.33% WER on the
-unseen-speaker test set and 5.42% on the Lombard eval speakers. Each word's confidence fuses the
-lattice MBR posterior with a TruCLeS confidence model (`run_demo_base_lor10_conf.sh`).
-
-```
-# CLI: print the recognised text for one video
-local/demo/demo.py grid-corpus/s1/bbaf2n.mpg
-
-# Gradio web UI: upload or record a clip, see the mouth ROI + prediction
-local/demo/demo.py --ui
-```
-
-The demo knows GRID's fixed 6-word grammar and nothing else (command · colour · preposition ·
-letter · digit · adverb, e.g. "place green with h eight now"). Clips must run 2-15 s (up to 20 s
-from a webcam) and show one frontal face.
+[![Mouth tracking and word alignment](demo/thumbnail.png)](demo/tracking-demo.gif)
 
 ## Citation
 

@@ -384,7 +384,7 @@ def detect_landmarks_list(video: str, detector, predictor, detect_every: int = 1
     fallback_landmarker: optional callable (BGR frame) -> (68,2) array or None,
     tried only on frames where dlib's detector finds no face. Not used by any
     training-feature-extraction caller (default None keeps them byte-for-byte
-    unchanged); wired up by the interactive demo, see kaldi_lipreader.py."""
+    unchanged)."""
     cap = cv2.VideoCapture(video)
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video}")
@@ -432,7 +432,7 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
 
     detect_every: see detect_landmarks_list -- default 1 keeps every
     training-feature-extraction caller unchanged. cache=False neither reads nor
-    writes the .mfroi.npz (the demo passes it for user uploads)."""
+    writes the .mfroi.npz."""
     # Key non-default crops apart so they never reuse the default cache.
     tag = "" if (window_margin, detect_every) == (12, 1) else f".wm{window_margin}de{detect_every}"
     cache_path = os.path.splitext(video)[0] + tag + ".mfroi.npz" if cache else None
