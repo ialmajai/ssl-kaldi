@@ -1,9 +1,8 @@
 # TIMIT
 
-Phone recognition on TIMIT with self-supervised speech representations in place
-of MFCCs. The pipeline is Kaldi's classic `egs/timit/s5` recipe (48-phone
-training, bigram phone LM, scoring mapped to the standard 39 phone classes)
-with the feature stage swapped for frozen SSL embeddings.
+Phone recognition on TIMIT with frozen self-supervised speech representations
+in place of MFCCs. The recipe follows Kaldi's `egs/timit/s5`: 48-phone training,
+a bigram phone LM, and scoring mapped to the standard 39 phone classes.
 
 ## Quick Start
 
@@ -24,8 +23,8 @@ The recipe needs IRSTLM and sph2pipe in the Kaldi build (see [Requirements](#req
 | `data/<set>_raw` | SSL encoder output (768-d base / 1024-d large), 20 ms frame shift | chain TDNN-F |
 | `data/<set>_pca` | PCA-reduced SSL features (30-d by default) | mono / tri1 / tri2 / tri3 |
 
-The SSL model's weights are never updated; `shared/make_ssl.sh` runs it as a
-fixed feature extractor and writes ordinary Kaldi `ark/scp` archives.
+`shared/make_ssl.sh` runs the SSL model as a frozen feature extractor and writes
+ordinary Kaldi `ark/scp` archives.
 
 ## Requirements
 
@@ -48,23 +47,23 @@ fixed feature extractor and writes ordinary Kaldi `ark/scp` archives.
 | 8 | Chain TDNN-F on raw SSL features (`local/chain/run_tdnn_ssl.sh`) |
 
 Pick the SSL model and layer with `ssl_model` / `encoder_layer` at the top of
-`run.sh`, or as options. The default `facebook/mms-300m` layer 14 is the best
-measured here; `facebook/hubert-base-ls960` layer 9 is 1.2 points worse at a
-third of the extraction cost, which is the one to use while iterating.
+`run.sh`, or as options. The default, `facebook/mms-300m` layer 14, gives the
+best PER we measured. `facebook/hubert-base-ls960` layer 9 costs a third as much
+to extract and loses 1.2 points on test; use it while you iterate.
 
 Feature extraction needs the GPU in default compute mode
-(`sudo nvidia-smi -c 0`); chain training is happier in exclusive mode
-(`sudo nvidia-smi -c 3`).
+(`sudo nvidia-smi -c 0`). Switch to exclusive mode (`sudo nvidia-smi -c 3`) for
+chain training.
 
 ## Scoring
 
 `local/score.sh` maps reference and hypothesis to the 39 phone classes and
-reports PER with `compute-wer`, so no external scoring tool is needed. For the
+reports PER with `compute-wer`, so you need no external scoring tool. For the
 sclite numbers upstream TIMIT reports, swap in the included alternative with
 `ln -sf score_sclite.sh local/score.sh`.
 
-Both sweep LM weights 1 to 20 rather than Kaldi's 1 to 10, because some systems
-genuinely peak above 10 and a truncated sweep under-reports them.
+Both scripts sweep LM weights 1 to 20 instead of Kaldi's 1 to 10. Some systems
+here peak above 10, and a 1-to-10 sweep would under-report them.
 
 Collect results with `bash RESULTS dev` / `bash RESULTS test`.
 
@@ -84,13 +83,13 @@ stages:
 The MFCC columns are `run-mfcc.sh` run locally, so both halves of the table
 share a data prep, speaker lists and scoring script. They reproduce the numbers
 published in Kaldi's `egs/timit/s5/RESULTS` (31.7/32.7, 25.1/25.6, 23.0/23.7,
-20.3/21.6) to within a few tenths. Kaldi's TIMIT recipe has no chain system;
+20.3/21.6) to within 0.8. Kaldi's TIMIT recipe has no chain system;
 its strongest published result is 16.7 / 18.4 (SGMM + DNN combination).
 
 ### Model comparison
 
-Four frozen extractors through the identical pipeline; the full per-stage
-breakdown for each is in [RESULTS](RESULTS).
+We ran four frozen encoders through the same pipeline. [RESULTS](RESULTS) has
+the per-stage breakdown for each.
 
 | Model | layer | dim | tri2 test | tri3 test | chain dev | chain test |
 |-------|-------|-----|-----------|-----------|-----------|------------|
@@ -99,19 +98,15 @@ breakdown for each is in [RESULTS](RESULTS).
 | `facebook/hubert-base-ls960` | 9 | 768 | 16.15 | 16.31 | 9.93 | 11.43 |
 | `facebook/hubert-large-ll60k` | 14 | 1024 | 15.98 | 15.79 | 10.02 | 11.48 |
 
-mms-300m wins by 90 errors over HuBERT Base (~3.2 standard errors), and on
-insertions, deletions and substitutions at once. Note the GMM columns rank the
-models differently from the chain column: wav2vec2 is last at tri2 and second at
-the chain stage.
-
-mms-300m layer 14 is the recipe default. Use
-`--ssl-model facebook/hubert-base-ls960 --encoder-layer 9` when extraction cost
-matters more than the last point of PER.
+On chain test, mms-300m makes 90 fewer errors than HuBERT Base (about 3.2
+standard errors) and fewer insertions, deletions and substitutions each. The GMM
+columns rank the models differently from the chain columns: wav2vec2 comes last
+at tri2 and second at the chain stage.
 
 ### Layer choice within one model
 
-Which layer you tap matters, and not in a single direction
-(`facebook/hubert-base-ls960`, frozen, %PER test):
+Moving `facebook/hubert-base-ls960` from layer 9 to 12 helps some stages and
+hurts others (frozen, %PER test):
 
 | Acoustic model | layer 9 | layer 12 |
 |----------------|---------|----------|
@@ -121,11 +116,10 @@ Which layer you tap matters, and not in a single direction
 | tri3 | 16.31 | **16.11** |
 | chain TDNN-F | **11.43** | 11.74 |
 
-The deeper layer wins for the weakest models and loses for the strongest. Layer
-9 is the better choice for the chain system. These two runs used `nj=16`, so
-their tri2 row does not line up with the full Base sweep below; the sweep
-supersedes it for layer choice, and this table is kept for the stages the sweep
-does not cover.
+Layer 12 wins at mono, tri1 and tri3; layer 9 wins at tri2 and for the chain
+system. These two runs used `nj=16`, so their tri2 row differs from the full Base
+sweep below. Use the sweep for layer choice and this table for the stages the
+sweep skips.
 
 ### Layer sweep (HuBERT Base, all 12 layers)
 
@@ -145,15 +139,16 @@ Every layer of Base, from one forward pass per data dir, scored at tri2
 | 11 | 15.01 | 16.83 |
 | 12 | 15.83 | 17.27 |
 
-A steep climb to layer 7, then a plateau. Layer 10 is nominally best, but a
-paired bootstrap cannot separate it from 9 (P=24.8%) or 7 (P=38.1%), so
-anywhere in 7 to 11 is equivalent and the recipe's layer 9 needs no change.
-Layers 6 and below and layer 12 are measurably worse (P=0.14% and P=0.58%).
-Layer 8 is a real dip rather than noise, worse than both its neighbours on test
-(P=1.1% against 7, P=3.7% against 9) while dev shows nothing; unexplained.
+PER falls fast up to layer 7 and then levels off. Layer 10 has the lowest PER,
+but a paired bootstrap cannot separate it from 9 (P=24.8%) or 7 (P=38.1%). Any
+layer from 7 to 11 does the job, so the recipe keeps layer 9. Layers 6 and below
+and layer 12 lose (P=0.14% and P=0.58%).
 
-These numbers are not comparable with the Large sweep below or with
-[RESULTS](RESULTS), which used different job counts.
+Layer 8 dips on test, worse than layer 7 (P=1.1%) and layer 9 (P=3.7%), while dev
+shows no dip. We have no explanation for it.
+
+Compare these numbers only with each other: the Large sweep below and
+[RESULTS](RESULTS) used different job counts.
 
 ### Layer sweep (HuBERT Large)
 
@@ -168,8 +163,8 @@ Sweeping Large's encoder layer, scored at tri2
 | 13 | **14.58** | **15.90** |
 | 14 | **14.45** | 15.98 |
 
-Monotone from 10 to 13, then flat, so Large's phonetic quality is still rising
-at the layer we use rather than past its peak. These are tri2 numbers, which
-rank layers within one model reliably enough but not models against each other,
-and the 12-to-14 spread is close to the noise floor.
+PER drops from layer 10 to 13 and stays flat at 14, so Large's phonetic
+quality is still rising at the layers we use. Tri2 numbers rank layers within
+one model but not models against each other, and the 12-to-14 spread sits near
+the noise floor.
 
