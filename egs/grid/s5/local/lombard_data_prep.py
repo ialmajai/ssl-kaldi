@@ -6,8 +6,9 @@ its GRID sentence (command colour preposition letter digit adverb), so the
 transcript is decoded from the file name.
 
 Drops the utterances in --exclude: 69 clips that the reported Lombard results
-leave out (face detection failed or the clip fell outside 2-15 s). Pass
---exclude "" to keep every clip.
+leave out, rejected by the icefall demo reader (face detection failed or the clip
+fell outside 2-15 s). Pass --exclude "" to keep every clip. Feature extraction then
+skips 3 more clips with no trackable mouth, so 2,577 utterances are scored.
 
     local/lombard_data_prep.py --video-dir lombardgrid/front --cond l --out data/lomb_l
 """
