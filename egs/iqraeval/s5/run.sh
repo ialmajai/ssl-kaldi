@@ -102,8 +102,9 @@ fi
 
 # tri1: Δ + ΔΔ
 if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
+  # Align the full set: mono trained on the 5k subset, tri1 trains on everything.
   steps/align_si.sh --boost-silence 1.25 --nj "$train_nj" --cmd "$train_cmd" \
-    data/train_pca_5k data/lang exp/mono exp/mono_ali
+    data/train_pca data/lang exp/mono exp/mono_ali
   steps/train_deltas.sh --cmd "$train_cmd" \
     $numLeavesTri1 $numGaussTri1 data/train_pca data/lang exp/mono_ali exp/tri1
 
@@ -115,7 +116,7 @@ fi
 # tri2: LDA + MLLT 
 if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   steps/align_si.sh --nj "$train_nj" --cmd "$train_cmd" \
-     data/train_pca_5k data/lang exp/tri1 exp/tri1_ali
+     data/train_pca data/lang exp/tri1 exp/tri1_ali
   steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
     $numLeavesMLLT $numGaussMLLT data/train_pca data/lang exp/tri1_ali exp/tri2
