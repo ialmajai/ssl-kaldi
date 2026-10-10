@@ -132,13 +132,17 @@ if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
       --max_utts=$pca_train_utts
   fi
 
+  # Write PCA features to their own dirs: pruning data/{train,test} in place would
+  # drop clips from every later re-extraction.
   for x in train test; do
-    echo "preparing pca features"    
+    echo "preparing pca features"
+    rm -rf data/${x}_pca
+    local/copy_data_dir.sh data/${x}_raw data/${x}_pca
     shared/make_pca_features.sh --cmd "$decode_cmd" --nj $njpca \
 	  --pca-model $pca_dir/$pca_model \
-          data/${x}_raw data/${x}   || exit 1;
-    steps/compute_cmvn_stats.sh data/$x   || exit 1;
-    utils/fix_data_dir.sh data/$x
+          data/${x}_raw data/${x}_pca   || exit 1;
+    steps/compute_cmvn_stats.sh data/${x}_pca   || exit 1;
+    utils/fix_data_dir.sh data/${x}_pca
   done
 fi
 
@@ -146,7 +150,7 @@ if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
 
   for x in train test; do
     echo "upsampling features"
-    src=data/${x}
+    src=data/${x}_pca
     dst=data/${x}_upsampled
     local/copy_data_dir.sh $src $dst
     shared/upsample_features.sh --cmd "$decode_cmd" --nj $njpca \
