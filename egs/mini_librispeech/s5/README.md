@@ -1,6 +1,6 @@
 # Mini LibriSpeech
 
-This recipe demonstrates how to use self-supervised speech representations as acoustic features in Kaldi. Pretrained HuBERT models are evaluated with both hybrid chain and traditional GMM-HMM systems on Mini LibriSpeech.
+Kaldi speech recognition on Mini LibriSpeech with frozen self-supervised encoders (MMS, WavLM, HuBERT, XLS-R) as acoustic features. The recipe trains a GMM-HMM ladder and a chain TDNN on top of them.
 
 ## Quick Start
 
@@ -31,12 +31,11 @@ Pick another encoder with `--ssl-model` and `--encoder-layer`.
 
 ## Key Findings
 
-- SSL features outperform conventional MFCC/filterbank features by a wide margin.
-- The best result is **3.88% WER** using `facebook/mms-300m` layer 14 with a chain TDNN, a **43% relative reduction** against the Kaldi baseline (6.79% → 3.88%).
+- `facebook/mms-300m` layer 14 with a chain TDNN gives the best result, **3.88% WER**, a **43% relative reduction** on the Kaldi MFCC/filterbank baseline (6.79% → 3.88%).
 - Encoder size does not decide the ranking: WavLM Base+ (95 M parameters) matches MMS-300m (315 M) to within 0.09, and XLS-R-300m trails both despite sharing MMS-300m's architecture. English is a thin slice of XLS-R's 128-language pretraining mixture, and the same encoder ties mHuBERT-147 on the Swahili recipe.
-- Intermediate layers work best; layer 14 beat layer 12 for HuBERT Large.
-- The Tri3b GMM-HMM system also benefits substantially from SSL representations, so the embeddings carry strong phonetic information on their own.
-- The three encoder rows measured most recently (MMS-300m, WavLM, XLS-R) share one tree, alignments and lattices, so they differ only in features.
+- Layer choice matters: for HuBERT Large, layer 14 gives 4.15 and layer 12 gives 4.70.
+- MMS-300m features also help the Tri3b GMM-HMM system, which drops from 13.18 with MFCCs to 10.87.
+- The MMS-300m, WavLM and XLS-R chain rows share one tree, alignments and lattices, so they differ only in features.
 - See [RESULTS](RESULTS) for the raw decode lines.
 
 ## Tested SSL Models
