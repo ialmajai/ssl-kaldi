@@ -464,6 +464,19 @@ def meanface_tracking(video: str, detector, predictor, am, mean_face,
     return out, fps
 
 
+AVHUBERT_FPS = 25.0
+
+
+def resample_frames(frames: np.ndarray, fps: float) -> np.ndarray:
+    """Pick the frames nearest a 25 fps grid; AV-HuBERT was trained at 25 fps.
+    Leaves 25 fps input (all of GRID) untouched; Lombard GRID is about 24 fps."""
+    if not fps or abs(fps - AVHUBERT_FPS) < 0.01:
+        return frames
+    n = int(round(len(frames) * AVHUBERT_FPS / fps))
+    idx = np.minimum(np.round(np.arange(n) * fps / AVHUBERT_FPS).astype(int), len(frames) - 1)
+    return frames[idx]
+
+
 @torch.no_grad()
 def extract_avhubert(roi_video: torch.Tensor, model, layer: Optional[int]) -> np.ndarray:
     feature_vid, _ = model.extract_finetune(
@@ -577,6 +590,8 @@ def process_features(
                                                          mouth_w=args.mouth_size,
                                                          mouth_h=args.mouth_size)
 
+                    duration = len(roi_frames) / fps if fps else 0.0
+                    roi_frames = resample_frames(roi_frames, fps)
                     if len(roi_frames) < args.min_frames:
                         logger.warning(f"{utt_id}: only {len(roi_frames)} mouth frames, skipping")
                         failed += 1
@@ -596,7 +611,7 @@ def process_features(
                     )
                     feats = extract_avhubert(tensor, model, args.layer)
                     writer(utt_id, feats.astype(np.float32))
-                    utt2dur[utt_id] = len(roi_frames) / fps
+                    utt2dur[utt_id] = duration
                     processed += 1
 
                 except Exception as e:
