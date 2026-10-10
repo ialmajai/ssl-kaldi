@@ -3,7 +3,7 @@
 import sys
 import contextlib
 import logging
-from kaldiio import ReadHelper, WriteHelper
+from kaldiio import ReadHelper, WriteHelper, load_mat
 import argparse
 
 # Import the extractor from packages/ssl-kaldi-feats, which works without Kaldi.
@@ -116,6 +116,24 @@ def parse_args():
     return parser.parse_args()
 
 
+def iter_input(rspec: str):
+    """Yield (utt_id, loader). For scp input each entry is read inside the
+    caller's per-utterance try, so an unreadable file or failing pipe counts as
+    one failure; kaldiio's scp reader would stop at it and drop the rest of the
+    job silently. Other rspecifiers (an ark on stdin) are streamed as before."""
+    kind, _, path = rspec.partition(":")
+    if kind.split(",")[0] == "scp":
+        with open(path) as f:
+            for line in f:
+                if line.strip():
+                    utt_id, loc = line.strip().split(None, 1)
+                    yield utt_id, (lambda loc=loc: load_mat(loc))
+    else:
+        with ReadHelper(rspec) as reader:
+            for utt_id, value in reader:
+                yield utt_id, (lambda value=value: value)
+
+
 def process_features(args):
     multi = args.layers is not None
     if multi and not args.out_template:
@@ -138,7 +156,7 @@ def process_features(args):
     # Single layer streams to one wspecifier, as before. Several layers cannot
     # share one stdout, so each gets its own compressed archive.
     with contextlib.ExitStack() as stack:
-        reader = stack.enter_context(ReadHelper(args.input))
+        reader = iter_input(args.input)
         if multi:
             writers = {
                 L: stack.enter_context(
@@ -151,10 +169,9 @@ def process_features(args):
             writers = {ssl_extractor.layers[0]:
                        stack.enter_context(WriteHelper(args.output))}
 
-        # kaldiio yields (utt_id, (sample_rate, waveform)) for wav input,
-        # whether read from an scp or from an ark on stdin.
-        for utt_id, (sample_rate, waveform) in reader:
+        for utt_id, load in reader:
             try:
+                sample_rate, waveform = load()
                 if sample_rate != EXPECTED_SAMPLE_RATE:
                     raise ValueError(
                         f"sample rate {sample_rate} != {EXPECTED_SAMPLE_RATE}; "
