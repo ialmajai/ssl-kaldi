@@ -406,8 +406,8 @@ def launch_ui(reader: KaldiLipReader, example_paths=None):
             gr.update(),
             "",
         )
-        # icefall's confidences are already calibrated (isotonic map) by
-        # the service; only the Kaldi path has a second refinement stage.
+        # icefall's confidences are already calibrated by the service (TruCLeS
+        # CEM fusion, isotonic fallback); only the Kaldi path refines them again.
         calibrated = reader.refine_confidence() if backend == "kaldi" else None
         if calibrated is not None:
             yield (gr.update(), _highlighted(calibrated), gr.update(),
