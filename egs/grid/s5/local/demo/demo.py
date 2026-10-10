@@ -348,8 +348,40 @@ def _new_request_dir() -> str:
     return d
 
 
+def _refuse_remote_files():
+    """Stop Gradio 4 fetching URLs sent as file inputs.
+
+    Gradio 4 downloads any http(s) URL a client submits as a file input, with no
+    size limit, and serves the result back (SSRF, the CVE-2024-47167 class; fixed
+    in Gradio 5, which needs Python >= 3.10). This page only receives uploads,
+    webcam recordings and bundled examples, all local paths, so refuse URLs on
+    every component before anything is fetched."""
+    from gradio.blocks import Block
+    from gradio_client import utils as client_utils
+
+    orig_move = Block.move_resource_to_block_cache
+    orig_async_move = Block.async_move_resource_to_block_cache
+
+    def check(path):
+        if path is not None and client_utils.is_http_url_like(str(path)):
+            raise ValueError("Remote file URLs are not accepted.")
+
+    def guarded_move(self, url_or_file_path):
+        check(url_or_file_path)
+        return orig_move(self, url_or_file_path)
+
+    async def guarded_async_move(self, url_or_file_path):
+        check(url_or_file_path)
+        return await orig_async_move(self, url_or_file_path)
+
+    Block.move_resource_to_block_cache = guarded_move
+    Block.async_move_resource_to_block_cache = guarded_async_move
+
+
 def launch_ui(reader: KaldiLipReader, example_paths=None):
     import gradio as gr
+
+    _refuse_remote_files()
 
     def _highlighted(word_confs):
         return [
