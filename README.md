@@ -24,7 +24,7 @@ cd egs/mini_librispeech/s5
 This downloads Mini LibriSpeech, extracts MMS-300m layer 14 features and trains the GMM ladder. The [recipe README](egs/mini_librispeech/s5/README.md) covers the chain stage.
 
 <p align="center">
-  <img src="egs/grid/s5/demo/tracking-demo.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
+  <img src="egs/grid/s5/figures/tracking.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
   <br>
   <em>Lip-region tracking from the <a href="egs/grid/s5/README.md">GRID lipreading recipe</a> (AV-HuBERT visual features).</em>
 </p>

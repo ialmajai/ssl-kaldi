@@ -103,7 +103,7 @@ GMM-SAT system under it. Large layer 13 gives the recipe's best WER, 5.83%.
 
 ### Mouth tracking and word alignment
 
-[![Mouth tracking and word alignment](demo/thumbnail.png)](demo/tracking-demo.gif)
+[![Mouth tracking and word alignment](figures/tracking-thumbnail.png)](figures/tracking.gif)
 
 ## Citation
 
