@@ -73,7 +73,8 @@ docker run -d --restart unless-stopped --name kaldi-vsr-demo \
     --read-only --tmpfs "/tmp:size=4g,uid=$(id -u),gid=$(id -g)" \
     --tmpfs "$E2E_MODEL_DIR/decode_demo:size=512m,uid=$(id -u),gid=$(id -g)" \
     --cap-drop ALL --security-opt no-new-privileges \
-    --memory 8g \
+    --memory 8g --pids-limit 512 --init \
+    --log-opt max-size=20m --log-opt max-file=3 \
     -v /etc/localtime:/etc/localtime:ro \
     -v /data/miniconda3/envs/ssl-kaldi:/data/miniconda3/envs/ssl-kaldi:ro \
     -v "$RECIPE_ROOT:$RECIPE_ROOT:ro" \
