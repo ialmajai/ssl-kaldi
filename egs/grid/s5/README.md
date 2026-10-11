@@ -101,6 +101,33 @@ large-layer-13 from 6.43% to 6.41%. The base gain is about the size of run-to-ru
 At both encoder sizes, the TDNN-F chain on fMLLR features beats the flat-start e2e chain and the
 GMM-SAT system under it. Large layer 13 gives the recipe's best WER, 5.83%.
 
+### Fine-tuned encoders
+
+`run_ctc_finetune.sh` fine-tunes AV-HuBERT with a letter CTC head, either with
+rank-32 LoRA or with every weight trainable, then extracts features from the
+fine-tuned encoder for the flat-start e2e chain. Run it after `run.sh` stages
+0-2 and 14. On one GPU, a fine-tune took 47 min (base LoRA) to 2 h 10 min (large
+LoRA) in our runs, before feature extraction and chain training.
+
+```
+./run_ctc_finetune.sh                                    # LoRA, base, layer 10
+./run_ctc_finetune.sh --config base_ctc_full             # every weight trainable
+./run_ctc_finetune.sh --config large_ctc_lora --layer 20
+```
+
+| Encoder | Fine-tuning, layer | Trainable | GRID test | Lombard eval |
+| ------- | ------------------ | --------- | --------- | ------------ |
+| base  | none, L4           | 0     | 7.11 | 7.30 |
+| base  | full, L10          | 103M  | **5.66** | 7.68 |
+| base  | LoRA r32, L10      | 5.3M  | 6.30 | **5.70** |
+| large | none, L13 (fMLLR chain) | 0 | 5.83 | **4.54** |
+| large | full, L20          | 325M  | 6.22 | 8.49 |
+| large | LoRA r32, L20      | 14M   | **5.51** | 5.05 |
+
+Lombard eval covers the 40 speakers outside `local/lombard_dev_speakers.txt`;
+the dev speakers chose the fine-tuned layers. Full fine-tuning gains in domain
+for base and loses on Lombard for both sizes. LoRA keeps the Lombard gain.
+
 ### Mouth tracking and word alignment
 
 [![Mouth tracking and word alignment](figures/tracking-thumbnail.png)](figures/tracking.gif)
