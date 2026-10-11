@@ -26,11 +26,11 @@ num_tdnnf_layers=12
 # Keep online CMVN with renorm-linear: the controlled A/B kept it on both
 # arms and renorm still won, refuting the earlier redundancy guess.
 cmvn_opts="--config=conf/online_cmvn.conf"
-# 2/5 is the historical setting and needs a card per job. TIMIT measured 1/1 as
-# better as well as cheaper, since Kaldi scales the effective learning rate by
-# job count. Kept at 2/5 here so existing runs reproduce.
-num_jobs_initial=2
-num_jobs_final=5
+# One job, as the published 3.88 (tdnn1a_rl_j1_sp). Kaldi scales the effective
+# learning rate by job count, and TIMIT measured 1/1 as better as well as
+# cheaper; 2/5 is the historical setting and needs a card per job.
+num_jobs_initial=1
+num_jobs_final=1
 train_stage=-10
 get_egs_stage=-10
 decode_iter=

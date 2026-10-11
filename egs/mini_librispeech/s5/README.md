@@ -8,8 +8,7 @@ Kaldi speech recognition on Mini LibriSpeech with frozen self-supervised encoder
 conda activate ssl-kaldi
 cd egs/mini_librispeech/s5
 ./run.sh --stop-stage 12           # corpus + LM download, MMS-300m L14 features, GMM ladder
-sudo nvidia-smi -c 3               # chain training runs 2-5 GPU jobs
-./run.sh --stage 13                # chain TDNN, decoded with tglarge
+./run.sh --stage 13                # chain TDNN (one training job), decoded with tglarge
 ```
 
 Feature extraction needs the GPU in Default mode (`sudo nvidia-smi -c 0`).
