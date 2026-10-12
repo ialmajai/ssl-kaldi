@@ -25,7 +25,7 @@ conda install -c conda-forge dlib==19.18.0
 cd ../..
 ```
 
-Then run the recipe. The 5.83% system uses large AV-HuBERT, layer 13:
+Then run the recipe. The 5.85% system uses large AV-HuBERT, layer 13:
 
 ```
 ./run.sh --stage -1 --model-size large   # downloads, features, GMM-SAT, fMLLR TDNN-F chain
@@ -45,8 +45,10 @@ unzip -q lombard-grid/lombardgrid_front.zip -d lombard-grid   # -> lombard-grid/
 | System            | Setting         | Grammar/LM         | Data augmentation                        | WER (unseen speaker) |
 | ----------------- | --------------- | ------------------ | ---------------------------------------- | -------------------- |
 | LipNet            | unseen speakers | Fixed GRID grammar | Spatial/temporal jitter, mirroring, etc. | 11.4% |
-| SSL-Kaldi GMM-HMM (SAT) | unseen speakers | Fixed GRID grammar | None                                | 6.03% |
-| SSL-Kaldi TDNN-F chain (fMLLR) | unseen speakers | Fixed GRID grammar | None                          | **5.83%** |
+| SSL-Kaldi GMM-HMM (SAT) | unseen speakers | Fixed GRID grammar | None                                | 6.05% |
+| SSL-Kaldi TDNN-F chain (fMLLR) | unseen speakers | Fixed GRID grammar | None                          | **5.85%** |
+
+GRID test WERs in this README are on all 4,000 clips of the unseen speakers (s1, s2, s20, s22).
 
 On [Lombard GRID](https://spandh.dcs.shef.ac.uk/avlombard/) (out-of-domain, unseen in training), all
 but one system score better than in-domain. Lombard speakers talk with more effort and clearer
@@ -54,13 +56,13 @@ articulation. Speaker adaptation decides how much of that gain a system keeps:
 
 | System | base, layer 4 (in-domain → Lombard) | large, layer 13 (in-domain → Lombard) |
 | ------ | ------------------------------------ | --------------------------------------- |
-| GMM-SAT               | 7.30% → 5.39% | 6.03% → 4.73% |
-| TDNN-F chain on fMLLR features | 6.72% → 5.32% | 5.83% → **4.66%** |
-| Flat-start e2e chain, renorm + no-relu | 7.51% → 7.16% | 6.43% → 5.41% |
-| Flat-start e2e chain, + full CMVN | 7.11% → 7.35% | 6.41% → 5.76% |
+| GMM-SAT               | 7.38% → 5.39% | 6.05% → 4.73% |
+| TDNN-F chain on fMLLR features | 6.76% → 5.32% | 5.85% → **4.66%** |
+| Flat-start e2e chain, renorm + no-relu | 7.55% → 7.16% | 6.47% → 5.41% |
+| Flat-start e2e chain, + full CMVN | 7.15% → 7.35% | 6.45% → 5.76% |
 
-Without CMVN, the flat-start e2e chain gains 0.35 abs on base L4 and 1.02 on large L13. GMM-SAT and
-the TDNN-F chain built on it apply a per-speaker fMLLR transform and gain 1.2-1.9 abs.
+Without CMVN, the flat-start e2e chain gains 0.39 abs on base L4 and 1.06 on large L13. GMM-SAT and
+the TDNN-F chain built on it apply a per-speaker fMLLR transform and gain 1.2-2.0 abs.
 
 Full CMVN gives the e2e chain a small in-domain gain and a small Lombard loss at both encoder sizes.
 Both effects sit within run-to-run noise: retraining the base-l4 CMVN chain moved its in-domain WER by
@@ -79,8 +81,8 @@ about 0.4 abs (RESULTS, 2026-10 rows).
 
 | AV-HuBERT           | Monophone | Triphone (Δ+ΔΔ) | Triphone + LDA+MLLT | Triphone + LDA+MLLT+SAT |
 | -------------------- | --------- | --------------- | ------------------- | ----------------------- |
-| base, layer 4 (50fps)  | 19.00     | 9.81            | 8.90                 | 7.30 |
-| large, layer 13 (50fps) | 19.31     | 8.55            | 7.08                 | **6.03** |
+| base, layer 4 (50fps)  | 19.00     | 9.85            | 8.94                 | 7.38 |
+| large, layer 13 (50fps) | 19.35     | 8.57            | 7.13                 | **6.05** |
 
 We left out 25 fps rows. We measured them at the old default layers (9 base, 12 large) with the
 earlier centroid crop, so they don't compare with the numbers above. Standard Kaldi HMM topologies
@@ -92,14 +94,14 @@ We trained two chain architectures on these features:
 
 | Chain architecture | base, layer 4 | large, layer 13 |
 | ------------------- | ------------- | ---------------- |
-| Flat-start e2e (raw features, renorm + no-relu input layer + full CMVN) | 7.11% | 6.41% |
-| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `local/chain/run_tdnn_fmllr_tdnnf.sh`) | **6.72%** | **5.83%** |
+| Flat-start e2e (raw features, renorm + no-relu input layer + full CMVN) | 7.15% | 6.45% |
+| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `local/chain/run_tdnn_fmllr_tdnnf.sh`) | **6.76%** | **5.85%** |
 
-Adding full CMVN to the renorm+no-relu e2e chain moves base-layer-4 from 7.51% to 7.11% and
-large-layer-13 from 6.43% to 6.41%. The base gain is about the size of run-to-run noise.
+Adding full CMVN to the renorm+no-relu e2e chain moves base-layer-4 from 7.55% to 7.15% and
+large-layer-13 from 6.47% to 6.45%. The base gain is about the size of run-to-run noise.
 
 At both encoder sizes, the TDNN-F chain on fMLLR features beats the flat-start e2e chain and the
-GMM-SAT system under it. Large layer 13 gives the recipe's best WER, 5.83%.
+GMM-SAT system under it. Large layer 13 gives the recipe's best WER, 5.85%.
 
 ### Fine-tuned encoders
 
@@ -117,12 +119,12 @@ LoRA) in our runs, before feature extraction and chain training.
 
 | Encoder | Fine-tuning, layer | Trainable | GRID test | Lombard eval |
 | ------- | ------------------ | --------- | --------- | ------------ |
-| base  | none, L4           | 0     | 7.11 | 7.30 |
-| base  | full, L10          | 103M  | **5.66** | 7.68 |
-| base  | LoRA r32, L10      | 5.3M  | 6.30 | **5.70** |
-| large | none, L13 (fMLLR chain) | 0 | 5.83 | **4.54** |
-| large | full, L20          | 325M  | 6.22 | 8.49 |
-| large | LoRA r32, L20      | 14M   | **5.51** | 5.05 |
+| base  | none, L4           | 0     | 7.15 | 7.30 |
+| base  | full, L10          | 103M  | **5.70** | 7.68 |
+| base  | LoRA r32, L10      | 5.3M  | 6.34 | **5.70** |
+| large | none, L13 (fMLLR chain) | 0 | 5.85 | **4.54** |
+| large | full, L20          | 325M  | 6.25 | 8.49 |
+| large | LoRA r32, L20      | 14M   | **5.55** | 5.05 |
 
 Lombard eval covers the 40 speakers outside `local/lombard_dev_speakers.txt`;
 the dev speakers chose the fine-tuned layers. Full fine-tuning gains in domain

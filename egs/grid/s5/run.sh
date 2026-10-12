@@ -244,7 +244,7 @@ if [ $stage -le 12 ] && [ $stop_stage -ge 12 ]; then
 fi
 
 if [ $stage -le 13 ] && [ $stop_stage -ge 13 ]; then
-  # Train the TDNN-F chain on the fMLLR features (5.83% with --model-size large).
+  # Train the TDNN-F chain on the fMLLR features (5.85% with --model-size large).
   local/chain/run_tdnn_fmllr_tdnnf.sh --stage 9 --gmm $gmm --data-fmllr $data_fmllr \
     --train-set train$data_affix --test-set test$data_affix
 fi
