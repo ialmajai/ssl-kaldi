@@ -39,6 +39,13 @@ nj_roi=8
 nj_feats=2
 avhubert_path=$PWD/av_hubert
 
+# Take --config before utils/parse_options.sh, which sources any --config as a Kaldi config file.
+args=()
+while [ $# -gt 0 ]; do
+  if [ "$1" = --config ]; then config=$2; shift 2; else args+=("$1"); shift; fi
+done
+set -- ${args[@]+"${args[@]}"}
+
 . ./cmd.sh
 . ./path.sh
 . ./utils/parse_options.sh
