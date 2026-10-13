@@ -24,6 +24,15 @@ def test_int_scaled_to_unit_range():
     assert peak[0] == pytest.approx(1.0)
 
 
+def test_unsigned_pcm_is_centred_on_silence():
+    """8/16-bit unsigned PCM is offset-binary: silence (the midpoint) must map
+    to 0.0, not 0.5 -- dividing by max alone silently adds a DC offset."""
+    assert preprocess_waveform(np.array([128], np.uint8))[0] == pytest.approx(0.0)
+    assert preprocess_waveform(np.array([255], np.uint8))[0] == pytest.approx(127 / 128)
+    assert preprocess_waveform(np.array([0], np.uint8))[0] == pytest.approx(-1.0)
+    assert preprocess_waveform(np.array([32768], np.uint16))[0] == pytest.approx(0.0)
+
+
 def test_float_passthrough():
     out = preprocess_waveform(np.array([0.5, -0.5], np.float64))
     assert out.dtype == np.float32 and out[0] == pytest.approx(0.5)

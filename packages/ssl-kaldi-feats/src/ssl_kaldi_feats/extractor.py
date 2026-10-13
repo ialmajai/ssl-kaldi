@@ -47,6 +47,12 @@ def preprocess_waveform(waveform):
     # np.squeeze turns a one-sample array into a 0-d scalar, which then fails
     # on len() deep inside the feature extractor.
     waveform = np.atleast_1d(waveform)
+    if np.issubdtype(waveform.dtype, np.unsignedinteger):
+        # Unsigned PCM is offset-binary (e.g. 8-bit wav from scipy.io.wavfile):
+        # silence sits at the midpoint, so centring is required -- dividing by
+        # max alone would leave a 0.5 DC offset and silently corrupt features.
+        mid = float(1 << (np.iinfo(waveform.dtype).bits - 1))
+        return ((waveform.astype(np.float64) - mid) / mid).astype(np.float32)
     if np.issubdtype(waveform.dtype, np.integer):
         return waveform.astype(np.float32) / np.iinfo(waveform.dtype).max
     return waveform.astype(np.float32)
