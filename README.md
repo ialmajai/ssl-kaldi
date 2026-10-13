@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml/badge.svg)](https://github.com/ialmajai/ssl-kaldi/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/ssl-kaldi-feats.svg)](https://pypi.org/project/ssl-kaldi-feats/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
 Kaldi recipes that replace MFCCs with self-supervised (SSL) encoder features such as HuBERT, mHuBERT, MMS and AV-HuBERT. Shared scripts extract the features, reduce them with PCA for the GMM stages, and feed them to Kaldi's GMM-HMM and chain (TDNN-F) training. You can use each pretrained model frozen, or adapt it to the task before extraction.
@@ -22,6 +23,22 @@ cd egs/mini_librispeech/s5
 ```
 
 This downloads Mini LibriSpeech, extracts MMS-300m layer 14 features and trains the GMM ladder. The [recipe README](egs/mini_librispeech/s5/README.md) covers the chain stage.
+
+### Features only: ssl-kaldi-feats
+
+The feature extractor is also published on PyPI as
+[`ssl-kaldi-feats`](https://pypi.org/project/ssl-kaldi-feats/). It writes
+Kaldi `ark`/`scp` features from any Hugging Face speech encoder without a
+Kaldi install:
+
+```
+pip install ssl-kaldi-feats
+ssl-kaldi-feats --model facebook/hubert-base-ls960 --layer 9 \
+    --wav-scp data/train/wav.scp --output-dir feats/train
+```
+
+See the [package README](packages/ssl-kaldi-feats/README.md) for multi-layer
+extraction and library use.
 
 <p align="center">
   <img src="egs/grid/s5/figures/tracking.gif" alt="AV-HuBERT lip-region tracking from the GRID visual speech recognition recipe" width="480">
