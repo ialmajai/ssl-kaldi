@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Score a Lombard decode separately on the dev speakers (local/lombard_dev_speakers.txt,
 # 14 of 54, fixed seed) and the remaining eval speakers. Choices are made on dev and
-# eval is reported, the LM weight and penalty included: for a Kaldi decode dir the
+# eval is reported (all 54 too, at the same setting), the LM weight and penalty included: for a Kaldi decode dir the
 # setting with the lowest dev WER is applied unchanged to eval. A plain "utt words"
 # hyp file is scored as is.
 #   local/score_lombard_split.sh DECODE_DIR_OR_HYP [WORDS [LOMBARD_DATA_DIR]]
@@ -14,6 +14,7 @@ tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 awk 'NR==FNR{d[$1]=1;next} {print $1, (($2 in d)?"dev":"eval")}' \
   local/lombard_dev_speakers.txt $data/utt2spk > $tmp/set
 for s in dev eval; do awk -v s=$s '$2==s{print $1}' $tmp/set > $tmp/$s.list; done
+cut -d' ' -f1 $tmp/set > $tmp/all.list
 
 wer_on() {  # wer_on HYP SET
   utils/filter_scp.pl $tmp/$2.list $1 | compute-wer --text --mode=present ark:$ref ark:- 2>/dev/null \
@@ -36,4 +37,4 @@ else
   done
   hyp=$best
 fi
-printf "dev=%s eval=%s \n" "$(wer_on $hyp dev)" "$(wer_on $hyp eval)"
+printf "dev=%s eval=%s all=%s\n" "$(wer_on $hyp dev)" "$(wer_on $hyp eval)" "$(wer_on $hyp all)"
