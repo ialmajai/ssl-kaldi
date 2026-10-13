@@ -15,11 +15,23 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def _load_wav_scp_entry(rest):
+    if rest.endswith("|"):
+        raw = subprocess.run(
+            rest[:-1], shell=True, capture_output=True, check=True
+        ).stdout
+        return _decode_wav_bytes(raw)
+    return read_audio(rest)
+
+
 def read_wav_scp(path):
-    """Yield ``(utt_id, waveform, sample_rate)`` from a Kaldi wav.scp.
+    """Yield ``(utt_id, load)`` from a Kaldi wav.scp; ``load()`` returns
+    ``(waveform, sample_rate)``.
 
     Handles both plain paths and the extended pipe form
     ``utt_id sox foo.flac -t wav - |``, which Kaldi recipes use heavily.
+    Reading is deferred to ``load()`` so the caller can count an unreadable
+    file or failing pipe as one failure instead of ending the job.
     """
     with open(path) as f:
         for line in f:
@@ -27,18 +39,12 @@ def read_wav_scp(path):
             if not line:
                 continue
             utt_id, rest = line.split(None, 1)
-            if rest.endswith("|"):
-                raw = subprocess.run(
-                    rest[:-1], shell=True, capture_output=True, check=True
-                ).stdout
-                wav, sr = _decode_wav_bytes(raw)
-            else:
-                wav, sr = read_audio(rest)
-            yield utt_id, wav, sr
+            yield utt_id, (lambda rest=rest: _load_wav_scp_entry(rest))
 
 
 def read_file_list(path):
-    """Yield ``(utt_id, waveform, sample_rate)`` from a list of audio paths.
+    """Yield ``(utt_id, load)`` from a list of audio paths; ``load()`` returns
+    ``(waveform, sample_rate)``.
 
     The utterance id is the basename without extension, which is what most
     people expect when they point this at a directory listing.
@@ -48,8 +54,8 @@ def read_file_list(path):
             p = line.strip()
             if not p:
                 continue
-            wav, sr = read_audio(p)
-            yield os.path.splitext(os.path.basename(p))[0], wav, sr
+            yield (os.path.splitext(os.path.basename(p))[0],
+                   (lambda p=p: read_audio(p)))
 
 
 def read_audio(path):

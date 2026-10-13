@@ -97,3 +97,36 @@ def test_unknown_frame_rate_is_reported_not_snapped():
             return {1: np.zeros((500, 4))}
 
     assert SSLExtractor._measure_frame_shift(Fake()) == pytest.approx(0.008)
+
+
+def _write_wav(path, samples, sampwidth):
+    import wave
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(sampwidth)
+        w.setframerate(16000)
+        w.writeframes(samples.tobytes() if sampwidth != 3 else b"".join(
+            int(x).to_bytes(3, "little", signed=True) for x in samples))
+
+
+def test_piped_24bit_wav_is_not_read_as_int16(tmp_path):
+    pytest.importorskip("soundfile")
+    from ssl_kaldi_feats.io import read_wav_scp
+    x = (np.sin(np.arange(1600) / 10.0) * 0.5 * (2 ** 23 - 1)).astype(np.int32)
+    _write_wav(tmp_path / "a.wav", x, 3)
+    scp = tmp_path / "wav.scp"
+    scp.write_text(f"a cat {tmp_path / 'a.wav'} |\n")
+    (utt, load), = list(read_wav_scp(scp))
+    wav, sr = load()
+    assert utt == "a" and sr == 16000 and len(wav) == 1600
+    assert np.allclose(wav, x / 2 ** 23, atol=1e-4)
+
+
+def test_failing_pipe_is_deferred_to_load(tmp_path):
+    from ssl_kaldi_feats.io import read_wav_scp
+    scp = tmp_path / "wav.scp"
+    scp.write_text("bad false |\ngood true |\n")
+    entries = list(read_wav_scp(scp))  # reading the list must not run the pipes
+    assert [u for u, _ in entries] == ["bad", "good"]
+    with pytest.raises(Exception):
+        entries[0][1]()

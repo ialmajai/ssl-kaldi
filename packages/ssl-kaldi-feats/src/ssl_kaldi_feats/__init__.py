@@ -7,7 +7,7 @@ from .extractor import (
     preprocess_waveform,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "SSLExtractor",
     "preprocess_waveform",

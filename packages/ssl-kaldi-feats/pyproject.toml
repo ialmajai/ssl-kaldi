@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ssl-kaldi-feats"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kaldi ark/scp features from any HuggingFace speech encoder, without a Kaldi install"
 readme = "README.md"
 # 3.8 because that is the interpreter the ssl-kaldi recipes run on.

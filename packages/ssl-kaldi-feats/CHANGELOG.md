@@ -2,13 +2,22 @@
 
 ## Unreleased
 
+- Open: verify against transformers 5.x and lift the `<5` pin if the fixture
+  still reproduces. Run `pytest -m needs_model tests/` on a 5.x environment.
+
+## 0.1.1 (2026-10-13)
+
+- Piped wav input that is not 16-bit PCM (24/32-bit, float) is decoded through
+  soundfile. 0.1.0 read every piped wav as int16, so such input produced
+  wrong features without an error.
+- An unreadable file or failing pipe in `wav.scp` or a file list now counts as
+  one failure against `--max-failures`. 0.1.0 read audio outside the
+  per-utterance error handling, so one bad entry ended the job.
 - Compatibility test tolerance is now relative to each fixture's own scale,
   with a separate cosine check. The absolute bound reported a false failure on
   transformers 4.57.6 because `strip` features carry roughly 20x the standard
   deviation of `keep` ones. Test-only: the shipped code in 0.1.0 is unaffected,
   and the fix missed that release by minutes.
-- Open: verify against transformers 5.x and lift the `<5` pin if the fixture
-  still reproduces. Run `pytest -m needs_model tests/` on a 5.x environment.
 
 ## 0.1.0 (2026-08-05)
 

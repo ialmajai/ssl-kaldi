@@ -87,8 +87,9 @@ def main(argv=None):
     utt2num_frames, utt2dur, failed = {}, {}, []
     processed = 0
     try:
-        for utt_id, wav, sr in reader:
+        for utt_id, load in reader:
             try:
+                wav, sr = load()
                 feats = extractor.extract(wav, sr)
                 for layer, w in writers.items():
                     w(utt_id, feats[layer])
