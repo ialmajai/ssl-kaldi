@@ -113,6 +113,24 @@ def test_flush_batch_skips_undersized_trailing_batch():
     assert ipca2.called
 
 
+def test_save_pca_unfitted_raises_clear_error(tmp_path):
+    """Training on fewer frames than n_components skips every batch, so
+    partial_fit never runs. Saving must say that, not AttributeError."""
+    pca = _load("pca")
+
+    class UnfittedIPCA:
+        n_components = 30
+        device = "cpu"
+
+    with pytest.raises(ValueError, match="never fitted"):
+        pca.save_pca(UnfittedIPCA(), str(tmp_path / "m.pt"))
+
+
+def test_flush_batch_empty_is_noop():
+    pca = _load("pca")
+    pca._flush_batch([], object())  # must not raise on np.vstack([])
+
+
 # ---------------------------------------------------------------- cli
 
 def test_layers_requires_out_template(cf):

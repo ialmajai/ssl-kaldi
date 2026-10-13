@@ -17,6 +17,8 @@ logger = logging.getLogger("IPCA")
 
 
 def _flush_batch(batch, ipca):
+    if not batch:
+        return
     batch_tensor = torch.from_numpy(np.vstack(batch)).float().to(ipca.device)
     # Skip a trailing batch smaller than n_components; partial_fit cannot
     # estimate components from it and fails deep inside torchdr.
@@ -54,6 +56,14 @@ def train_pca(feats_scp, ipca, max_utts):
 
 
 def save_pca(ipca, path):
+    if not hasattr(ipca, "components_"):
+        # Every batch was skipped (see _flush_batch): fewer frames in total
+        # than n_components, so partial_fit never ran.
+        raise ValueError(
+            "PCA was never fitted: the training features contain fewer "
+            "frames than n_components. Add data, raise --max_utts, or "
+            "lower --pca_dim"
+        )
     # Save only what transform() needs, as CPU tensors, so the model can be
     # loaded on any host and any torchdr version.
     torch.save(
