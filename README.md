@@ -43,6 +43,8 @@ Audio / Video
       ↓
 Pretrained SSL model (PyTorch)
       ↓
+Fine-tuning with a CTC head, LoRA or full (optional)
+      ↓
 Frame-level feature extraction
       ↓
 PCA dimensionality reduction / Upsampling (optional)
@@ -51,6 +53,8 @@ Kaldi ark/scp features
       ↓
 Standard Kaldi training & decoding
 ```
+
+Fine-tuning is optional. [`egs/grid/s5/run_ctc_finetune.sh`](egs/grid/s5/run_ctc_finetune.sh) fine-tunes AV-HuBERT with LoRA or in full under a CTC head, then exports a plain checkpoint that the extractor reads like a pretrained one.
 
 The shared building blocks live in [`shared/`](shared/) (SSL extraction, PCA, interpolation, upsampling) and are reused across every recipe in [`egs/`](egs/).
 
