@@ -14,6 +14,7 @@ stage=0
 train_stage=-10
 get_egs_stage=-10
 affix=1a
+srand=0  # egs shuffling and dropout seed; vary it for repeat runs
 
 # training options
 dropout_schedule='0,0@0.20,0.5@0.50,0'
@@ -150,6 +151,7 @@ if [ $stage -le 3 ]; then
   fi
 
   steps/nnet3/chain/e2e/train_e2e.py --stage $train_stage \
+    --trainer.srand $srand \
     --cmd "$decode_cmd" \
     --feat.cmvn-opts "$cmvn_opts" \
     --chain.leaky-hmm-coefficient 0.1 \
