@@ -58,6 +58,7 @@ def download_grid(
             f.extractall(corpus_dir)
 
     # Speaker mapping to fix mis-assigned alignment data
+    # s21 has no video in GRID, so the map leaves it out.
     speaker_fix_map = {
         "s1": "s1",
         "s2": "s2",
