@@ -5,6 +5,14 @@
 - Open: verify against transformers 5.x and lift the `<5` pin if the fixture
   still reproduces. Run `pytest -m needs_model tests/` on a 5.x environment.
 
+## 0.1.2 (2026-10-15)
+
+- Unsigned integer PCM (for example 8-bit wav as returned by
+  `scipy.io.wavfile`) is centred on its midpoint before scaling, so silence
+  maps to 0.0. 0.1.1 divided by the dtype maximum only, which mapped silence
+  to 0.5 and shifted the features without an error. Signed PCM is unchanged.
+- Releases are published from GitHub Actions through PyPI Trusted Publishing.
+
 ## 0.1.1 (2026-10-13)
 
 - Piped wav input that is not 16-bit PCM (24/32-bit, float) is decoded through
