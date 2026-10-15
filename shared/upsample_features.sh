@@ -7,7 +7,7 @@ cmd=run.pl
 
 interp_mode=linear
 upsample_factor=2
-compress=false   # true writes Kaldi lossy-compressed features
+compress=true    # false keeps float32; compression showed no WER effect on GRID and is ~4x smaller
 
 echo "$0 $@"  
 
