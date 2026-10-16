@@ -14,6 +14,12 @@ first N updates, so the CTC head learns before the encoder moves.
 full_finetune=true is the matched control: no LoRA, every encoder weight
 (front end included) trainable, everything else identical.
 
+With task.modalities [audio, video], modality_dropout drops one stream for a
+whole batch with that probability (the audio with probability audio_dropout,
+else the video), as AV-HuBERT pretraining does; stock fine-tuning has no
+modality dropout. valid_video_only drops the audio outside training, so
+checkpoint selection scores the video-only input the features are read from.
+
 Env: AVHUBERT_ROOT, the directory holding the `avhubert` package.
 """
 import contextlib
@@ -101,6 +107,8 @@ class LoraCtcEncoder(FairseqEncoder):
         self.apply_mask = cfg.apply_mask
         self.final_dropout = nn.Dropout(cfg.final_dropout)
         self.freeze_finetune_updates = cfg.freeze_finetune_updates
+        self.modality_dropout, self.audio_dropout = cfg.modality_dropout, cfg.audio_dropout
+        self.valid_video_only = cfg.valid_video_only
         self.num_updates = 0
         self.proj = nn.Linear(self.w2v_model.encoder.embedding_dim, len(tgt_dict))
         nn.init.xavier_uniform_(self.proj.weight)
@@ -122,6 +130,13 @@ class LoraCtcEncoder(FairseqEncoder):
         return self
 
     def forward(self, source, padding_mask, tbc=True, **kwargs):
+        if source["audio"] is not None and source["video"] is not None:
+            if self.training:
+                if torch.rand(1).item() < self.modality_dropout:
+                    drop = "audio" if torch.rand(1).item() < self.audio_dropout else "video"
+                    source = {**source, drop: None}
+            elif self.valid_video_only:
+                source = {**source, "audio": None}
         ft = self.freeze_finetune_updates <= self.num_updates
         with torch.no_grad() if not ft else contextlib.ExitStack():
             x, padding_mask = self.w2v_model.extract_finetune(
@@ -151,6 +166,12 @@ class AVHubertCtcLoraConfig(AVHubertCtcConfig):
                               metadata={"help": "comma-separated Linear names per layer"})
     full_finetune: bool = field(default=False,
                                 metadata={"help": "no LoRA; train every encoder weight (control)"})
+    modality_dropout: float = field(default=0.0,
+                                    metadata={"help": "per-batch probability of dropping one stream"})
+    audio_dropout: float = field(default=0.0,
+                                 metadata={"help": "given a drop, probability it is the audio"})
+    valid_video_only: bool = field(default=False,
+                                   metadata={"help": "drop the audio outside training"})
 
 
 @register_model("av_hubert_ctc_lora", dataclass=AVHubertCtcLoraConfig)
