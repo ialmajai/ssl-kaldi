@@ -119,3 +119,21 @@
 # full, AdamW 0.01  1337  5.58   6.60  8.34     8.99   input/avhubert_base_ctc_full_wd1e-2.pt
 # The older lines above use the 3,985-clip test (23,910 words) and the
 # 2,577-clip all-54 Lombard set (15,462 words) with test-chosen LM weights.
+
+# ---- 2026-10-16: all 5,142 shared Lombard GRID clips pooled (Lombard + plain
+# speech, 30,852 words); LM weight chosen on the 14 dev speakers over the pooled
+# clips (local/score_lombard_pooled.sh). Columns: eval-40 / all-54.
+# frozen base L4 fMLLR TDNN-F chain          5.19 / 5.37
+# frozen large L13 fMLLR TDNN-F chain        4.58 / 4.74
+# frozen large L13 tri3b (SAT + fMLLR)       4.77 / 4.92
+# frozen base L8, e2e + CMVN, chain seeds    6.06, 5.76, 6.63 / 6.14, 5.95, 6.73
+# frozen large L16, e2e, no CMVN             5.28 / 5.44
+# frozen large L16, e2e + CMVN, chain seeds  5.39, 5.20, 5.05 / 5.54, 5.40, 5.20
+# base LoRA r32 L10, fine-tune seeds 1337/43/44   5.83, 6.04, 6.23 / 6.07, 6.19, 6.48  (mean 6.03 / 6.25)
+# base full FT L10, fine-tune seeds 1337/43/44    8.28, 8.15, 7.63 / 8.48, 8.38, 7.95  (mean 8.02 / 8.27)
+# base full FT L10, lr 5e-5 / 5e-4                6.77 / 7.04,  12.45 / 12.61
+# base full FT L10, AdamW 0.01                    8.66 / 8.94
+# base full FT interpolated 0.25, chain seeds     5.60, 5.96, 5.79 / 5.89, 6.25, 6.04
+# base LoRA interpolated 0.25, chain seeds        6.17, 5.78, 6.06 / 6.31, 6.05, 6.40
+# large LoRA r32 L20, chain seeds                 5.04, 5.63, 5.84 / 5.13, 5.71, 5.94
+# large full FT L20                               8.75 / 8.98
