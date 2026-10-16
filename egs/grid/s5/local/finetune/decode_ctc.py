@@ -4,6 +4,9 @@
 No LM, no grammar: argmax per frame, collapse repeats, drop blanks, '|' -> space.
 Writes '<utt> <words>' lines for compute-wer. Centre 88x88 crop (image_aug off).
   decode_ctc.py CKPT ROI_DIR DATA_DIR OUT_HYP [--manifest-dir D]
+  decode_ctc.py MERGED.pt ROI_DIR DATA_DIR OUT_HYP --head MERGED.ctc_head.pt ...
+With --head, CKPT is the merged encoder from export_lora_encoder.py and the
+fine-tuned model is rebuilt from it and the saved CTC head.
 """
 import argparse
 import os
@@ -21,7 +24,10 @@ def main():
     ap.add_argument("out_hyp")
     ap.add_argument("--manifest-dir", required=True)
     ap.add_argument("--label-dict", required=True, help="dict.ltr.txt from training")
+    ap.add_argument("--head", help="CTC head from export_lora_encoder.py; CKPT is then the merged encoder")
     a = ap.parse_args()
+    if a.head:
+        a.ckpt = rebuild_checkpoint(a.ckpt, a.head, a.manifest_dir)
 
     os.makedirs(a.manifest_dir, exist_ok=True)
     text = dict(l.rstrip("\n").split(None, 1) for l in open(f"{a.data_dir}/text"))
@@ -67,6 +73,34 @@ def main():
         for u in utts:
             print(u, out.get(u, ""), file=f)
     print(f"decoded {len(out)} of {len(utts)}", file=sys.stderr)
+
+
+def rebuild_checkpoint(enc_path, head_path, work_dir):
+    """Write a fairseq checkpoint equivalent to the fine-tune's from the merged
+    encoder and the saved head. Each LoRA-wrapped weight gets the merged weight as
+    its base and B = 0, so the adapter adds nothing on top of it."""
+    h = torch.load(head_path, map_location="cpu")
+    enc = torch.load(enc_path, map_location="cpu")["model"]
+    pre = "w2v_encoder.w2v_model."
+    state = {}
+    for k, shape in h["keys"].items():
+        if not k.startswith(pre):
+            v = h["head"][k]
+        elif ".parametrizations.weight.0." in k:          # LoRA A or B
+            v = torch.zeros(shape)
+        elif k.endswith(".parametrizations.weight.original"):
+            v = enc[k[len(pre):-len(".parametrizations.weight.original")] + ".weight"]
+        else:
+            v = enc[k[len(pre):]]
+        if tuple(v.shape) != tuple(shape):
+            sys.exit(f"shape mismatch for {k}: {tuple(v.shape)} vs {shape}")
+        state[k] = v
+    os.makedirs(work_dir, exist_ok=True)
+    out = os.path.join(work_dir, "rebuilt_checkpoint.pt")
+    torch.save({"cfg": h["cfg"], "args": h["args"], "task_state": h["task_state"],
+                "optimizer_history": h["optimizer_history"], "extra_state": h["extra_state"],
+                "model": state}, out)
+    return out
 
 
 if __name__ == "__main__":

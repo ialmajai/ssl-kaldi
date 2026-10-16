@@ -102,8 +102,13 @@ if run 4; then
     src=data/${x}_raw; [ $x = lomb ] && src=$lomb
     [ -d $ft_dir/rois96_$x ] || continue
     hyp=$exp/decode_ctc_$x.txt
-    python local/finetune/decode_ctc.py $exp/checkpoints/checkpoint_best.pt $ft_dir/rois96_$x \
-      $src $hyp --manifest-dir $exp/manifest_$x --label-dict $ft_dir/manifest/dict.ltr.txt
+    # Without the training checkpoint, rebuild the model from the merged encoder
+    # and the CTC head that stage 3 saved beside it.
+    model=($exp/checkpoints/checkpoint_best.pt)
+    [ -f ${model[0]} ] || model=($ckpt --head ${ckpt%.pt}.ctc_head.pt)
+    python local/finetune/decode_ctc.py ${model[0]} $ft_dir/rois96_$x \
+      $src $hyp --manifest-dir $exp/manifest_$x --label-dict $ft_dir/manifest/dict.ltr.txt \
+      "${model[@]:1}"
     if [ $x = lomb ]; then
       echo "$0: self-decode Lombard $(local/score_lombard_split.sh $hyp data/lang/words.txt $src)"
     else
