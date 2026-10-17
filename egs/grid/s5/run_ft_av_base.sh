@@ -3,25 +3,28 @@
 # audio-visual fine-tuning"): base LoRA r32 fine-tuned on GRID audio + video
 # with modality dropout (base_ctc_lora_av.yaml), then read at L10 from video
 # alone through the same e2e chain (chain seed 0) as the three video-only LoRA
-# fine-tunes it is compared with. Copy of run_ft_seeds_base.sh for one config;
-# runs on fierce.
+# fine-tunes it is compared with. Copy of run_ft_seeds_base.sh for one config.
+# Run from egs/grid/s5 in the ssl-kaldi environment:
+#   ./run_ft_av_base.sh [--audio-dir DIR] [--store DIR]
 set -uo pipefail
-cd /data/learn/ssl-kaldi/egs/grid/s5 || exit 1
-export PATH=/data/miniconda3/envs/ssl-kaldi/bin:$PATH
-export STORE=/srv/nfs/data/ssl-kaldi-feats-xpaper
+audio_dir=/srv/nfs/data/grid16k_true   # video-synced 16 kHz GRID audio
+store=                                 # feature store; default data/ft_av_store
 . ./cmd.sh; . ./path.sh
+. utils/parse_options.sh
+export STORE=${store:-$PWD/data/ft_av_store}
 need_space() {
-  local free=$(df --output=avail -BG /data | tail -1 | tr -dc 0-9)
-  [ $free -ge 10 ] || { echo "$(date +%H:%M) only ${free}G free on /data, stopping before $1"; exit 1; }
-  free=$(df --output=avail -BG /srv/nfs/data | tail -1 | tr -dc 0-9)
-  [ $free -ge 10 ] || { echo "$(date +%H:%M) only ${free}G free on /srv/nfs/data, stopping before $1"; exit 1; }
+  local d free
+  for d in $PWD $STORE; do
+    mkdir -p $d; free=$(df --output=avail -BG $d | tail -1 | tr -dc 0-9)
+    [ $free -ge 10 ] || { echo "$(date +%H:%M) only ${free}G free on $d, stopping before $1"; exit 1; }
+  done
 }
 
 cfg=base_ctc_lora_av; tag=lor10av; ckpt=input/avhubert_$cfg.pt; ft=finetune_av
 # Same clips and validation split as finetune_lora/manifest, plus the audio.
 if [ ! -s $ft/manifest/train.tsv ]; then
   python local/finetune/prepare_ctc_manifests.py --data data/train_lor10_raw \
-    --roi-dir finetune_lora/rois96 --out $ft/manifest --audio-dir /srv/nfs/data/grid16k_true \
+    --roi-dir finetune_lora/rois96 --out $ft/manifest --audio-dir $audio_dir \
     || { echo "FAILED manifests"; exit 1; }
   cmp -s <(cut -f1,2,4 finetune_lora/manifest/train.tsv) <(cut -f1,2,4 $ft/manifest/train.tsv) \
     || { echo "FAILED: manifest clips differ from finetune_lora"; exit 1; }
