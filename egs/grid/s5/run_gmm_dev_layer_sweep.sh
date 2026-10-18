@@ -2,8 +2,9 @@
 # Choose the GMM ladder's AV-HuBERT layer on the 14 Lombard dev speakers rather
 # than on GRID test (2026-10-17, review of the paper: the published taps, base L4
 # and large L13, came from a tri3b sweep scored on test). Same pipeline as the
-# published -rt systems: one multi-layer extraction pass over the training set
-# (local/compute_avhubert_layers.py, mean-face), PCA-30 fitted on train, x2
+# published -rt systems: training features from local/compute_avhubert_layers.py
+# (mean-face), one layer per pass so only one float32 layer sits on disk at a
+# time, PCA-30 fitted on train, x2
 # nearest upsampling to 50 fps, mono -> tri1 -> tri2b -> tri3b with the sweep's
 # settings, then decode_fmllr on the dev speakers' Lombard and plain clips,
 # extracted per layer with local/make_avhubert.sh as the shared Lombard set is.
@@ -15,7 +16,7 @@
 set -uo pipefail
 model=base
 layers=2,3,4,5,6,7,8
-store=          # raw training features (deleted after PCA); default data/gmm_sweep_store
+store=          # raw training features, one layer at a time; default data/gmm_sweep_store
 nj=2            # extraction jobs, each holding one encoder on the GPU
 . ./cmd.sh; . ./path.sh
 . utils/parse_options.sh
@@ -36,25 +37,22 @@ for set in lomb_l lomb_p; do
   [ -s $d/utt2spk ] || utils/subset_data_dir.sh --spk-list local/lombard_dev_speakers.txt data/s_$set $d
 done
 
-# 1. One multi-layer pass over the training set for the layers without a model.
-todo=""; for L in $LL; do [ -s data/dvs_${model}${L}_train_up/feats.scp ] || todo="$todo,$L"; done
-todo=${todo#,}
-if [ -n "$todo" ]; then
-  step "extracting training layers $todo"
-  log=$D/log_extract; mkdir -p $log
-  split=; for j in $(seq $nj); do split="$split $log/v.$j.scp"; done
-  utils/split_scp.pl data/train/video.scp $split
-  $train_cmd JOB=1:$nj $log/extract.JOB.log \
-    python local/compute_avhubert_layers.py \
-      --out-template "ark,scp:$store/$model/raw_l{layer}.JOB.ark,$store/$model/raw_l{layer}.JOB.scp" \
-      --layers $todo --ckpt $ckpt --path $PWD/av_hubert --crop-mode meanface scp:$log/v.JOB.scp \
-    || { echo "FAILED extraction"; exit 1; }
-fi
-
 for L in $LL; do
   T=data/dvs_${model}${L}_train; E=exp-gmm-dev-sweep/$model/l$L; pca=$D/pca-30d-l$L.pt
-  # 2. PCA-30 on train, x2 upsample, drop the raw layer.
+  # 1-2. Extract this layer (float32, ~7 GB base, ~9 GB large), PCA-30 on train,
+  # x2 upsample, then drop the raw layer before the next one.
   if [ ! -s ${T}_up/feats.scp ]; then
+    free=$(df --output=avail -BG $store | tail -1 | tr -dc 0-9)
+    [ $free -ge 15 ] || { echo "$(date +%H:%M) only ${free}G free on $store, stopping before L$L"; exit 1; }
+    step "L$L: extracting training features"
+    log=$D/log_extract_l$L; mkdir -p $log
+    split=; for j in $(seq $nj); do split="$split $log/v.$j.scp"; done
+    utils/split_scp.pl data/train/video.scp $split
+    $train_cmd JOB=1:$nj $log/extract.JOB.log \
+      python local/compute_avhubert_layers.py \
+        --out-template "ark,scp:$store/$model/raw_l{layer}.JOB.ark,$store/$model/raw_l{layer}.JOB.scp" \
+        --layers $L --ckpt $ckpt --path $PWD/av_hubert --crop-mode meanface scp:$log/v.JOB.scp \
+      || { rm -f $store/$model/raw_l$L.*; echo "FAILED extraction L$L"; exit 1; }
     step "L$L: PCA and upsample"
     raw=${T}_raw; rm -rf $raw $T ${T}_up; utils/copy_data_dir.sh data/train $raw
     for j in $(seq $nj); do cat $store/$model/raw_l$L.$j.scp; done | sort > $raw/feats.scp
