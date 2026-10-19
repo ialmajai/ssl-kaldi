@@ -21,6 +21,7 @@ frames_per_eg=150
 remove_egs=false
 common_egs_dir=
 xent_regularize=0.1
+srand=0  # network init, egs shuffling and dropout seed; vary it for repeat runs
 dim=600
 small_dim=256
 num_jobs_initial=1
@@ -133,6 +134,7 @@ if [ $stage -le 13 ]; then
     --chain.apply-deriv-weights false \
     --chain.lm-opts="--num-extra-lm-states=2000" \
     --trainer.add-option="--optimization.memory-compression-level=2" \
+    --trainer.srand $srand \
     --egs.dir "$common_egs_dir" \
     --egs.stage $get_egs_stage \
     --egs.opts "" \
