@@ -26,6 +26,6 @@ for seed in 0 $seeds; do
   sfx=$([ $seed = 0 ] || echo _s$seed)
   d=exp/chain/e2e_tdnnf_n10_ft_lora32$sfx/decode_ft_lora32$sfx
   echo "  seed $seed: self-decode $(grep -h 'WER' exp_ft/mhubert147_lora32$sfx/lm_test.log 2>/dev/null | tail -1)"
-  python shared/score_cross_select.py $d data/test/utt2spk | sed 's/^/    /'
+  python shared/score_cross_select.py $d data/test/utt2spk --words exp/chain/e2e_tree/graph/words.txt | sed 's/^/    /'
 done
 echo "MHUBERT-LORA-SEEDS-DONE"
