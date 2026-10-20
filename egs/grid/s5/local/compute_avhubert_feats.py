@@ -85,7 +85,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=74,
         help="Skip utterances with fewer than this many mouth frames. Lower it for "
-             "shorter out-of-domain clips (e.g. Lombard GRID is ~60 frames).",
+             "shorter clips, such as out-of-domain test sets.",
     )
     parser.add_argument(
         "--mouth-size",

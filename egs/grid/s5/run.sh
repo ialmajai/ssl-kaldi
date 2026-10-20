@@ -17,16 +17,14 @@ upsample_factor=2
 
 #path to grid corpus dataset
 datasrc=grid-corpus
-# Lombard GRID front-view videos, for stages 14-15: unzip lombardgrid_front.zip into lombard-grid/
-lombard_dir=lombard-grid/lombardgrid/front
 
 model_size=base
 crop_mode=meanface       # canonical AV-HuBERT mean-face alignment (main method);
                          # resolution-invariant, marginally best. Alternatives:
                          # legacy 'centroid' (fixed 64px) or centroid + --crop-scale (dynamic IOD).
 
-# Empty values take the model_size defaults below: the re-validated best layers
-# (base 4, large 13; see README layer sweeps).
+# Empty values take the model_size defaults below: base layer 4 and large layer 11,
+# chosen by a GMM-SAT layer sweep on held-out dev speakers, not on GRID test.
 avhubert_model=
 encoder_layer=
 njfeats=
@@ -55,7 +53,7 @@ numGaussSAT=40000
 # Resolve model_size defaults after parsing so --model-size takes effect.
 case $model_size in
   base)  : ${avhubert_model:=base_vox_iter5.pt}  ${encoder_layer:=4}  ${njfeats:=8} ;;
-  large) : ${avhubert_model:=large_vox_iter5.pt} ${encoder_layer:=13} ${njfeats:=4} ;;
+  large) : ${avhubert_model:=large_vox_iter5.pt} ${encoder_layer:=11} ${njfeats:=4} ;;
   *) echo "$0: --model-size must be base or large, got '$model_size'"; exit 1 ;;
 esac
 
@@ -244,50 +242,9 @@ if [ $stage -le 12 ] && [ $stop_stage -ge 12 ]; then
 fi
 
 if [ $stage -le 13 ] && [ $stop_stage -ge 13 ]; then
-  # Train the TDNN-F chain on the fMLLR features (5.85% with --model-size large).
+  # Train the TDNN-F chain on the fMLLR features (5.89% over three seeds with --model-size large).
   local/chain/run_tdnn_fmllr_tdnnf.sh --stage 9 --gmm $gmm --data-fmllr $data_fmllr \
     --train-set train$data_affix --test-set test$data_affix
-fi
-
-if [ $stage -le 14 ] && [ $stop_stage -ge 14 ]; then
-  # Build Lombard features as the training data were, then GMM-SAT decode for fMLLR.
-  [ -d "$lombard_dir" ] || { echo "$0: no Lombard videos in $lombard_dir (unzip lombardgrid_front.zip into lombard-grid/)"; exit 1; }
-  rm -rf data/lomb_raw data/lomb data/lomb$data_affix
-  python local/lombard_data_prep.py --video-dir $lombard_dir --out data/lomb_raw
-  # Lower --min-frames: Lombard clips run ~60 frames.
-  local/make_avhubert.sh --cmd "$feats_cmd" --nj $njfeats --ckpt input/$avhubert_model \
-    --avhubert-path $avhubert_path --layer $encoder_layer --crop-mode $crop_mode \
-    --min-frames 30 data/lomb_raw || exit 1;
-  steps/compute_cmvn_stats.sh data/lomb_raw && utils/fix_data_dir.sh data/lomb_raw
-
-  local/copy_data_dir.sh data/lomb_raw data/lomb
-  shared/make_pca_features.sh --cmd "$decode_cmd" --nj $njpca --pca-model pca/pca-${pca_dim}d.pt \
-    data/lomb_raw data/lomb || exit 1;
-  steps/compute_cmvn_stats.sh data/lomb && utils/fix_data_dir.sh data/lomb
-  local/copy_data_dir.sh data/lomb data/lomb$data_affix
-  shared/upsample_features.sh --cmd "$decode_cmd" --nj $njpca \
-    --interp-mode $interp_mode --upsample-factor $upsample_factor \
-    data/lomb data/lomb$data_affix || exit 1;
-  steps/compute_cmvn_stats.sh data/lomb$data_affix && utils/fix_data_dir.sh data/lomb$data_affix
-
-  steps/decode_fmllr.sh --nj $njtest --cmd "$decode_cmd" \
-    $gmm/graph data/lomb$data_affix $gmm/decode_lombard
-  dirc=${data_fmllr}/lomb$data_affix
-  steps/nnet/make_fmllr_feats.sh --nj $njtest --cmd "$train_cmd" \
-    --transform-dir $gmm/decode_lombard \
-    $dirc data/lomb$data_affix $gmm $dirc/log $dirc/data
-  steps/compute_cmvn_stats.sh $dirc $dirc/log $dirc/data || exit 1;
-fi
-
-if [ $stage -le 15 ] && [ $stop_stage -ge 15 ]; then
-  # Decode Lombard with the fMLLR TDNN-F chain; score both systems on the dev/eval split.
-  chain=exp/chain/tdnntdnnf
-  steps/nnet3/decode.sh --acwt 1.0 --post-decode-acwt 10.0 --nj $njtest --cmd "$decode_cmd" \
-    $chain/graph ${data_fmllr}/lomb$data_affix $chain/decode_lombard || exit 1;
-  for d in $gmm/decode_lombard $chain/decode_lombard; do
-    split=$(local/score_lombard_split.sh $d data/lang/words.txt data/lomb_raw)
-    echo "$d: $split"
-  done
 fi
 
 exit 0;

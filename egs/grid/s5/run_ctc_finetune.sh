@@ -4,8 +4,7 @@
 #
 # CTC fine-tuning of AV-HuBERT on GRID (LoRA or matched full fine-tune), then
 # the fine-tuned encoder as a feature extractor for the flat-start e2e chain.
-# Run after run.sh stages 0-2 (data/{train,test}_raw) and, for the Lombard
-# stages, stage 14 (data/lomb_raw).
+# Run after run.sh stages 0-2 (data/{train,test}_raw).
 #
 #   ./run_ctc_finetune.sh                                   # LoRA r32, base, layer 10
 #   ./run_ctc_finetune.sh --config base_ctc_full            # matched full fine-tune
@@ -18,14 +17,13 @@
 # s30, ResNet BatchNorm statistics frozen.
 #
 # Stages:
-#   0  96 px mean-face ROIs for train, test and Lombard
+#   0  96 px mean-face ROIs for train and test
 #   1  fairseq manifests (letters; s7, s30 held out for validation)
 #   2  fine-tune (one GPU; restartable, fairseq resumes from checkpoint_last.pt)
 #   3  merge LoRA into a plain AV-HuBERT checkpoint: input/avhubert_<config>.pt
-#   4  the fine-tuned model decoding itself (greedy CTC, no LM) on test and Lombard
-#   5  features at --layer for train, test and Lombard, x2 upsampled
+#   4  the fine-tuned model decoding itself (greedy CTC, no LM) on test
+#   5  features at --layer for train and test, x2 upsampled
 #   6  flat-start e2e chain (renorm, no relu, full CMVN), decoded on test
-#   7  Lombard decode, scored on the dev / eval speaker split
 
 set -euo pipefail
 
@@ -33,7 +31,7 @@ stage=0
 stop_stage=100
 config=base_ctc_lora
 pretrained=        # empty: input/{base,large}_vox_iter5.pt from the config name
-layer=             # empty: 10 for base, 20 for large (chosen on Lombard dev)
+layer=             # empty: 10 for base, 20 for large
 ft_dir=finetune_ctc
 nj_roi=8
 nj_feats=2
@@ -65,14 +63,13 @@ ckpt=input/avhubert_$config.pt
 tag=${config}_L$layer
 chain=exp/chain/e2e_tdnnf_${tag}
 tree=exp/chain/e2e_tree_ft
-lomb=data/lomb_raw
 
 run() { [ $stage -le $1 ] && [ $stop_stage -ge $1 ]; }
 
 if run 0; then
-  for x in train test lomb; do
-    src=data/${x}_raw; [ $x = lomb ] && src=$lomb
-    [ -f $src/video.scp ] || { echo "$0: $src/video.scp missing"; [ $x = lomb ] && continue; exit 1; }
+  for x in train test; do
+    src=data/${x}_raw
+    [ -f $src/video.scp ] || { echo "$0: $src/video.scp missing"; exit 1; }
     echo "$0: mouth ROIs for $x"
     OMP_NUM_THREADS=1 python local/finetune/dump_roi_meanface.py $src/video.scp \
       $ft_dir/rois96_$x --nj $nj_roi --path $avhubert_path \
@@ -98,8 +95,8 @@ if run 3; then
 fi
 
 if run 4; then
-  for x in test lomb; do
-    src=data/${x}_raw; [ $x = lomb ] && src=$lomb
+  for x in test; do
+    src=data/${x}_raw
     [ -d $ft_dir/rois96_$x ] || continue
     hyp=$exp/decode_ctc_$x.txt
     # Without the training checkpoint, rebuild the model from the merged encoder
@@ -109,20 +106,15 @@ if run 4; then
     python local/finetune/decode_ctc.py ${model[0]} $ft_dir/rois96_$x \
       $src $hyp --manifest-dir $exp/manifest_$x --label-dict $ft_dir/manifest/dict.ltr.txt \
       "${model[@]:1}"
-    if [ $x = lomb ]; then
-      echo "$0: self-decode Lombard $(local/score_lombard_split.sh $hyp data/lang/words.txt $src)"
-    else
-      compute-wer --text --mode=present ark:$src/text ark:$hyp | grep WER
-    fi
+    compute-wer --text --mode=present ark:$src/text ark:$hyp | grep WER
   done
 fi
 
 if run 5; then
-  for x in train test lomb; do
-    src=data/${x}_raw; [ $x = lomb ] && src=$lomb
-    [ -f $src/video.scp ] || continue
+  for x in train test; do
+    src=data/${x}_raw
     raw=data/${x}_${tag}_raw; up=${raw}_upsampled
-    min=74; [ $x = lomb ] && min=30
+    min=74
     rm -rf $raw $up
     local/copy_data_dir.sh $src $raw; rm -f $raw/feats.scp $raw/cmvn.scp
     local/make_avhubert.sh --cmd "$feats_cmd" --nj $nj_feats --ckpt $ckpt --min-frames $min \
@@ -145,12 +137,4 @@ if run 6; then
     --cmvn-opts "--norm-means=true --norm-vars=true" --treedir $tree \
     --train-set train_${tag}_raw_upsampled --test-set test_${tag}_raw_upsampled --stage $start
   echo "$0: GRID test $(grep -h WER $chain/decode/wer_* | utils/best_wer.sh)"
-fi
-
-if run 7; then
-  data=data/lomb_${tag}_raw_upsampled
-  steps/nnet3/decode.sh --acwt 1.0 --post-decode-acwt 10.0 --lattice-beam 2.0 \
-    --extra-left-context-initial 0 --extra-right-context-final 0 --frames-per-chunk 150 \
-    --nj 4 --cmd "$decode_cmd" --num-threads 4 $tree/graph $data $chain/decode_lombard
-  echo "$0: Lombard $(local/score_lombard_split.sh $chain/decode_lombard data/lang/words.txt $lomb)"
 fi

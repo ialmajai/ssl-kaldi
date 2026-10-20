@@ -32,11 +32,8 @@
 %WER 9.81 [ 2345 / 23910, 0 ins, 0 del, 2345 sub ] exp-sweep-mf50/l4/tri1/decode/wer_40_0.5
 %WER 8.90 [ 2129 / 23910, 0 ins, 0 del, 2129 sub ] exp-sweep-mf50/l4/tri2b/decode/wer_39_0.5
 %WER 7.30 [ 1746 / 23910, 0 ins, 0 del, 1746 sub ] exp-sweep-mf50/l4/tri3b/decode/wer_40_1.0
-%WER 5.39 [ 834 / 15462, 0 ins, 0 del, 834 sub ] exp-sweep-mf50/l4/tri3b/decode_lombard/wer_18_0.0  # GMM, Lombard GRID OOD
 %WER 7.51 [ 1796 / 23910, 0 ins, 0 del, 1796 sub ] exp/chain/e2e_tdnnf_l4norelu/decode/wer_10_0.0  # e2e chain, renorm+no-relu
 %WER 7.11 [ 1700 / 23910, 0 ins, 0 del, 1700 sub ] exp/chain/e2e_tdnnf_l4norelu_cmvn/decode/wer_1_1.0  # e2e chain, renorm+no-relu+CMVN, best e2e
-%WER 7.16 [ 1107 / 15462, 0 ins, 0 del, 1107 sub ] exp/chain/e2e_tdnnf_l4norelu/decode_lombard/wer_1_0.5  # e2e chain, Lombard OOD
-%WER 7.35 [ 1137 / 15462, 0 ins, 0 del, 1137 sub ] exp/chain/e2e_tdnnf_l4norelu_cmvn/decode_lombard/wer_11_0.5  # e2e chain +CMVN, Lombard OOD (worse than no-CMVN despite better in-domain)
 %WER 6.72 [ 1606 / 23910, 0 ins, 0 del, 1606 sub ] exp/chain/tdnntdnnf_l4/decode_test/wer_11_0.0  # fMLLR TDNN-F chain, best base-l4 fMLLR result
 
 # large avhubert model, layer 13, dimension 1024
@@ -44,23 +41,25 @@
 %WER 8.55 [ 2045 / 23910, 0 ins, 0 del, 2045 sub ] exp-sweep-mfL50/l13/tri1/decode/wer_29_0.5
 %WER 7.08 [ 1694 / 23910, 0 ins, 0 del, 1694 sub ] exp-sweep-mfL50/l13/tri2b/decode/wer_31_1.0
 %WER 6.03 [ 1442 / 23910, 0 ins, 0 del, 1442 sub ] exp-sweep-mfL50/l13/tri3b/decode/wer_20_0.5
-%WER 4.73 [ 732 / 15462, 0 ins, 0 del, 732 sub ] exp-sweep-mfL50/l13/tri3b/decode_lombard/wer_4_0.0  # GMM, Lombard GRID OOD
 %WER 6.43 [ 1538 / 23910, 0 ins, 0 del, 1538 sub ] exp/chain/e2e_tdnnf_l13norelu/decode/wer_10_0.5  # e2e chain, renorm+no-relu
 %WER 6.41 [ 1533 / 23910, 0 ins, 0 del, 1533 sub ] exp/chain/e2e_tdnnf_l13norelu_cmvn/decode/wer_10_0.5  # e2e chain, renorm+no-relu+CMVN, best e2e
-%WER 5.41 [ 836 / 15462, 0 ins, 0 del, 836 sub ] exp/chain/e2e_tdnnf_l13norelu/decode_lombard/wer_10_1.0  # e2e chain, Lombard OOD
-%WER 5.76 [ 891 / 15462, 0 ins, 0 del, 891 sub ] exp/chain/e2e_tdnnf_l13norelu_cmvn/decode_lombard/wer_10_0.0  # e2e chain +CMVN, Lombard OOD (worse than no-CMVN despite better in-domain)
 %WER 5.83 [ 1394 / 23910, 0 ins, 0 del, 1394 sub ] exp/chain/tdnntdnnf_l13/decode_test/wer_1_0.0  # fMLLR TDNN-F chain, best overall
 
 
 # 2026-10-04/06: more frozen rows (same feature dirs and trees as above)
 # base avhubert, layer 4
-%WER 5.32 [ 822 / 15462, 0 ins, 0 del, 822 sub ] exp/chain/tdnntdnnf_l4/decode_lombard/wer_11_1.0  # fMLLR TDNN-F chain, Lombard OOD
 %WER 7.11 [ 1700 / 23910, 0 ins, 0 del, 1700 sub ] exp/chain/e2e_tdnnf_frzl4cnorelu_cmvn/decode/wer_12_0.0  # e2e chain +CMVN rerun, compressed features
-%WER 7.72 [ 1193 / 15462, 0 ins, 0 del, 1193 sub ] exp/chain/e2e_tdnnf_frzl4cnorelu_cmvn/decode_lombard/wer_10_0.5  #   same, Lombard OOD
 %WER 7.51 [ 1796 / 23910, 0 ins, 0 del, 1796 sub ] exp/chain/e2e_tdnnf_frzl4ncnorelu_cmvn/decode/wer_12_0.0  # e2e chain +CMVN rerun, uncompressed features (COMPRESS=false)
-%WER 7.76 [ 1200 / 15462, 0 ins, 0 del, 1200 sub ] exp/chain/e2e_tdnnf_frzl4ncnorelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD; single-run noise ~0.4 WER
 # base avhubert, layer 12 (deeper than the swept-best layer 4)
 %WER 8.18 [ 1955 / 23910, 0 ins, 0 del, 1955 sub ] exp/chain/e2e_tdnnf_frzl12norelu_cmvn/decode/wer_13_0.0  # e2e chain +CMVN
-# large avhubert, layer 13
-%WER 4.66 [ 720 / 15462, 0 ins, 0 del, 720 sub ] exp/chain/tdnntdnnf_l13/decode_lombard/wer_11_0.5  # fMLLR TDNN-F chain, Lombard OOD, best Lombard result
-# Lombard dev/eval speaker split: local/lombard_dev_speakers.txt, local/score_lombard_split.sh
+
+# 2026-10-19: large avhubert, layer 11, dimension 1024 (run.sh's large default). The layer
+# comes from a tri3b layer sweep scored on held-out dev speakers, not on GRID test. All
+# 4,000 test clips (24,000 words); best LM setting on test, as above.
+%WER 19.01 [ 4562 / 24000, 0 ins, 0 del, 4562 sub ] exp-gmm-dev-sweep/large/l11/mono/decode_r_test/wer_27_0.0
+%WER 8.97 [ 2153 / 24000, 0 ins, 0 del, 2153 sub ] exp-gmm-dev-sweep/large/l11/tri1/decode_r_test/wer_39_0.0
+%WER 7.41 [ 1779 / 24000, 0 ins, 4 del, 1775 sub ] exp-gmm-dev-sweep/large/l11/tri2b/decode_r_test/wer_37_0.5
+%WER 6.25 [ 1500 / 24000, 0 ins, 0 del, 1500 sub ] exp-gmm-dev-sweep/large/l11/tri3b/decode_r_test/wer_30_0.0
+%WER 6.00 [ 1440 / 24000, 0 ins, 0 del, 1440 sub ] exp/chain/tdnntdnnf_uc_Ld11/decode_test/wer_10_1.0  # fMLLR TDNN-F chain, seed 0
+%WER 5.76 [ 1382 / 24000, 0 ins, 0 del, 1382 sub ] exp/chain/tdnntdnnf_uc_s1_Ld11/decode_test/wer_12_0.0  # fMLLR TDNN-F chain, seed 1
+%WER 5.91 [ 1419 / 24000, 0 ins, 0 del, 1419 sub ] exp/chain/tdnntdnnf_uc_s2_Ld11/decode_test/wer_12_0.0  # fMLLR TDNN-F chain, seed 2

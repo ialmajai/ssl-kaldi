@@ -9,8 +9,8 @@ layer=9
 ckpt=input/base_vox_iter5.pt
 avhubert_path=av_hubert  # see README: cloned into this directory
 crop_mode=meanface       # meanface (canonical AV-HuBERT alignment) | centroid (legacy)
-min_frames=74            # skip clips shorter than this; lower for Lombard (~60 frames)
-mouth_size=64            # legacy centroid crop px; scale up for higher-res clips (Lombard ~200)
+min_frames=74            # skip clips shorter than this; lower it for shorter clips
+mouth_size=64            # legacy centroid crop px; scale up for higher-res clips
 crop_scale=0.0           # legacy centroid: if >0, dynamic IOD-based crop (resolution-invariant)
 
 echo "$0 $@"  # Print the command line for logging.

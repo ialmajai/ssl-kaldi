@@ -1,9 +1,8 @@
 # GRID results with the AV-HuBERT encoder fine-tuned before feature extraction.
 # Frozen-encoder results are in RESULTS. Test: unseen speakers s1 s2 s20 s22
-# (23,910 words); Lombard GRID OOD (15,462 words). All Kaldi rows: flat-start e2e
+# (23,910 words). All Kaldi rows: flat-start e2e
 # chain, renorm + no-relu + CMVN, unless marked fMLLR/tri3b. Analysis and
 # bootstraps: paper/results.md 4b-4f; recipe and gotchas: NOTES.md (last section).
-# Lombard dev/eval speaker split: local/lombard_dev_speakers.txt (choose layers on dev).
 
 # ---- 2026-10-05/06: matched CTC recipe (run_lora_finetune.sh, run_lora_eval.sh) ----
 # letter CTC head, 3k-update head-only phase, mean-face 96px ROIs + random 88 crop,
@@ -11,129 +10,71 @@
 
 # base, LoRA rank 32 (5.3M trainable), input/avhubert_base_ctc_lora.pt  [headline base]
 %WER 6.77 [ 1618 / 23910, 21 ins, 57 del, 1540 sub ] finetune_lora/exp_base_ctc_lora/hyp_test.txt  # model decoding itself, greedy CTC, no grammar
-%WER 8.34 [ 1290 / 15462, 20 ins, 74 del, 1196 sub ] finetune_lora/exp_base_ctc_lora/hyp_lomb.txt  #   same, Lombard OOD
 %WER 6.69 [ 1599 / 23910, 0 ins, 0 del, 1599 sub ] exp/chain/e2e_tdnnf_lor8norelu_cmvn/decode/wer_10_0.5  # layer 8 features
-%WER 6.26 [ 968 / 15462, 0 ins, 0 del, 968 sub ] exp/chain/e2e_tdnnf_lor8norelu_cmvn/decode_lombard/wer_11_0.0  #   same, Lombard OOD
-%WER 6.30 [ 1507 / 23910, 0 ins, 0 del, 1507 sub ] exp/chain/e2e_tdnnf_lor10norelu_cmvn/decode/wer_11_1.0  # layer 10 features, chosen on Lombard dev
-%WER 5.85 [ 904 / 15462, 0 ins, 0 del, 904 sub ] exp/chain/e2e_tdnnf_lor10norelu_cmvn/decode_lombard/wer_10_0.5  #   same, Lombard OOD
+%WER 6.30 [ 1507 / 23910, 0 ins, 0 del, 1507 sub ] exp/chain/e2e_tdnnf_lor10norelu_cmvn/decode/wer_11_1.0  # layer 10 features
 %WER 6.06 [ 1450 / 23910, 0 ins, 0 del, 1450 sub ] exp/chain/e2e_tdnnf_lor12norelu_cmvn/decode/wer_11_1.0  # layer 12 features
-%WER 7.00 [ 1082 / 15462, 0 ins, 0 del, 1082 sub ] exp/chain/e2e_tdnnf_lor12norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 
 # base, full fine-tune control (103M trainable), input/avhubert_base_ctc_full.pt
 %WER 6.24 [ 1493 / 23910, 17 ins, 65 del, 1411 sub ] finetune_lora/exp_base_ctc_full/hyp_test.txt  # model decoding itself
-%WER 11.25 [ 1739 / 15462, 28 ins, 89 del, 1622 sub ] finetune_lora/exp_base_ctc_full/hyp_lomb.txt  #   same, Lombard OOD
 %WER 5.66 [ 1353 / 23910, 0 ins, 0 del, 1353 sub ] exp/chain/e2e_tdnnf_ful10norelu_cmvn/decode/wer_11_1.0  # layer 10 features
-%WER 7.94 [ 1228 / 15462, 0 ins, 0 del, 1228 sub ] exp/chain/e2e_tdnnf_ful10norelu_cmvn/decode_lombard/wer_11_0.0  #   same, Lombard OOD
 %WER 7.25 [ 1734 / 23910, 0 ins, 0 del, 1734 sub ] exp/chain/e2e_tdnnf_ful12norelu_cmvn/decode/wer_12_0.0  # layer 12 features
-%WER 10.10 [ 1562 / 15462, 0 ins, 0 del, 1562 sub ] exp/chain/e2e_tdnnf_ful12norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 
 # base, LoRA rank 16 (2.7M) and rank 64 (10.6M)
 %WER 6.94 [ 1659 / 23910, 26 ins, 76 del, 1557 sub ] finetune_lora/exp_base_ctc_lora16/hyp_test.txt  # r16, model decoding itself
-%WER 8.47 [ 1309 / 15462, 36 ins, 80 del, 1193 sub ] finetune_lora/exp_base_ctc_lora16/hyp_lomb.txt  #   same, Lombard OOD
 %WER 6.87 [ 1642 / 23910, 0 ins, 0 del, 1642 sub ] exp/chain/e2e_tdnnf_lr16_8norelu_cmvn/decode/wer_13_0.5  # r16 layer 8
-%WER 6.67 [ 1032 / 15462, 0 ins, 0 del, 1032 sub ] exp/chain/e2e_tdnnf_lr16_8norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 %WER 6.43 [ 1537 / 23910, 0 ins, 0 del, 1537 sub ] exp/chain/e2e_tdnnf_lr16_10norelu_cmvn/decode/wer_12_0.0  # r16 layer 10
-%WER 5.90 [ 913 / 15462, 0 ins, 0 del, 913 sub ] exp/chain/e2e_tdnnf_lr16_10norelu_cmvn/decode_lombard/wer_10_0.5  #   same, Lombard OOD
 %WER 6.88 [ 1646 / 23910, 19 ins, 64 del, 1563 sub ] finetune_lora/exp_base_ctc_lora64/hyp_test.txt  # r64, model decoding itself
-%WER 8.94 [ 1382 / 15462, 20 ins, 64 del, 1298 sub ] finetune_lora/exp_base_ctc_lora64/hyp_lomb.txt  #   same, Lombard OOD
 %WER 6.81 [ 1629 / 23910, 0 ins, 0 del, 1629 sub ] exp/chain/e2e_tdnnf_lr64_8norelu_cmvn/decode/wer_11_1.0  # r64 layer 8
-%WER 6.28 [ 971 / 15462, 0 ins, 0 del, 971 sub ] exp/chain/e2e_tdnnf_lr64_8norelu_cmvn/decode_lombard/wer_11_1.0  #   same, Lombard OOD
 %WER 6.40 [ 1530 / 23910, 0 ins, 0 del, 1530 sub ] exp/chain/e2e_tdnnf_lr64_10norelu_cmvn/decode/wer_11_0.5  # r64 layer 10
-%WER 6.54 [ 1011 / 15462, 0 ins, 0 del, 1011 sub ] exp/chain/e2e_tdnnf_lr64_10norelu_cmvn/decode_lombard/wer_12_1.0  #   same, Lombard OOD
 %WER 6.88 [ 1646 / 23910, 0 ins, 0 del, 1646 sub ] exp/chain/e2e_tdnnf_lr64_12norelu_cmvn/decode/wer_13_0.0  # r64 layer 12
-%WER 8.50 [ 1314 / 15462, 0 ins, 0 del, 1314 sub ] exp/chain/e2e_tdnnf_lr64_12norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 
 # base LoRA r32 layer 10 through the PCA-30 GMM / fMLLR stack (run_ft_large_fmllr.sh, TAG=lorL10)
 %WER 7.51 [ 1795 / 23910, 0 ins, 0 del, 1795 sub ] exp-ft-large/lorL10/tri3b/decode_test/wer_15_0.5  # layer 10, tri3b
-%WER 7.42 [ 1148 / 15462, 0 ins, 0 del, 1148 sub ] exp-ft-large/lorL10/tri3b/decode_lomb/wer_2_1.0  #   same, Lombard OOD
 %WER 6.36 [ 1520 / 23910, 0 ins, 0 del, 1520 sub ] exp/chain/tdnntdnnf_uc_lorL10/decode_test/wer_10_1.0  # layer 10, fMLLR TDNN-F chain (no better than e2e on LoRA features)
-%WER 6.05 [ 935 / 15462, 0 ins, 0 del, 935 sub ] exp/chain/tdnntdnnf_uc_lorL10/decode_lombard/wer_11_1.0  #   same, Lombard OOD
 
 # large, LoRA rank 32 (14.2M trainable), input/avhubert_large_ctc_lora.pt  [headline large]
 %WER 5.50 [ 1314 / 23910, 17 ins, 24 del, 1273 sub ] finetune_lora/exp_large_ctc_lora/hyp_test.txt  # model decoding itself
-%WER 7.17 [ 1109 / 15462, 16 ins, 35 del, 1058 sub ] finetune_lora/exp_large_ctc_lora/hyp_lomb.txt  #   same, Lombard OOD
 %WER 6.21 [ 1486 / 23910, 0 ins, 0 del, 1486 sub ] exp/chain/e2e_tdnnf_lgl13norelu_cmvn/decode/wer_11_0.0  # layer 13
-%WER 5.97 [ 923 / 15462, 0 ins, 0 del, 923 sub ] exp/chain/e2e_tdnnf_lgl13norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 %WER 5.98 [ 1430 / 23910, 0 ins, 0 del, 1430 sub ] exp/chain/e2e_tdnnf_lgl16norelu_cmvn/decode/wer_10_0.5  # layer 16
-%WER 5.57 [ 862 / 15462, 0 ins, 0 del, 862 sub ] exp/chain/e2e_tdnnf_lgl16norelu_cmvn/decode_lombard/wer_12_0.5  #   same, Lombard OOD
-%WER 5.51 [ 1318 / 23910, 0 ins, 0 del, 1318 sub ] exp/chain/e2e_tdnnf_lgl20norelu_cmvn/decode/wer_12_0.0  # layer 20, chosen on Lombard dev
-%WER 5.08 [ 785 / 15462, 0 ins, 0 del, 785 sub ] exp/chain/e2e_tdnnf_lgl20norelu_cmvn/decode_lombard/wer_10_1.0  #   same, Lombard OOD
+%WER 5.51 [ 1318 / 23910, 0 ins, 0 del, 1318 sub ] exp/chain/e2e_tdnnf_lgl20norelu_cmvn/decode/wer_12_0.0  # layer 20
 %WER 5.06 [ 1211 / 23910, 0 ins, 0 del, 1211 sub ] exp/chain/e2e_tdnnf_lgl24norelu_cmvn/decode/wer_11_1.0  # layer 24, best GRID test
-%WER 5.89 [ 911 / 15462, 0 ins, 0 del, 911 sub ] exp/chain/e2e_tdnnf_lgl24norelu_cmvn/decode_lombard/wer_11_0.0  #   same, Lombard OOD
 %WER 8.31 [ 1987 / 23910, 0 ins, 0 del, 1987 sub ] exp-ft-large/lglL20/tri3b/decode_test/wer_14_1.0  # layer 20, PCA-30 GMM tri3b
-%WER 9.47 [ 1465 / 15462, 0 ins, 0 del, 1465 sub ] exp-ft-large/lglL20/tri3b/decode_lomb/wer_40_0.5  #   same, Lombard OOD
 %WER 5.91 [ 1412 / 23910, 0 ins, 0 del, 1412 sub ] exp/chain/tdnntdnnf_uc_lglL20/decode_test/wer_11_0.0  # layer 20, fMLLR TDNN-F chain (worse than e2e on LoRA features)
-%WER 5.39 [ 833 / 15462, 0 ins, 0 del, 833 sub ] exp/chain/tdnntdnnf_uc_lglL20/decode_lombard/wer_11_1.0  #   same, Lombard OOD
 
 # large, full fine-tune control (325.2M trainable), input/avhubert_large_ctc_full.pt
 %WER 6.62 [ 1583 / 23910, 9 ins, 26 del, 1548 sub ] finetune_lora/exp_large_ctc_full/hyp_test.txt  # model decoding itself
-%WER 12.19 [ 1885 / 15462, 8 ins, 52 del, 1825 sub ] finetune_lora/exp_large_ctc_full/hyp_lomb.txt  #   same, Lombard OOD
 %WER 6.44 [ 1540 / 23910, 0 ins, 0 del, 1540 sub ] exp/chain/e2e_tdnnf_lgf16norelu_cmvn/decode/wer_12_0.0  # layer 16
-%WER 7.93 [ 1226 / 15462, 0 ins, 0 del, 1226 sub ] exp/chain/e2e_tdnnf_lgf16norelu_cmvn/decode_lombard/wer_11_0.0  #   same, Lombard OOD
 %WER 6.22 [ 1488 / 23910, 0 ins, 0 del, 1488 sub ] exp/chain/e2e_tdnnf_lgf20norelu_cmvn/decode/wer_11_1.0  # layer 20
-%WER 8.71 [ 1347 / 15462, 0 ins, 0 del, 1347 sub ] exp/chain/e2e_tdnnf_lgf20norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 
 # ---- 2026-07 seq2seq fine-tunes (input/avhubert_ft.pt, avhubert_ft_large.pt) ----
 # Superseded: centroid crops, seq2seq head, BatchNorm drift, training-speaker validation.
 %WER 7.26 [ 1736 / 23910, 0 ins, 0 del, 1736 sub ] exp/chain/e2e_tdnnf_ftl4norelu_cmvn/decode/wer_11_0.0  # base, layer 4 features
-%WER 9.49 [ 1468 / 15462, 0 ins, 0 del, 1468 sub ] exp/chain/e2e_tdnnf_ftl4norelu_cmvn/decode_lombard/wer_13_0.5  #   same, Lombard OOD
 %WER 7.13 [ 1704 / 23910, 0 ins, 0 del, 1704 sub ] exp/chain/e2e_tdnnf_ftl6norelu_cmvn/decode/wer_12_0.0  # base, layer 6 features
-%WER 8.11 [ 1254 / 15462, 0 ins, 0 del, 1254 sub ] exp/chain/e2e_tdnnf_ftl6norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 %WER 6.69 [ 1599 / 23910, 0 ins, 0 del, 1599 sub ] exp/chain/e2e_tdnnf_ftl8norelu_cmvn/decode/wer_12_0.0  # base, layer 8 features
-%WER 8.10 [ 1253 / 15462, 0 ins, 0 del, 1253 sub ] exp/chain/e2e_tdnnf_ftl8norelu_cmvn/decode_lombard/wer_11_0.0  #   same, Lombard OOD
 %WER 6.26 [ 1497 / 23910, 0 ins, 0 del, 1497 sub ] exp/chain/e2e_tdnnf_ftl10norelu_cmvn/decode/wer_11_0.0  # base, layer 10 features
-%WER 8.58 [ 1327 / 15462, 0 ins, 0 del, 1327 sub ] exp/chain/e2e_tdnnf_ftl10norelu_cmvn/decode_lombard/wer_12_0.0  #   same, Lombard OOD
 %WER 6.13 [ 1465 / 23910, 0 ins, 0 del, 1465 sub ] exp/chain/e2e_tdnnf_ftl12norelu_cmvn/decode/wer_12_0.5  # base, layer 12 features
-%WER 8.32 [ 1287 / 15462, 0 ins, 0 del, 1287 sub ] exp/chain/e2e_tdnnf_ftl12norelu_cmvn/decode_lombard/wer_11_0.5  #   same, Lombard OOD
 %WER 6.07 [ 1452 / 23910, 0 ins, 0 del, 1452 sub ] exp-ft-large/l13/tri3b/decode_test/wer_40_0.5  # large layer 13, tri3b
-%WER 6.18 [ 956 / 15462, 0 ins, 0 del, 956 sub ] exp-ft-large/l13/tri3b/decode_lomb/wer_10_1.0  #   same, Lombard OOD
 %WER 6.19 [ 1480 / 23910, 0 ins, 0 del, 1480 sub ] exp/chain/tdnntdnnf_uc_ftL13/decode_test/wer_13_0.0  # large layer 13, fMLLR TDNN-F chain
-%WER 6.47 [ 1001 / 15462, 0 ins, 0 del, 1001 sub ] exp/chain/tdnntdnnf_uc_ftL13/decode_lombard/wer_11_1.0  #   same, Lombard OOD
 %WER 7.74 [ 1851 / 23910, 0 ins, 0 del, 1851 sub ] exp-ft-large-sweep/l8/tri2b/decode_test/wer_30_0.0  # large layer 8 sweep, tri2b
-%WER 9.00 [ 1392 / 15462, 0 ins, 8 del, 1384 sub ] exp-ft-large-sweep/l8/tri2b/decode_lomb/wer_37_0.5  #   same, Lombard OOD
 %WER 7.43 [ 1777 / 23910, 0 ins, 0 del, 1777 sub ] exp-ft-large-sweep/l10/tri2b/decode_test/wer_18_1.0  # large layer 10 sweep, tri2b
-%WER 8.17 [ 1263 / 15462, 0 ins, 0 del, 1263 sub ] exp-ft-large-sweep/l10/tri2b/decode_lomb/wer_10_0.5  #   same, Lombard OOD
 %WER 6.81 [ 1629 / 23910, 0 ins, 0 del, 1629 sub ] exp-ft-large-sweep/l13/tri2b/decode_test/wer_37_1.0  # large layer 13 sweep, tri2b
-%WER 7.89 [ 1220 / 15462, 0 ins, 7 del, 1213 sub ] exp-ft-large-sweep/l13/tri2b/decode_lomb/wer_29_0.0  #   same, Lombard OOD
 %WER 6.37 [ 1524 / 23910, 0 ins, 0 del, 1524 sub ] exp-ft-large-sweep/l14/tri2b/decode_test/wer_38_0.0  # large layer 14 sweep, tri2b
-%WER 7.82 [ 1209 / 15462, 0 ins, 38 del, 1171 sub ] exp-ft-large-sweep/l14/tri2b/decode_lomb/wer_36_0.5  #   same, Lombard OOD
 %WER 6.51 [ 1556 / 23910, 0 ins, 0 del, 1556 sub ] exp-ft-large-sweep/l16/tri2b/decode_test/wer_1_0.0  # large layer 16 sweep, tri2b
-%WER 8.03 [ 1241 / 15462, 0 ins, 0 del, 1241 sub ] exp-ft-large-sweep/l16/tri2b/decode_lomb/wer_31_0.0  #   same, Lombard OOD
 
-# ---- 2026-10-16: shared study with icefall, agreed lists ----
-# GRID test = all 4,000 clips (24,000 words); Lombard = shared clip set, eval-40
-# speakers (plain = plain-speech clips, eval-40). LM weight chosen on the 14
-# Lombard dev speakers. Base, layer 10 through the e2e chain (+CMVN), chain
-# seed 0; three encoder fine-tunes per arm (common.seed 1337, 43, 44).
-# arm               seed  valid  GRID  Lombard  plain
-# LoRA r32          1337  5.10   6.34  5.70     5.95   input/avhubert_base_ctc_lora.pt
-# LoRA r32            43  4.83   6.44  6.06     6.03   input/avhubert_base_ctc_lora_s43.pt
-# LoRA r32            44  5.02   6.19  5.94     6.52   input/avhubert_base_ctc_lora_s44.pt
-#   mean                         6.32  5.90     6.17
-# full fine-tune    1337  5.48   5.70  7.68     8.88   input/avhubert_base_ctc_full.pt
-# full fine-tune      43  5.40   6.74  7.87     8.43   input/avhubert_base_ctc_full_s43.pt
-# full fine-tune      44  5.21   6.08  7.38     7.89   input/avhubert_base_ctc_full_s44.pt
-#   mean                         6.17  7.64     8.40
-# full, lr 5e-5     1337  5.23   6.41  6.58      -     input/avhubert_base_ctc_full_lr5e-5.pt
-# full, lr 5e-4     1337  7.92   7.43  11.81     -     input/avhubert_base_ctc_full_lr5e-4.pt
-# full, AdamW 0.01  1337  5.58   6.60  8.34     8.99   input/avhubert_base_ctc_full_wd1e-2.pt
-# The older lines above use the 3,985-clip test (23,910 words) and the
-# 2,577-clip all-54 Lombard set (15,462 words) with test-chosen LM weights.
-
-# ---- 2026-10-16: all 5,142 shared Lombard GRID clips pooled (Lombard + plain
-# speech, 30,852 words); LM weight chosen on the 14 dev speakers over the pooled
-# clips (local/score_lombard_pooled.sh). Columns: eval-40 / all-54.
-# frozen base L4 fMLLR TDNN-F chain          5.19 / 5.37
-# frozen large L13 fMLLR TDNN-F chain        4.58 / 4.74
-# frozen large L13 tri3b (SAT + fMLLR)       4.77 / 4.92
-# frozen base L8, e2e + CMVN, chain seeds    6.06, 5.76, 6.63 / 6.14, 5.95, 6.73
-# frozen large L16, e2e, no CMVN             5.28 / 5.44
-# frozen large L16, e2e + CMVN, chain seeds  5.39, 5.20, 5.05 / 5.54, 5.40, 5.20
-# base LoRA r32 L10, fine-tune seeds 1337/43/44   5.83, 6.04, 6.23 / 6.07, 6.19, 6.48  (mean 6.03 / 6.25)
-# base full FT L10, fine-tune seeds 1337/43/44    8.28, 8.15, 7.63 / 8.48, 8.38, 7.95  (mean 8.02 / 8.27)
-# base full FT L10, lr 5e-5 / 5e-4                6.77 / 7.04,  12.45 / 12.61
-# base full FT L10, AdamW 0.01                    8.66 / 8.94
-# base full FT interpolated 0.25, chain seeds     5.60, 5.96, 5.79 / 5.89, 6.25, 6.04
-# base LoRA interpolated 0.25, chain seeds        6.17, 5.78, 6.06 / 6.31, 6.05, 6.40
-# large LoRA r32 L20, chain seeds                 5.04, 5.63, 5.84 / 5.13, 5.71, 5.94
-# large full FT L20                               8.75 / 8.98
+# ---- 2026-10-16: GRID test, all 4,000 clips (24,000 words) ----
+# LM weight chosen on held-out dev speakers, not on GRID test. Base, layer 10
+# through the e2e chain (+CMVN), chain seed 0; three encoder fine-tunes per arm
+# (common.seed 1337, 43, 44).
+# arm               seed  valid  GRID
+# LoRA r32          1337  5.10   6.34   input/avhubert_base_ctc_lora.pt
+# LoRA r32            43  4.83   6.44   input/avhubert_base_ctc_lora_s43.pt
+# LoRA r32            44  5.02   6.19   input/avhubert_base_ctc_lora_s44.pt
+#   mean                         6.32
+# full fine-tune    1337  5.48   5.70   input/avhubert_base_ctc_full.pt
+# full fine-tune      43  5.40   6.74   input/avhubert_base_ctc_full_s43.pt
+# full fine-tune      44  5.21   6.08   input/avhubert_base_ctc_full_s44.pt
+#   mean                         6.17
+# full, lr 5e-5     1337  5.23   6.41   input/avhubert_base_ctc_full_lr5e-5.pt
+# full, lr 5e-4     1337  7.92   7.43   input/avhubert_base_ctc_full_lr5e-4.pt
+# full, AdamW 0.01  1337  5.58   6.60   input/avhubert_base_ctc_full_wd1e-2.pt
+# The older lines above use the 3,985-clip test (23,910 words) with test-chosen LM weights.
