@@ -13,6 +13,7 @@ The awkward parts of this, and why they are here rather than in your own script:
 * **Whisper** pads every utterance to 30 s, so the encoder always returns 1500
   frames and a 3 s utterance would otherwise carry 1350 frames of padding.
 """
+import contextlib
 import logging
 
 import numpy as np
@@ -88,12 +89,21 @@ class SSLExtractor:
         given, which is the safe default: hardcoding 20 ms is correct for every
         encoder this package currently supports and silently wrong for anything
         else. Pass a value only to override a measurement you disagree with.
+    autocast : bool
+        Run the encoder under fp16 autocast. CUDA only. For mms-300m layer 14
+        it ran 1.6-2.5x faster on Ampere cards, with a mean error under half
+        of what Kaldi's 8-bit ``copy-feats --compress`` adds, but peak memory
+        rose by 20-40%. The layer norm and the returned features stay fp32.
     """
 
     def __init__(self, model_id, layers, final_layer_norm="keep", device=None,
-                 frame_shift=None):
+                 frame_shift=None, autocast=False):
         if final_layer_norm not in ("keep", "strip"):
             raise ValueError("final_layer_norm must be 'keep' or 'strip'")
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        if autocast and torch.device(self.device).type != "cuda":
+            raise ValueError(f"autocast needs a CUDA device, got {self.device}")
+        self.autocast = autocast
         self.model_id = model_id
         self.layers = [layers] if isinstance(layers, int) else sorted(set(layers))
         self.final_layer_norm_mode = final_layer_norm
@@ -137,7 +147,6 @@ class SSLExtractor:
         if self.is_whisper:
             self.model = self.model.encoder
 
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self.model.to(self.device)
         if self._final_ln is not None:
             self._final_ln = self._final_ln.to(self.device)
@@ -198,12 +207,14 @@ class SSLExtractor:
             waveform, sampling_rate=sample_rate, return_tensors="pt"
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        with torch.no_grad():
+        amp = (torch.autocast("cuda", dtype=torch.float16) if self.autocast
+               else contextlib.nullcontext())
+        with torch.no_grad(), amp:
             hidden = self.model(**inputs, output_hidden_states=True).hidden_states
 
         out = {}
         for layer in self.layers:
-            feats = hidden[layer]
+            feats = hidden[layer].float()  # fp16 under autocast; norm and output in fp32
             if self._final_ln is not None:
                 with torch.no_grad():
                     feats = self._final_ln(feats)

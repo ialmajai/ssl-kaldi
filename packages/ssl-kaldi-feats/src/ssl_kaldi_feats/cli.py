@@ -41,6 +41,9 @@ def build_parser():
                         "mean. Only affects models that norm after the layer "
                         "loop (the large ones, and Whisper)")
     p.add_argument("--device", default=None, help="torch device (default: cuda if available)")
+    p.add_argument("--autocast", action="store_true",
+                   help="run the encoder under fp16 autocast (CUDA only): faster, "
+                        "20-40%% more GPU memory, features still written as fp32")
     # Use paired flags, not argparse.BooleanOptionalAction, which is 3.9+ while
     # this package supports 3.8.
     p.add_argument("--compress", dest="compress", action="store_true",
@@ -66,7 +69,8 @@ def main(argv=None):
 
     layers = ([int(x) for x in args.layers.split(",")] if args.layers
               else args.layer)
-    extractor = SSLExtractor(args.model, layers, args.final_layer_norm, args.device)
+    extractor = SSLExtractor(args.model, layers, args.final_layer_norm, args.device,
+                             autocast=args.autocast)
     multi = len(extractor.layers) > 1
 
     dirs = {}

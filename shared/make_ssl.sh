@@ -14,11 +14,13 @@ max_failures=0       # how many utterances may fail before a job aborts
 # keep|strip: see compute_ssl_feats.py. Only bites on models that norm after the
 # layer loop. keep measures better; strip matches hidden_states[layer].
 final_layer_norm=keep
+autocast=false   # true: fp16 autocast on CUDA, faster, 20-40% more GPU memory per job
 
 echo "$0 $@"  # Print the command line for logging.
 
 if [ -f path.sh ]; then . ./path.sh; fi
 . parse_options.sh || exit 1;
+autocast_opt=; [ "$autocast" = true ] && autocast_opt=--autocast
 
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
   cat >&2 <<EOF
@@ -89,7 +91,7 @@ if [ -f $data/segments ]; then
   $cmd JOB=1:$nj $logdir/make_ssl_${name}.JOB.log \
     extract-segments scp,p:$scp $logdir/segments.JOB ark:- \| \
     python shared/compute_ssl_feats.py --layer $layer \
-         --ssl-model $ssl_model --final-layer-norm $final_layer_norm \
+         --ssl-model $ssl_model --final-layer-norm $final_layer_norm $autocast_opt \
          --max-failures $max_failures $write_utt2dur_opt ark:- ark:- \| \
          copy-feats --compress=$compress $write_num_frames_opt ark:- \
          ark,scp:$ssldir/raw_ssl_$name.JOB.ark,$ssldir/raw_ssl_$name.JOB.scp \
@@ -105,7 +107,7 @@ else
 
   $cmd JOB=1:$nj $logdir/make_ssl_${name}.JOB.log \
     python shared/compute_ssl_feats.py --layer $layer \
-          --ssl-model $ssl_model --final-layer-norm $final_layer_norm \
+          --ssl-model $ssl_model --final-layer-norm $final_layer_norm $autocast_opt \
           --max-failures $max_failures $write_utt2dur_opt \
 	   scp,p:$logdir/wav_${name}.JOB.scp ark:- \| \
            copy-feats $write_num_frames_opt --compress=$compress ark:- \

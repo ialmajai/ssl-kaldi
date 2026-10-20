@@ -96,6 +96,12 @@ def parse_args():
         help="Pretrained SSL model type from HuggingFace",
     )
     parser.add_argument(
+        "--autocast",
+        action="store_true",
+        help="run the encoder under fp16 autocast (CUDA only): 1.6-2.5x faster, "
+             "20-40%% more GPU memory per job, features still written as fp32",
+    )
+    parser.add_argument(
         "--final-layer-norm",
         choices=["keep", "strip"],
         default="keep",
@@ -146,7 +152,8 @@ def process_features(args):
     logger.info(f"Layer(s):     {layers}")
     logger.info("=" * 70)
 
-    ssl_extractor = SSLExtractor(args.ssl_model, layers, args.final_layer_norm)
+    ssl_extractor = SSLExtractor(args.ssl_model, layers, args.final_layer_norm,
+                                 autocast=args.autocast)
 
     utt2dur_data = {}
     utt2num_frames = {}

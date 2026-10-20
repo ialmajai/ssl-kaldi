@@ -5,6 +5,18 @@
 - Open: verify against transformers 5.x and lift the `<5` pin if the fixture
   still reproduces. Run `pytest -m needs_model tests/` on a 5.x environment.
 
+## 0.1.3 (2026-10-20)
+
+- `SSLExtractor(autocast=True)` and `--autocast` run the encoder under fp16
+  autocast on CUDA. For mms-300m layer 14 it ran 1.6-2.5x faster with a mean
+  error of 0.00027, under half the 0.00067 that Kaldi's 8-bit
+  `copy-feats --compress` adds, but peak GPU memory rose by 20-40%. Off by
+  default; the layer norm and the returned features stay fp32. Asking for it
+  on a CPU device fails before the model loads.
+- numpy 2 is allowed, so the package installs on Python 3.13, where numpy 1.x
+  has no wheels. torch now needs 2.3 or later, the first release built
+  against numpy 2.
+
 ## 0.1.2 (2026-10-15)
 
 - Unsigned integer PCM (for example 8-bit wav as returned by

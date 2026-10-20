@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ssl-kaldi-feats"
-version = "0.1.2"
+version = "0.1.3"
 description = "Kaldi ark/scp features from any HuggingFace speech encoder, without a Kaldi install"
 readme = "README.md"
 # 3.8 because that is the interpreter the ssl-kaldi recipes run on.
@@ -24,11 +24,14 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-  "numpy>=1.22,<2.0",
-  "torch>=2.0",
+  "numpy>=1.22",
+  # 2.3 is the first torch built against numpy 2; older builds fail to import
+  # beside it, and pip cannot see that from the metadata.
+  "torch>=2.3",
   # Upper bound is deliberate. This package truncates model.encoder.layers,
   # reads config.do_stable_layer_norm and swaps encoder.layer_norm for
   # Identity: internals, not public API. A major release can change any of

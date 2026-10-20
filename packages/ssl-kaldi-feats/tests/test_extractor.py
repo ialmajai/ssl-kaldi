@@ -139,3 +139,15 @@ def test_failing_pipe_is_deferred_to_load(tmp_path):
     assert [u for u, _ in entries] == ["bad", "good"]
     with pytest.raises(Exception):
         entries[0][1]()
+
+
+def test_autocast_defaults_off():
+    args = build_parser().parse_args(["--model", "m", "--layer", "1",
+                                      "--wav-scp", "w", "--output-dir", "o"])
+    assert args.autocast is False
+
+
+def test_autocast_on_cpu_fails_before_loading_the_model():
+    from ssl_kaldi_feats import SSLExtractor
+    with pytest.raises(ValueError, match="CUDA"):
+        SSLExtractor("not/a-model", 1, device="cpu", autocast=True)
