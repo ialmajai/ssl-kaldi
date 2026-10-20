@@ -1,8 +1,7 @@
 # GRID results with the AV-HuBERT encoder fine-tuned before feature extraction.
 # Frozen-encoder results are in RESULTS. Test: unseen speakers s1 s2 s20 s22
 # (23,910 words). All Kaldi rows: flat-start e2e
-# chain, renorm + no-relu + CMVN, unless marked fMLLR/tri3b. Analysis and
-# bootstraps: paper/results.md 4b-4f; recipe and gotchas: NOTES.md (last section).
+# chain, renorm + no-relu + CMVN, unless marked fMLLR/tri3b.
 
 # ---- 2026-10-05/06: matched CTC recipe (run_lora_finetune.sh, run_lora_eval.sh) ----
 # letter CTC head, 3k-update head-only phase, mean-face 96px ROIs + random 88 crop,

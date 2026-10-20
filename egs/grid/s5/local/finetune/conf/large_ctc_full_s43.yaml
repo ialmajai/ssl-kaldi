@@ -1,5 +1,5 @@
-# Fine-tune seed 43 of large_ctc_full.yaml (2026-10-17, seeds for the paper's
-# single-run large full fine-tune); identical except common.seed (the original used 1337).
+# Fine-tune seed 43 of large_ctc_full.yaml (2026-10-17, a repeat of the
+# large full fine-tune); identical except common.seed (the original used 1337).
 # AV-HuBERT LARGE version of base_ctc_full.yaml: same recipe, max_tokens 500 x update_freq 2
 # (same effective batch) to fit large on one GPU.
 # Control: no LoRA, every encoder weight trainable, lr 2e-4.
