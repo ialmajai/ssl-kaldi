@@ -8,7 +8,7 @@ on:
 jobs:
   lint:
     name: Lint Python
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Python 3.8 builds may not exist for Ubuntu 26
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -28,7 +28,7 @@ jobs:
 
   shellcheck:
     name: Lint shell
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - name: Install shellcheck
@@ -49,7 +49,7 @@ jobs:
 
   test:
     name: Unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Python 3.8 builds may not exist for Ubuntu 26
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
