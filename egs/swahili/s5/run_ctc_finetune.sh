@@ -12,6 +12,8 @@
 #
 #   ./run_ctc_finetune.sh                       # LoRA r32 on attention + FFN
 #   ./run_ctc_finetune.sh --arm full            # every encoder weight trainable
+#   ./run_ctc_finetune.sh --seed 1 --stage 1    # repeat run; dirs get _s1
+# --store DIR puts the stage-4 features under DIR, linked from data/.
 #
 # Two training sessions (SWH-05-20110327, SWH-15-20110310; 668 utterances) are
 # held out to choose the checkpoint and the LM weights, so the test set chooses
@@ -31,6 +33,8 @@ set -euo pipefail
 stage=0
 stop_stage=100
 arm=lora32
+seed=0
+store=
 ssl_model=utter-project/mHuBERT-147
 layer=9
 valid_sessions="SWH-05-20110327 SWH-15-20110310"
@@ -47,8 +51,9 @@ case $arm in
   full)   train_opts="--curriculum-epochs 2 --lr 5e-5" ;;
   *) echo "$0: --arm must be lora32 or full, got '$arm'"; exit 1 ;;
 esac
-out=exp_ft/mhubert147_$arm
-tag=ft_$arm
+sfx=$([ $seed = 0 ] || echo _s$seed)
+out=exp_ft/mhubert147_$arm$sfx
+tag=ft_$arm$sfx
 
 run() { [ $stage -le $1 ] && [ $stop_stage -ge $1 ]; }
 
@@ -74,7 +79,7 @@ if run 0; then
 fi
 
 if run 1; then
-  python local/finetune/finetune_ctc.py --ssl-model $ssl_model $train_opts \
+  python local/finetune/finetune_ctc.py --ssl-model $ssl_model $train_opts --seed $seed \
     --epochs 40 --batch-utts 2 --grad-accum 1 --warmup-frac 0.1 --hold-frac 0.3 \
     --train-dir data/train_ctc --valid-dir data/valid_ctc --out-dir $out
 fi
@@ -97,6 +102,9 @@ fi
 if run 4; then
   for x in train_spe2e test; do
     d=data/${x}_$tag; rm -rf $d
+    if [ -n "$store" ]; then
+      rm -rf $store/${x}_$tag; mkdir -p $store/${x}_$tag; ln -sfn $store/${x}_$tag $d
+    fi
     utils/copy_data_dir.sh data/$x $d
     shared/make_ssl.sh --cmd "$train_cmd" --nj $feats_nj --ssl-model $out --layer $layer $d
     steps/compute_cmvn_stats.sh $d
