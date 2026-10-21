@@ -2,13 +2,13 @@
 # not on GRID test.
 
 # base avhubert model, layer 4, dimension 768
-# 3,985 test clips (23,910 words); best LM setting on test.
-%WER 19.00 [ 4542 / 23910, 0 ins, 0 del, 4542 sub ] exp-sweep-mf50/l4/mono/decode/wer_39_0.0
-%WER 9.81 [ 2345 / 23910, 0 ins, 0 del, 2345 sub ] exp-sweep-mf50/l4/tri1/decode/wer_40_0.5
-%WER 8.90 [ 2129 / 23910, 0 ins, 0 del, 2129 sub ] exp-sweep-mf50/l4/tri2b/decode/wer_39_0.5
-%WER 7.30 [ 1746 / 23910, 0 ins, 0 del, 1746 sub ] exp-sweep-mf50/l4/tri3b/decode/wer_40_1.0
-%WER 7.11 [ 1700 / 23910, 0 ins, 0 del, 1700 sub ] exp/chain/e2e_tdnnf_l4norelu_cmvn/decode/wer_1_1.0  # e2e chain, renorm+no-relu+CMVN, best e2e
-%WER 6.72 [ 1606 / 23910, 0 ins, 0 del, 1606 sub ] exp/chain/tdnntdnnf_l4/decode_test/wer_11_0.0  # fMLLR TDNN-F chain, best base-l4 fMLLR result
+# 4,000 test clips (24,000 words); best LM setting on test.
+%WER 19.00 [ 4561 / 24000, 0 ins, 0 del, 4561 sub ] exp-sweep-mf50-rt/l4/mono/decode_r_test/wer_38_0.0
+%WER 9.85 [ 2364 / 24000, 0 ins, 0 del, 2364 sub ] exp-sweep-mf50-rt/l4/tri1/decode_r_test/wer_32_0.0
+%WER 8.94 [ 2145 / 24000, 0 ins, 0 del, 2145 sub ] exp-sweep-mf50-rt/l4/tri2b/decode_r_test/wer_40_0.0
+%WER 7.38 [ 1770 / 24000, 0 ins, 3 del, 1767 sub ] exp-sweep-mf50-rt/l4/tri3b/decode_r_test/wer_40_0.0
+%WER 7.15 [ 1715 / 24000, 0 ins, 0 del, 1715 sub ] exp/chain/e2e_tdnnf_l4norelu_cmvn/decode_r_test/wer_10_0.0  # e2e chain, renorm+no-relu+CMVN
+%WER 6.76 [ 1623 / 24000, 0 ins, 0 del, 1623 sub ] exp/chain/tdnntdnnf_l4/decode_r_test/wer_10_0.0  # fMLLR TDNN-F chain
 
 # 2026-10-19: large avhubert, layer 11, dimension 1024 (run.sh's large default). The layer
 # comes from a tri3b layer sweep scored on held-out dev speakers, not on GRID test. All
