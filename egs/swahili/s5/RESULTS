@@ -14,6 +14,13 @@ local/bwer.sh
 %WER 19.59 [ 3467 / 17700, 402 ins, 630 del, 2435 sub ] exp/chain/e2e_tdnnf_xlsr_n10/decode_xlsr/wer_10
 
 
+# mHuBERT-147 fine-tuned with a character CTC head (run_ctc_finetune.sh), then
+# layer 9 of the fine-tuned encoder through the same n10 chain and tree.
+# Checkpoint and CTC LM weights chosen on two held-out training sessions.
+# LoRA r32: greedy CTC 29.16, CTC + trigram 19.18. Full: greedy 24.63, CTC + trigram 19.72.
+%WER 19.07 [ 3376 / 17700, 390 ins, 647 del, 2339 sub ] exp/chain/e2e_tdnnf_n10_ft_lora32/decode_ft_lora32  # LoRA r32
+%WER 19.36 [ 3427 / 17700, 403 ins, 643 del, 2381 sub ] exp/chain/e2e_tdnnf_n10_ft_full/decode_ft_full  # every weight trainable
+
 # Best result reported in kaldi reprository using MFCCs:
 %WER 26.62 [ 4711 / 17700, 487 ins, 1076 del, 3148 sub ] exp/system1/sgmm2_5b2_mmi_b0.1/decode_test_it3.mbr/wer_9
 

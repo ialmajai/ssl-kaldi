@@ -54,6 +54,24 @@ land within 0.29 of each other, which is inside this test set's confidence
 interval of roughly ±0.8, so treat their ordering as unresolved rather than
 as a ranking. See [RESULTS](RESULTS) for the raw decode lines.
 
+### Fine-tuned encoder
+
+`run_ctc_finetune.sh` fine-tunes mHuBERT-147 with a character CTC head, then
+reads layer 9 of the fine-tuned encoder into the same chain. Run it after
+`run_e2e.sh`. Two held-out training sessions choose the checkpoint and the
+CTC decoder's LM weights, so the test set chooses nothing.
+
+```
+./run_ctc_finetune.sh              # LoRA r32 on attention + FFN
+./run_ctc_finetune.sh --arm full   # every encoder weight trainable
+```
+
+| Fine-tuning | CTC greedy | CTC + trigram | Chain |
+|-------------|------------|---------------|-------|
+| none (frozen) | - | - | 19.47 |
+| LoRA r32 | 29.16 | 19.18 | **19.07** |
+| full | 24.63 | 19.72 | 19.36 |
+
 ## Citation
 
 If you use this recipe, please cite **ssl-kaldi** and the
