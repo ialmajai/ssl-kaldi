@@ -7,10 +7,8 @@ local/bwer.sh
 %WER 19.82 [ 3508 / 17700, 390 ins, 673 del, 2445 sub ] exp/chain/e2e_tdnnf_1a/decode_test/wer_10
 
 # mHuBERT-147, renorm-linear input and 10 TDNN-F layers (both now the script
-# defaults), single training job. The rb10 line is the matched-architecture
-# relu-batchnorm control that isolates the input layer; see FINDINGS.md sec 11.
+# defaults), single training job.
 %WER 19.47 [ 3446 / 17700, 449 ins, 560 del, 2437 sub ] exp/chain/e2e_tdnnf_n10/decode_test/wer_9
-%WER 20.10 [ 3558 / 17700, 391 ins, 658 del, 2509 sub ] exp/chain/e2e_tdnnf_rb10/decode_test/wer_11
 
 # ssl_model : facebook/wav2vec2-xls-r-300m, layer 12
 # Same renorm n10 config and shared tree as the 19.47 line above, so this is a

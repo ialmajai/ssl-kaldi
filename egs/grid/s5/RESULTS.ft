@@ -3,62 +3,25 @@
 # (23,910 words). All Kaldi rows: flat-start e2e
 # chain, renorm + no-relu + CMVN, unless marked fMLLR/tri3b.
 
-# ---- 2026-10-05/06: matched CTC recipe (run_lora_finetune.sh, run_lora_eval.sh) ----
+# ---- 2026-10-05/06: matched CTC recipe (run_ctc_finetune.sh) ----
 # letter CTC head, 3k-update head-only phase, mean-face 96px ROIs + random 88 crop,
 # held-out validation speakers s7 s30, frozen BatchNorm stats. LoRA on q/k/v/out/fc1/fc2.
 
 # base, LoRA rank 32 (5.3M trainable), input/avhubert_base_ctc_lora.pt  [headline base]
 %WER 6.77 [ 1618 / 23910, 21 ins, 57 del, 1540 sub ] finetune_lora/exp_base_ctc_lora/hyp_test.txt  # model decoding itself, greedy CTC, no grammar
-%WER 6.69 [ 1599 / 23910, 0 ins, 0 del, 1599 sub ] exp/chain/e2e_tdnnf_lor8norelu_cmvn/decode/wer_10_0.5  # layer 8 features
 %WER 6.30 [ 1507 / 23910, 0 ins, 0 del, 1507 sub ] exp/chain/e2e_tdnnf_lor10norelu_cmvn/decode/wer_11_1.0  # layer 10 features
-%WER 6.06 [ 1450 / 23910, 0 ins, 0 del, 1450 sub ] exp/chain/e2e_tdnnf_lor12norelu_cmvn/decode/wer_11_1.0  # layer 12 features
 
 # base, full fine-tune control (103M trainable), input/avhubert_base_ctc_full.pt
 %WER 6.24 [ 1493 / 23910, 17 ins, 65 del, 1411 sub ] finetune_lora/exp_base_ctc_full/hyp_test.txt  # model decoding itself
 %WER 5.66 [ 1353 / 23910, 0 ins, 0 del, 1353 sub ] exp/chain/e2e_tdnnf_ful10norelu_cmvn/decode/wer_11_1.0  # layer 10 features
-%WER 7.25 [ 1734 / 23910, 0 ins, 0 del, 1734 sub ] exp/chain/e2e_tdnnf_ful12norelu_cmvn/decode/wer_12_0.0  # layer 12 features
-
-# base, LoRA rank 16 (2.7M) and rank 64 (10.6M)
-%WER 6.94 [ 1659 / 23910, 26 ins, 76 del, 1557 sub ] finetune_lora/exp_base_ctc_lora16/hyp_test.txt  # r16, model decoding itself
-%WER 6.87 [ 1642 / 23910, 0 ins, 0 del, 1642 sub ] exp/chain/e2e_tdnnf_lr16_8norelu_cmvn/decode/wer_13_0.5  # r16 layer 8
-%WER 6.43 [ 1537 / 23910, 0 ins, 0 del, 1537 sub ] exp/chain/e2e_tdnnf_lr16_10norelu_cmvn/decode/wer_12_0.0  # r16 layer 10
-%WER 6.88 [ 1646 / 23910, 19 ins, 64 del, 1563 sub ] finetune_lora/exp_base_ctc_lora64/hyp_test.txt  # r64, model decoding itself
-%WER 6.81 [ 1629 / 23910, 0 ins, 0 del, 1629 sub ] exp/chain/e2e_tdnnf_lr64_8norelu_cmvn/decode/wer_11_1.0  # r64 layer 8
-%WER 6.40 [ 1530 / 23910, 0 ins, 0 del, 1530 sub ] exp/chain/e2e_tdnnf_lr64_10norelu_cmvn/decode/wer_11_0.5  # r64 layer 10
-%WER 6.88 [ 1646 / 23910, 0 ins, 0 del, 1646 sub ] exp/chain/e2e_tdnnf_lr64_12norelu_cmvn/decode/wer_13_0.0  # r64 layer 12
-
-# base LoRA r32 layer 10 through the PCA-30 GMM / fMLLR stack (run_ft_large_fmllr.sh, TAG=lorL10)
-%WER 7.51 [ 1795 / 23910, 0 ins, 0 del, 1795 sub ] exp-ft-large/lorL10/tri3b/decode_test/wer_15_0.5  # layer 10, tri3b
-%WER 6.36 [ 1520 / 23910, 0 ins, 0 del, 1520 sub ] exp/chain/tdnntdnnf_uc_lorL10/decode_test/wer_10_1.0  # layer 10, fMLLR TDNN-F chain (no better than e2e on LoRA features)
 
 # large, LoRA rank 32 (14.2M trainable), input/avhubert_large_ctc_lora.pt  [headline large]
 %WER 5.50 [ 1314 / 23910, 17 ins, 24 del, 1273 sub ] finetune_lora/exp_large_ctc_lora/hyp_test.txt  # model decoding itself
-%WER 6.21 [ 1486 / 23910, 0 ins, 0 del, 1486 sub ] exp/chain/e2e_tdnnf_lgl13norelu_cmvn/decode/wer_11_0.0  # layer 13
-%WER 5.98 [ 1430 / 23910, 0 ins, 0 del, 1430 sub ] exp/chain/e2e_tdnnf_lgl16norelu_cmvn/decode/wer_10_0.5  # layer 16
 %WER 5.51 [ 1318 / 23910, 0 ins, 0 del, 1318 sub ] exp/chain/e2e_tdnnf_lgl20norelu_cmvn/decode/wer_12_0.0  # layer 20
-%WER 5.06 [ 1211 / 23910, 0 ins, 0 del, 1211 sub ] exp/chain/e2e_tdnnf_lgl24norelu_cmvn/decode/wer_11_1.0  # layer 24, best GRID test
-%WER 8.31 [ 1987 / 23910, 0 ins, 0 del, 1987 sub ] exp-ft-large/lglL20/tri3b/decode_test/wer_14_1.0  # layer 20, PCA-30 GMM tri3b
-%WER 5.91 [ 1412 / 23910, 0 ins, 0 del, 1412 sub ] exp/chain/tdnntdnnf_uc_lglL20/decode_test/wer_11_0.0  # layer 20, fMLLR TDNN-F chain (worse than e2e on LoRA features)
 
 # large, full fine-tune control (325.2M trainable), input/avhubert_large_ctc_full.pt
 %WER 6.62 [ 1583 / 23910, 9 ins, 26 del, 1548 sub ] finetune_lora/exp_large_ctc_full/hyp_test.txt  # model decoding itself
-%WER 6.44 [ 1540 / 23910, 0 ins, 0 del, 1540 sub ] exp/chain/e2e_tdnnf_lgf16norelu_cmvn/decode/wer_12_0.0  # layer 16
 %WER 6.22 [ 1488 / 23910, 0 ins, 0 del, 1488 sub ] exp/chain/e2e_tdnnf_lgf20norelu_cmvn/decode/wer_11_1.0  # layer 20
-
-# ---- 2026-07 seq2seq fine-tunes (input/avhubert_ft.pt, avhubert_ft_large.pt) ----
-# Superseded: centroid crops, seq2seq head, BatchNorm drift, training-speaker validation.
-%WER 7.26 [ 1736 / 23910, 0 ins, 0 del, 1736 sub ] exp/chain/e2e_tdnnf_ftl4norelu_cmvn/decode/wer_11_0.0  # base, layer 4 features
-%WER 7.13 [ 1704 / 23910, 0 ins, 0 del, 1704 sub ] exp/chain/e2e_tdnnf_ftl6norelu_cmvn/decode/wer_12_0.0  # base, layer 6 features
-%WER 6.69 [ 1599 / 23910, 0 ins, 0 del, 1599 sub ] exp/chain/e2e_tdnnf_ftl8norelu_cmvn/decode/wer_12_0.0  # base, layer 8 features
-%WER 6.26 [ 1497 / 23910, 0 ins, 0 del, 1497 sub ] exp/chain/e2e_tdnnf_ftl10norelu_cmvn/decode/wer_11_0.0  # base, layer 10 features
-%WER 6.13 [ 1465 / 23910, 0 ins, 0 del, 1465 sub ] exp/chain/e2e_tdnnf_ftl12norelu_cmvn/decode/wer_12_0.5  # base, layer 12 features
-%WER 6.07 [ 1452 / 23910, 0 ins, 0 del, 1452 sub ] exp-ft-large/l13/tri3b/decode_test/wer_40_0.5  # large layer 13, tri3b
-%WER 6.19 [ 1480 / 23910, 0 ins, 0 del, 1480 sub ] exp/chain/tdnntdnnf_uc_ftL13/decode_test/wer_13_0.0  # large layer 13, fMLLR TDNN-F chain
-%WER 7.74 [ 1851 / 23910, 0 ins, 0 del, 1851 sub ] exp-ft-large-sweep/l8/tri2b/decode_test/wer_30_0.0  # large layer 8 sweep, tri2b
-%WER 7.43 [ 1777 / 23910, 0 ins, 0 del, 1777 sub ] exp-ft-large-sweep/l10/tri2b/decode_test/wer_18_1.0  # large layer 10 sweep, tri2b
-%WER 6.81 [ 1629 / 23910, 0 ins, 0 del, 1629 sub ] exp-ft-large-sweep/l13/tri2b/decode_test/wer_37_1.0  # large layer 13 sweep, tri2b
-%WER 6.37 [ 1524 / 23910, 0 ins, 0 del, 1524 sub ] exp-ft-large-sweep/l14/tri2b/decode_test/wer_38_0.0  # large layer 14 sweep, tri2b
-%WER 6.51 [ 1556 / 23910, 0 ins, 0 del, 1556 sub ] exp-ft-large-sweep/l16/tri2b/decode_test/wer_1_0.0  # large layer 16 sweep, tri2b
 
 # ---- 2026-10-16: GRID test, all 4,000 clips (24,000 words) ----
 # LM weight chosen on held-out dev speakers, not on GRID test. Base, layer 10
@@ -66,7 +29,4 @@
 # arm               seed  valid  GRID
 # LoRA r32          1337  5.10   6.34   input/avhubert_base_ctc_lora.pt
 # full fine-tune    1337  5.48   5.70   input/avhubert_base_ctc_full.pt
-# full, lr 5e-5     1337  5.23   6.41   input/avhubert_base_ctc_full_lr5e-5.pt
-# full, lr 5e-4     1337  7.92   7.43   input/avhubert_base_ctc_full_lr5e-4.pt
-# full, AdamW 0.01  1337  5.58   6.60   input/avhubert_base_ctc_full_wd1e-2.pt
 # The older lines above use the 3,985-clip test (23,910 words) with test-chosen LM weights.

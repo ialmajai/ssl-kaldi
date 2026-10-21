@@ -110,18 +110,7 @@ Setup notes:
   (`--context-width=1 --central-position=0`), no i-vectors, and one reverberated
   copy of the training data.
 
-Layer 9 performs best for the GMM systems:
-
-| SSL Layer | mono  | Δ+ΔΔ  | LDA+MLLT  |
-| --------- | ----- | ----- | --------- |
-| 5         | 31.96 | 24.27 | 22.63 |
-| 6         | 29.31 | 22.29 | 20.93 |
-| 7         | 28.17 | 22.27 | 20.69 |
-| 8         | 27.18 | 20.72 | 19.41 |
-| 9         | **26.59** | **20.48** | **18.82** |
-| 10        | 27.08 | 20.67 | 19.13 |
-| 11        | 29.49 | 22.62 | 21.57 |
-| 12        | 30.11 | 22.84 | 21.90 |
+The recipe taps layer 9, the best layer for the GMM systems in a layer sweep.
 
 Comparison with MFCCs, and with the challenge baseline:
 

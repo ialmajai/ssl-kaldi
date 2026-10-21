@@ -23,7 +23,7 @@ local/bwer.sh
 #facebook/mms-300m, layer 14
 %WER 3.89 [ 783 / 20138, 100 ins, 69 del, 614 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tglarge_dev_clean_2/wer_9_1.0
 # renorm-linear input (now the default), single training job; controlled A/B
-# vs relu-batchnorm at the same settings gave 4.42 (FINDINGS.md sec 11)
+# vs relu-batchnorm at the same settings gave 4.42
 %WER 3.88 [ 782 / 20138, 88 ins, 94 del, 600 sub ] exp/chain_online_cmn/tdnn1a_rl_j1_sp/decode_tglarge_dev_clean_2/wer_10_1.0
 %WER 4.48 [ 902 / 20138, 123 ins, 85 del, 694 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_10_0.5
 %WER 10.87 [ 2190 / 20138, 246 ins, 433 del, 1511 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_26_0.0

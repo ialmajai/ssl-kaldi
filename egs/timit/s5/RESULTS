@@ -67,31 +67,6 @@ GMM --nj       : 16 for every SSL block below, 30 for the MFCC baseline.
 
 # Chain objf for Large: train -0.038 vs valid -0.220.
 
-# Large L14, chain with --frame-subsampling-factor 1 (20 ms output frames)
-# instead of the default 2. Worse on both sets; see README for the analysis.
-# Undertrained relative to the default: Kaldi scales num_archives_to_process by
-# the subsampling factor, so 8 epochs at factor 1 is 15 iters, not 31.
-%WER 10.79 [ 1624 / 15057, 274 ins, 425 del, 925 sub ] exp/chain/tdnn_1b_fsf1_sp/decode_dev/wer_5
-%WER 11.70 [ 844 / 7215, 111 ins, 250 del, 483 sub ] exp/chain/tdnn_1b_fsf1_sp/decode_test/wer_6
-
-# ---------------------------------------------------------------------------
-# facebook/hubert-base-ls960 layer 12. The same model as the layer 9 block
-# above, tapped four layers deeper, so the two isolate layer choice within one
-# model. Layer 12 is not uniformly better or worse: it wins at mono and tri1,
-# loses at tri2 and at the chain stage.
-# GMM --nj 16. Dir: exp_hubert_base_frozen_l12.
-# ---------------------------------------------------------------------------
-%WER 22.53 [ 3393 / 15057, 144 ins, 1925 del, 1324 sub ] exp/mono/decode_dev/wer_5
-%WER 24.59 [ 1774 / 7215, 80 ins, 988 del, 706 sub ] exp/mono/decode_test/wer_4
-%WER 16.57 [ 2495 / 15057, 224 ins, 1096 del, 1175 sub ] exp/tri1/decode_dev/wer_8
-%WER 17.93 [ 1294 / 7215, 104 ins, 596 del, 594 sub ] exp/tri1/decode_test/wer_10
-%WER 15.96 [ 2403 / 15057, 213 ins, 1093 del, 1097 sub ] exp/tri2/decode_dev/wer_6
-%WER 17.30 [ 1248 / 7215, 108 ins, 579 del, 561 sub ] exp/tri2/decode_test/wer_5
-%WER 15.69 [ 2362 / 15057, 218 ins, 1058 del, 1086 sub ] exp/tri3/decode_dev/wer_5
-%WER 16.11 [ 1162 / 7215, 100 ins, 545 del, 517 sub ] exp/tri3/decode_test/wer_3
-%WER 10.85 [ 1633 / 15057, 330 ins, 369 del, 934 sub ] exp/chain/tdnn_1a_sp/decode_dev/wer_6
-%WER 11.74 [ 847 / 7215, 163 ins, 205 del, 479 sub ] exp/chain/tdnn_1a_sp/decode_test/wer_6
-
 # Note on scoring range: local/score.sh sweeps LM weights 1..20 rather than
 # Kaldi's 1..10, because some systems genuinely peak above 10 and truncating the
 # sweep silently under-reports them. Every number in this file uses the wider
@@ -125,18 +100,6 @@ GMM --nj       : 16 for every SSL block below, 30 for the MFCC baseline.
 # 2-3 points at tri2, second best at the chain stage. PCA-30 plus diagonal
 # GMMs is not a reliable proxy for cross-model comparison.
 
-# ---------------------------------------------------------------------------
-# Layer sweep for hubert-large-ll60k, scored at tri2 (stages 1-5 only, so these
-# are PCA-30 numbers and only a proxy for what the chain model would do).
-# GMM --nj 16. Not comparable with the Base sweep in README.md, which used 30.
-# ---------------------------------------------------------------------------
-#   layer   tri2 dev   tri2 test
-#     10      16.04      17.20
-#     11      15.26      16.78
-#     12      14.86      16.40
-#     13      14.58      15.90
-#     14      14.45      15.98
-#
 # ---------------------------------------------------------------------------
 # facebook/mms-300m layer 14, same pipeline. BEST OVERALL: 10.19 test at the
 # chain stage, 90 fewer errors than HuBERT Base (~3.2 sigma), winning on

@@ -10,7 +10,7 @@
 #   ./run_ctc_finetune.sh --config base_ctc_full            # matched full fine-tune
 #   ./run_ctc_finetune.sh --config large_ctc_lora --layer 20
 #
-# Configs live in local/finetune/conf: base_ctc_lora{,16,64}, base_ctc_full,
+# Configs live in local/finetune/conf: base_ctc_lora, base_ctc_full,
 # large_ctc_lora, large_ctc_full. Every config shares one recipe: letter CTC
 # head, encoder frozen for the first 3,000 of 15,000 updates, 96 px mean-face
 # ROIs with random 88 px crops, validation on held-out training speakers s7 and

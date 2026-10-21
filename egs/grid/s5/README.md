@@ -47,8 +47,7 @@ GRID test WERs in this README are on all 4,000 clips of the unseen speakers (s1,
 - Features upsampled from 25 to 50 fps.
 - Mouth crops aligned to a mean face instead of the earlier centroid crop.
 - Layer 4 for base AV-HuBERT and layer 11 for large, chosen by a tri3b layer sweep scored on
-  held-out dev speakers rather than on GRID test. Large layer 13, the earlier tap, came from a
-  sweep scored on GRID test, so its rows below are optimistic.
+  held-out dev speakers rather than on GRID test.
 - Speaker adaptation (LDA+MLLT+SAT) beats TDNN systems trained on raw features, as this
   [paper](https://ueaeprints.uea.ac.uk/id/eprint/63479/1/Accepted_manuscript.pdf) found for visual
   speech features.
@@ -57,23 +56,17 @@ GRID test WERs in this README are on all 4,000 clips of the unseen speakers (s1,
 | -------------------- | --------- | --------------- | ------------------- | ----------------------- |
 | base, layer 4 (50fps)  | 19.00     | 9.85            | 8.94                 | 7.38 |
 | large, layer 11 (50fps) | 19.01     | 8.97            | 7.41                 | 6.25 |
-| large, layer 13 (50fps, chosen on test) | 19.35 | 8.57   | 7.13                 | 6.05 |
 
-We left out 25 fps rows. We measured them at the old default layers (9 base, 12 large) with the
-earlier centroid crop, so they don't compare with the numbers above. Standard Kaldi HMM topologies
-lose accuracy on 40 ms frames, and the table uses 50 fps throughout.
+Standard Kaldi HMM topologies lose accuracy on 40 ms frames, so the table uses 50 fps throughout.
 
 ### Chain results
 
 We trained two chain architectures on these features:
 
-| Chain architecture | base, layer 4 | large, layer 11 | large, layer 13 (chosen on test) |
-| ------------------- | ------------- | --------------- | -------------------------------- |
-| Flat-start e2e (raw features, renorm + no-relu input layer + full CMVN) | 7.15% | not run | 6.45% |
-| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `local/chain/run_tdnn_fmllr_tdnnf.sh`) | **6.76%** | **5.89%** (3 seeds, 5.76-6.00) | 5.85% (1 run) |
-
-Adding full CMVN to the renorm+no-relu e2e chain moves base-layer-4 from 7.55% to 7.15% and
-large-layer-13 from 6.47% to 6.45%. The base gain is about the size of run-to-run noise.
+| Chain architecture | base, layer 4 | large, layer 11 |
+| ------------------- | ------------- | --------------- |
+| Flat-start e2e (raw features, renorm + no-relu input layer + full CMVN) | 7.15% | not run |
+| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `local/chain/run_tdnn_fmllr_tdnnf.sh`) | **6.76%** | **5.89%** (mean of 3 seeds) |
 
 At both encoder sizes, the TDNN-F chain on fMLLR features beats the flat-start e2e chain and the
 GMM-SAT system under it. Large layer 11 gives the recipe's best WER, 5.89% over three chain seeds.

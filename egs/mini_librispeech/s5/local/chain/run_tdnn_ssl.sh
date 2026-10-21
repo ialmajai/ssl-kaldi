@@ -18,7 +18,7 @@ affix=
 tree_affix=
 # renorm-linear rescales each input frame to RMS 1.0 and drops the first-layer
 # relu; beat relu-batchnorm here 3.88 vs 4.42 tglarge in a controlled A/B
-# (both with online CMVN, 12L, jobs 1/1 -- FINDINGS.md sec 11).
+# (both with online CMVN, 12L, jobs 1/1).
 input_style=renorm-linear
 # tdnnf2..tdnnf(1+N). Stride prefix 1,1,1,0 then 2, so 12 keeps the historical
 # stack exactly and 10 trims two stride-2 layers off the top.

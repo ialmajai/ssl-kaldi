@@ -17,7 +17,7 @@ affix=1a
 tree_affix=
 # renorm-linear rescales each input frame to RMS 1.0 and drops the first-layer
 # relu; won the controlled non-e2e A/B on mini_librispeech (3.88 vs 4.42
-# tglarge -- FINDINGS.md sec 11). Untested here, so timit keeps relu-batchnorm.
+# tglarge). Untested here, so timit keeps relu-batchnorm.
 input_style=relu-batchnorm
 # tdnnf2..tdnnf(1+N). Stride prefix 1,1,1,0 then 2 for the rest, so 12 keeps
 # the historical stack exactly and 10 trims two stride-2 layers off the top.

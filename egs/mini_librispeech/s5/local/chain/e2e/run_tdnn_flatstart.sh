@@ -27,7 +27,7 @@ l2_regularize=0.00005
 frames_per_iter=1000000
 cmvn_opts="--norm-means=false --norm-vars=false"
 # renorm-linear rescales each input frame to RMS 1.0 before the first affine
-# layer; wins or ties relu-batchnorm on 5 of 6 recipes (FINDINGS.md sec 11).
+# layer; wins or ties relu-batchnorm on 5 of 6 recipes.
 input_style=renorm-linear
 # tdnnf2..tdnnf(1+N); stride prefix 1,1,1,0 then 2. 10 measured best here
 # and on grid/torgo; pass 12 to reproduce the old stack.

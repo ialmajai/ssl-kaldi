@@ -30,7 +30,7 @@ train_set=train_spe2e
 test_set="test"
 frame_subsampling_factor=2
 # renorm-linear rescales each input frame to RMS 1.0 before the first affine
-# layer; beat relu-batchnorm here 19.47 vs 20.10 (FINDINGS.md sec 11).
+# layer; beat relu-batchnorm here 19.47 vs 20.10.
 input_style=renorm-linear
 num_tdnnf_layers=10  # tdnnf2..tdnnf(1+N); fixed 1,1,1,0 stride prefix then 2s;
                      # pass 12 to reproduce the published 1a baseline stack
