@@ -12,7 +12,7 @@ After downloading the data and building KenLM (see [Requirements](#requirements)
 ```
 conda activate ssl-kaldi
 cd egs/iqraeval/s5
-./run.sh --stop-stage 6   # set IqraEvalData at the top of run.sh first
+./run.sh --stop-stage 6 --IqraEvalData /path/to/sws_data
 sudo nvidia-smi -c 3      # chain training runs 2-5 GPU jobs
 ./run.sh --stage 7        # chain TDNN-F
 ./run_e2e.sh              # optional: flat-start e2e chain, no GMM stages
@@ -52,8 +52,8 @@ python download_hugg_data.py --path "IqraEval/Iqra_train" --split "dev" --output
 python download_hugg_data_tts.py --path "IqraEval/Iqra_TTS" --split "train" --output_dir "./data/TTS" --dev_name "Amer"
 ```
 
-Then point `IqraEvalData` at the top of `run.sh` at the resulting `sws_data`
-directory.
+Then pass the resulting `sws_data` directory as `--IqraEvalData`, or link it
+to `sws_data` in the recipe directory, the default.
 
 ### Building KenLM
 

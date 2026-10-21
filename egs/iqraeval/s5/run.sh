@@ -10,6 +10,7 @@ stop_stage=100   # run stages [stage, stop_stage]; without this
                  # --stage N ran to the end and could overwrite exp/
 encoder_layer=9
 pca_dim=30
+IqraEvalData=sws_data   # the sws_data dir from the IqraEval download (README)
 
 . ./cmd.sh || exit 1;
 . ./path.sh || exit 1;
@@ -26,9 +27,6 @@ train_nj=16
 decode_nj=16
 
 ssl_model="utter-project/mHuBERT-147"
-
-#Modify dataset path
-IqraEvalData=/data/git/interspeech_IqraEval/sws_data
 
 echo "========================================="
 echo "IqraEval Phone Recognition - GMM Pipeline"

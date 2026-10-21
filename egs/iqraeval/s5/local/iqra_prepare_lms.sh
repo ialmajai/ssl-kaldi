@@ -15,7 +15,7 @@ mkdir -p  $lmdir
 # KenLM's lmplz builds the phone LMs. Set KENLM to the build directory (the one
 # containing bin/lmplz) to use a build the search below does not find.
 if [ -z "${KENLM:-}" ]; then
-  for d in kenlm/build "$KALDI_ROOT/tools/kenlm/build" /data/git/kenlm/build ; do
+  for d in kenlm/build "$KALDI_ROOT/tools/kenlm/build" ; do
     if [ -x "$d/bin/lmplz" ] ; then KENLM=$d ; break ; fi
   done
 fi
@@ -25,8 +25,8 @@ fi
 if ! command -v lmplz >/dev/null ; then
   echo "===================================================================="
   echo "ERROR: KenLM's lmplz not found."
-  echo "Searched: \$KENLM, ./kenlm/build, \$KALDI_ROOT/tools/kenlm/build,"
-  echo "          /data/git/kenlm/build, and \$PATH."
+  echo "Searched: \$KENLM, ./kenlm/build, \$KALDI_ROOT/tools/kenlm/build"
+  echo "          and \$PATH."
   echo "To install KenLM:"
   echo "  git clone https://github.com/kpu/kenlm.git kenlm"
   echo "  cd kenlm"

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 stage=1
+IqraEvalData=sws_data   # the sws_data dir from the IqraEval download (README)
 
 
 . ./cmd.sh || exit 1;
@@ -17,9 +18,6 @@ feats_nj=16
 train_nj=16
 decode_nj=16
 encoder_layer=12
-
-#Modify dataset path
-IqraEvalData=/data/git/interspeech_IqraEval/s3prl/s3prl/sws_data
 
 
 if [ $stage -le 0 ]; then 
