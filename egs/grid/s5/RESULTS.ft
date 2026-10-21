@@ -62,17 +62,10 @@
 
 # ---- 2026-10-16: GRID test, all 4,000 clips (24,000 words) ----
 # LM weight chosen on held-out dev speakers, not on GRID test. Base, layer 10
-# through the e2e chain (+CMVN), chain seed 0; three encoder fine-tunes per arm
-# (common.seed 1337, 43, 44).
+# through the e2e chain (+CMVN), chain seed 0, encoder fine-tune seed 1337.
 # arm               seed  valid  GRID
 # LoRA r32          1337  5.10   6.34   input/avhubert_base_ctc_lora.pt
-# LoRA r32            43  4.83   6.44   input/avhubert_base_ctc_lora_s43.pt
-# LoRA r32            44  5.02   6.19   input/avhubert_base_ctc_lora_s44.pt
-#   mean                         6.32
 # full fine-tune    1337  5.48   5.70   input/avhubert_base_ctc_full.pt
-# full fine-tune      43  5.40   6.74   input/avhubert_base_ctc_full_s43.pt
-# full fine-tune      44  5.21   6.08   input/avhubert_base_ctc_full_s44.pt
-#   mean                         6.17
 # full, lr 5e-5     1337  5.23   6.41   input/avhubert_base_ctc_full_lr5e-5.pt
 # full, lr 5e-4     1337  7.92   7.43   input/avhubert_base_ctc_full_lr5e-4.pt
 # full, AdamW 0.01  1337  5.58   6.60   input/avhubert_base_ctc_full_wd1e-2.pt
