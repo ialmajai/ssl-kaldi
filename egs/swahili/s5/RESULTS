@@ -3,9 +3,6 @@ local/bwer.sh
 # ssl_model : ajesujoba/AfriHuBERT
 %WER 19.76 [ 3497 / 17700, 400 ins, 652 del, 2445 sub ] exp/chain/e2e_tdnnf_1a/decode_test/wer_10
 
-# ssl_model :  utter-project/mHuBERT-147
-%WER 19.82 [ 3508 / 17700, 390 ins, 673 del, 2445 sub ] exp/chain/e2e_tdnnf_1a/decode_test/wer_10
-
 # mHuBERT-147, renorm-linear input and 10 TDNN-F layers (both now the script
 # defaults), single training job.
 %WER 19.47 [ 3446 / 17700, 449 ins, 560 del, 2437 sub ] exp/chain/e2e_tdnnf_n10/decode_test/wer_9

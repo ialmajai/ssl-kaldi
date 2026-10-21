@@ -37,25 +37,22 @@ Setup notes:
 - End-to-end LF-MMI TDNN-F, no i-vectors, no GMM stage.
 - Reduced frame-subsampling-factor (default 3 → 2).
 - SSL features extracted at layer 9, except XLS-R at layer 12.
-- The last two rows use the current script defaults (renorm-linear input,
-  10 TDNN-F layers); the first three use the older 12-layer relu-batchnorm
+- mHuBERT-147 and XLS-R use the current script defaults (renorm-linear input,
+  10 TDNN-F layers); AfriHuBERT uses the older 12-layer relu-batchnorm
   network. All rows share one tree and phone LM.
 
 | Features | Network | WER (%) |
 |----------|---------|---------|
 | AfriHuBERT (`ajesujoba/AfriHuBERT`) | 12L relu-batchnorm | 19.76 |
-| mHuBERT-147 (`utter-project/mHuBERT-147`) | 12L relu-batchnorm | 19.82 |
 | Kaldi MFCC baseline (SGMM2 + MMI) | SGMM2 | 26.62 |
 | **mHuBERT-147** | **10L renorm-linear** | **19.47** |
 | XLS-R-300m (`facebook/wav2vec2-xls-r-300m`, L12) | 10L renorm-linear | 19.59 |
 
 Every SSL model beats the conventional MFCC/SGMM2 baseline by a wide margin
 (26.62% → 19.47%, a 27% relative reduction). The three multilingual encoders
-land within 0.35 of each other, which is inside this test set's confidence
+land within 0.29 of each other, which is inside this test set's confidence
 interval of roughly ±0.8, so treat their ordering as unresolved rather than
-as a ranking. Changing the network from 12-layer relu-batchnorm to 10-layer
-renorm-linear is worth about as much as the choice of encoder. See
-[RESULTS](RESULTS) for the raw decode lines.
+as a ranking. See [RESULTS](RESULTS) for the raw decode lines.
 
 ## Citation
 

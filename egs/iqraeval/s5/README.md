@@ -110,20 +110,18 @@ Setup notes:
   (`--context-width=1 --central-position=0`), no i-vectors, and one reverberated
   copy of the training data.
 
-The recipe taps layer 9, the best layer for the GMM systems in a layer sweep.
+The recipe taps layer 9, the best layer for the GMM systems.
 
 Comparison with MFCCs, and with the challenge baseline:
 
 | Model Type      | mono  | Δ+ΔΔ  | LDA+MLLT | tdnnf     | e2e_tdnnf |
 | --------------- | ----- | ----- | -------- | --------- | --------- |
 | MFCC            | 53.85 | 43.47 | 41.65    | -         | -         |
-| SSL (9th layer) | **26.59** | **20.48** | **18.82** | **11.27** | 11.88     |
+| SSL (9th layer) | **26.98** | **20.53** | **18.77** | **11.27** | 11.88     |
 | IqraEval baseline | -   | -     | -        | 16.42     | -         |
 
 Frozen mHuBERT features cut the MFCC phone error rate by more than half at each
 GMM stage. The chain model reaches 11.27 against the challenge baseline's 16.42.
-The SSL GMM columns come from the layer sweep. `RESULTS` lists a separate full run
-(26.98 / 20.53 / 18.77); reruns of the GMM ladder differ by up to 0.5.
 
 ![Sample phone alignment for one of the decoded dev utterances](images/alignment.png)
 

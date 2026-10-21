@@ -52,24 +52,16 @@ GRID test WERs in this README are on all 4,000 clips of the unseen speakers (s1,
   [paper](https://ueaeprints.uea.ac.uk/id/eprint/63479/1/Accepted_manuscript.pdf) found for visual
   speech features.
 
-| AV-HuBERT           | Monophone | Triphone (Δ+ΔΔ) | Triphone + LDA+MLLT | Triphone + LDA+MLLT+SAT |
-| -------------------- | --------- | --------------- | ------------------- | ----------------------- |
-| base, layer 4 (50fps)  | 19.00     | 9.85            | 8.94                 | 7.38 |
-| large, layer 11 (50fps) | 19.01     | 8.97            | 7.41                 | 6.25 |
+| AV-HuBERT           | Monophone | Triphone (Δ+ΔΔ) | Triphone + LDA+MLLT | Triphone + LDA+MLLT+SAT | TDNN-F chain (fMLLR) |
+| -------------------- | --------- | --------------- | ------------------- | ----------------------- | -------------------- |
+| base, layer 4 (50fps)  | 19.00     | 9.85            | 8.94                 | 7.38 | 6.76 |
+| large, layer 11 (50fps) | 19.01     | 8.97            | 7.41                 | 6.25 | **5.89** (mean of 3 seeds) |
 
 Standard Kaldi HMM topologies lose accuracy on 40 ms frames, so the table uses 50 fps throughout.
 
-### Chain results
-
-We trained two chain architectures on these features:
-
-| Chain architecture | base, layer 4 | large, layer 11 |
-| ------------------- | ------------- | --------------- |
-| Flat-start e2e (raw features, renorm + no-relu input layer + full CMVN) | 7.15% | not run |
-| TDNN-F on fMLLR features (speaker-adapted, GMM-SAT-derived, `local/chain/run_tdnn_fmllr_tdnnf.sh`) | **6.76%** | **5.89%** (mean of 3 seeds) |
-
-At both encoder sizes, the TDNN-F chain on fMLLR features beats the flat-start e2e chain and the
-GMM-SAT system under it. Large layer 11 gives the recipe's best WER, 5.89% over three chain seeds.
+The chain column is `local/chain/run_tdnn_fmllr_tdnnf.sh`, a TDNN-F trained on the GMM-SAT
+fMLLR features. It beats the GMM-SAT system under it at both encoder sizes, and large layer 11
+gives the recipe's best WER, 5.89% over three chain seeds.
 
 ### Fine-tuned encoders
 

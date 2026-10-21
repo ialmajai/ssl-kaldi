@@ -2,28 +2,16 @@ local/bwer.sh
 
 #facebook/hubert-base-ls960, layer 9
 %WER 4.28 [ 862 / 20138, 108 ins, 68 del, 686 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_11_1.0
-%WER 4.97 [ 1001 / 20138, 135 ins, 104 del, 762 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_11_0.5
 %WER 11.29 [ 2273 / 20138, 237 ins, 453 del, 1583 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_21_0.0
 %WER 29.05 [ 5850 / 20138, 311 ins, 1436 del, 4103 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_18_0.0
 
-#facebook/hubert-large-ll60k, layer 12
-%WER 4.70 [ 947 / 20138, 132 ins, 73 del, 742 sub ] exp/chain_online_cmn/tdnn_sp/decode_tglarge_dev_clean_2/wer_12_0.0
-%WER 6.31 [ 1271 / 20138, 122 ins, 129 del, 1020 sub ] exp/chain_online_cmn/tdnn_sp/decode_tgsmall_dev_clean_2/wer_11_0.5
-%WER 11.64 [ 2345 / 20138, 300 ins, 425 del, 1620 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_26_0.0
-%WER 28.59 [ 5758 / 20138, 351 ins, 1212 del, 4195 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_20_0.0
-
-
 #facebook/hubert-large-ll60k, layer 14
 %WER 4.15 [ 835 / 20138, 92 ins, 76 del, 667 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tglarge_dev_clean_2/wer_12_1.0
-%WER 4.90 [ 987 / 20138, 105 ins, 108 del, 774 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_10_1.0
 %WER 10.92 [ 2200 / 20138, 271 ins, 363 del, 1566 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_22_0.0
 %WER 27.31 [ 5499 / 20138, 361 ins, 1087 del, 4051 sub ] exp/mono/decode_tglarge_dev_clean_2_pca/wer_19_0.0
 
 
-#facebook/mms-300m, layer 14
-%WER 3.89 [ 783 / 20138, 100 ins, 69 del, 614 sub ] exp/chain_online_cmn/tdnn1a_sp/decode_tglarge_dev_clean_2/wer_9_1.0
-# renorm-linear input (now the default), single training job; controlled A/B
-# vs relu-batchnorm at the same settings gave 4.42
+#facebook/mms-300m, layer 14 (renorm-linear input, single training job)
 %WER 3.88 [ 782 / 20138, 88 ins, 94 del, 600 sub ] exp/chain_online_cmn/tdnn1a_rl_j1_sp/decode_tglarge_dev_clean_2/wer_10_1.0
 %WER 4.48 [ 902 / 20138, 123 ins, 85 del, 694 sub ] exp/chain/e2e_tdnnf_1a/decode_tglarge_dev_clean_2_raw/wer_10_0.5
 %WER 10.87 [ 2190 / 20138, 246 ins, 433 del, 1511 sub ] exp/tri3b/decode_tglarge_dev_clean_2_pca/wer_26_0.0

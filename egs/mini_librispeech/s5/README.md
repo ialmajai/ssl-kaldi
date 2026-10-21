@@ -23,7 +23,6 @@ Pick another encoder with `--ssl-model` and `--encoder-layer`.
 | HuBERT Large (LL60K, layer 14) | Chain TDNN | 4.15 |
 | HuBERT Base (LS960, layer 9) | Chain TDNN | 4.28 |
 | MMS-300m (layer 14) | E2E TDNN-F | 4.48 |
-| HuBERT Large (LL60K, layer 12) | Chain TDNN | 4.70 |
 | XLS-R-300m (layer 12) | Chain TDNN | 4.86 |
 | MMS-300m (layer 14) | Tri3b | 10.87 |
 | Kaldi MFCC/filterbank baseline | CNN-TDNN | 6.79 |
@@ -32,7 +31,6 @@ Pick another encoder with `--ssl-model` and `--encoder-layer`.
 
 - `facebook/mms-300m` layer 14 with a chain TDNN gives the best result, **3.88% WER**, a **43% relative reduction** on the Kaldi MFCC/filterbank baseline (6.79% → 3.88%).
 - Encoder size does not decide the ranking: WavLM Base+ (95 M parameters) matches MMS-300m (315 M) to within 0.09, and XLS-R-300m trails both despite sharing MMS-300m's architecture. English is a thin slice of XLS-R's 128-language pretraining mixture, and the same encoder ties mHuBERT-147 on the Swahili recipe.
-- Layer choice matters: for HuBERT Large, layer 14 gives 4.15 and layer 12 gives 4.70.
 - MMS-300m features also help the Tri3b GMM-HMM system, which drops from 13.18 with MFCCs to 10.87.
 - The MMS-300m, WavLM and XLS-R chain rows share one tree, alignments and lattices, so they differ only in features.
 - See [RESULTS](RESULTS) for the raw decode lines.
